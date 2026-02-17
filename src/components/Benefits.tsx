@@ -9,12 +9,13 @@ const benefits = [
 
 const Benefits = () => {
   return (
-    <section className="py-10 bg-secondary/50">
-      <div className="container">
+    <section className="py-10 bg-secondary/30 relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid-pattern opacity-20" />
+      <div className="container relative">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {benefits.map((b, i) => (
-            <div key={i} className="flex items-center gap-3 p-4">
-              <div className="shrink-0 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <div key={i} className="flex items-center gap-3 p-4 rounded-xl bg-card/50 border border-primary/10 hover:border-primary/30 transition-all hover:glow-green-sm">
+              <div className="shrink-0 h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <b.icon className="h-6 w-6 text-primary" />
               </div>
               <div>

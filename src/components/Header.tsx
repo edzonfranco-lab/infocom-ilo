@@ -4,8 +4,9 @@ import { Search, ShoppingCart, User, Menu, X, ChevronDown, MessageCircle } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { COMPANY_NAME, WHATSAPP_NUMBER, MOCK_CATEGORIES } from "@/lib/constants";
+import { COMPANY_NAME, WHATSAPP_NUMBER, MOCK_CATEGORIES, COMPANY_PHONE } from "@/lib/constants";
 import { useCart } from "@/hooks/use-cart";
+import logoInfocom from "@/assets/logo-infocom.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -28,22 +29,25 @@ const Header = () => {
               <MessageCircle className="h-3 w-3" />
               Contáctanos
             </a>
-            <span>📞 +51 999 999 999</span>
+            <span className="hidden sm:inline">📞 {COMPANY_PHONE}</span>
           </div>
         </div>
       </div>
 
       {/* Main header */}
-      <div className="bg-card border-b border-border shadow-sm">
+      <div className="bg-card/95 backdrop-blur-xl border-b border-primary/20 shadow-lg shadow-primary/5">
         <div className="container flex items-center justify-between gap-4 py-3">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="bg-primary text-primary-foreground font-display font-bold text-xl px-3 py-1.5 rounded">
-              INFOCOM
+          <Link to="/" className="flex items-center gap-3 shrink-0">
+            <img src={logoInfocom} alt="INFOCOM" className="h-10 w-10 object-contain" />
+            <div className="flex flex-col">
+              <span className="font-display font-bold text-lg text-primary tracking-wider leading-none">
+                INFOCOM
+              </span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.2em]">
+                Tecnology
+              </span>
             </div>
-            <span className="hidden sm:block text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Tecnology
-            </span>
           </Link>
 
           {/* Search bar */}
@@ -52,9 +56,9 @@ const Header = () => {
               placeholder="Buscar productos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10 bg-secondary border-border"
+              className="pr-10 bg-secondary/50 border-primary/20 focus:border-primary/50 focus:ring-primary/20"
             />
-            <Button size="icon" variant="ghost" className="absolute right-0 top-0 h-full">
+            <Button size="icon" variant="ghost" className="absolute right-0 top-0 h-full text-primary">
               <Search className="h-4 w-4" />
             </Button>
           </div>
@@ -62,15 +66,15 @@ const Header = () => {
           {/* Actions */}
           <div className="flex items-center gap-2">
             <Link to="/cuenta">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="hover:text-primary">
                 <User className="h-5 w-5" />
               </Button>
             </Link>
             <Link to="/carrito" className="relative">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="hover:text-primary">
                 <ShoppingCart className="h-5 w-5" />
                 {count > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-accent text-accent-foreground">
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px] bg-primary text-primary-foreground glow-green-sm">
                     {count}
                   </Badge>
                 )}
@@ -89,7 +93,7 @@ const Header = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="bg-card/95 backdrop-blur border-b border-border hidden md:block">
+      <nav className="bg-card/80 backdrop-blur-xl border-b border-primary/10 hidden md:block">
         <div className="container flex items-center gap-1 py-0">
           <Link to="/" className="px-4 py-3 text-sm font-medium hover:text-primary transition-colors">
             Inicio
@@ -98,12 +102,12 @@ const Header = () => {
             <button className="flex items-center gap-1 px-4 py-3 text-sm font-medium hover:text-primary transition-colors">
               Catálogo <ChevronDown className="h-3 w-3" />
             </button>
-            <div className="absolute top-full left-0 bg-card border border-border rounded-lg shadow-lg p-4 min-w-[280px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <div className="absolute top-full left-0 bg-card/95 backdrop-blur-xl border border-primary/20 rounded-lg shadow-lg shadow-primary/10 p-4 min-w-[280px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
               {MOCK_CATEGORIES.map((cat) => (
                 <div key={cat.id} className="mb-2 last:mb-0">
                   <Link
                     to={`/catalogo/${cat.slug}`}
-                    className="block px-3 py-2 font-medium text-sm hover:bg-secondary rounded transition-colors"
+                    className="block px-3 py-2 font-medium text-sm hover:bg-primary/10 hover:text-primary rounded transition-colors"
                   >
                     {cat.name}
                   </Link>
@@ -111,7 +115,7 @@ const Header = () => {
                     <Link
                       key={sub.id}
                       to={`/catalogo/${sub.slug}`}
-                      className="block px-6 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
+                      className="block px-6 py-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 rounded transition-colors"
                     >
                       {sub.name}
                     </Link>
@@ -131,19 +135,19 @@ const Header = () => {
 
       {/* Mobile menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-card border-b border-border p-4 space-y-2">
+        <div className="md:hidden bg-card/95 backdrop-blur-xl border-b border-primary/20 p-4 space-y-2">
           <div className="relative mb-3">
-            <Input placeholder="Buscar productos..." className="pr-10 bg-secondary" />
+            <Input placeholder="Buscar productos..." className="pr-10 bg-secondary/50 border-primary/20" />
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           </div>
-          <Link to="/" className="block py-2 text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Inicio</Link>
+          <Link to="/" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>Inicio</Link>
           {MOCK_CATEGORIES.map((cat) => (
-            <Link key={cat.id} to={`/catalogo/${cat.slug}`} className="block py-2 text-sm" onClick={() => setIsMenuOpen(false)}>
+            <Link key={cat.id} to={`/catalogo/${cat.slug}`} className="block py-2 text-sm hover:text-primary" onClick={() => setIsMenuOpen(false)}>
               {cat.name}
             </Link>
           ))}
-          <Link to="/contacto" className="block py-2 text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Contacto</Link>
-          <Link to="/nosotros" className="block py-2 text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Sobre Nosotros</Link>
+          <Link to="/contacto" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>Contacto</Link>
+          <Link to="/nosotros" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>Sobre Nosotros</Link>
         </div>
       )}
     </header>

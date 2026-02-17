@@ -5,23 +5,20 @@ import { Button } from "@/components/ui/button";
 const slides = [
   {
     title: "Laptops de Alto Rendimiento",
-    subtitle: "Las mejores marcas al mejor precio",
+    subtitle: "Las mejores marcas al mejor precio en Ilo",
     cta: "Ver Laptops",
-    bg: "from-primary/20 to-primary/5",
     image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=1200&h=500&fit=crop",
   },
   {
-    title: "Monitores Gaming",
-    subtitle: "Hasta 250Hz de tasa de refresco",
-    cta: "Ver Monitores",
-    bg: "from-accent/20 to-accent/5",
-    image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=1200&h=500&fit=crop",
+    title: "Cámaras de Seguridad",
+    subtitle: "Protege tu hogar y negocio con tecnología de punta",
+    cta: "Ver Cámaras",
+    image: "https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=1200&h=500&fit=crop",
   },
   {
     title: "Periféricos Profesionales",
     subtitle: "Teclados, mouse y más para gamers y oficina",
     cta: "Ver Periféricos",
-    bg: "from-success/20 to-success/5",
     image: "https://images.unsplash.com/photo-1541140532154-b024d1c0c78e?w=1200&h=500&fit=crop",
   },
 ];
@@ -39,7 +36,7 @@ const HeroBanner = () => {
 
   return (
     <section className="relative overflow-hidden bg-card">
-      <div className="relative h-[300px] sm:h-[400px] lg:h-[480px]">
+      <div className="relative h-[300px] sm:h-[400px] lg:h-[500px]">
         {slides.map((slide, i) => (
           <div
             key={i}
@@ -53,15 +50,21 @@ const HeroBanner = () => {
                 alt={slide.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-transparent" />
+              {/* Futuristic overlay */}
+              <div className="absolute inset-0 bg-grid-pattern opacity-30" />
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
             </div>
             <div className="relative container h-full flex items-center">
-              <div className="max-w-lg space-y-4">
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold leading-tight">
+              <div className="max-w-lg space-y-5">
+                <div className="inline-block px-3 py-1 text-xs font-display font-semibold text-primary border border-primary/30 rounded-full uppercase tracking-widest">
+                  INFOCOM TECNOLOGY
+                </div>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display font-bold leading-tight tracking-wide">
                   {slide.title}
                 </h2>
-                <p className="text-lg text-muted-foreground">{slide.subtitle}</p>
-                <Button size="lg" className="font-semibold">
+                <p className="text-lg text-muted-foreground font-body">{slide.subtitle}</p>
+                <Button size="lg" className="font-display font-semibold tracking-wider glow-green-sm">
                   {slide.cta}
                 </Button>
               </div>
@@ -72,7 +75,7 @@ const HeroBanner = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/50 hover:bg-background/80 backdrop-blur"
+          className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/50 hover:bg-primary/20 backdrop-blur border border-primary/20"
           onClick={prev}
         >
           <ChevronLeft className="h-5 w-5" />
@@ -80,7 +83,7 @@ const HeroBanner = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/50 hover:bg-background/80 backdrop-blur"
+          className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/50 hover:bg-primary/20 backdrop-blur border border-primary/20"
           onClick={next}
         >
           <ChevronRight className="h-5 w-5" />
@@ -91,8 +94,8 @@ const HeroBanner = () => {
             <button
               key={i}
               onClick={() => setCurrent(i)}
-              className={`h-2 rounded-full transition-all ${
-                i === current ? "w-8 bg-primary" : "w-2 bg-foreground/30"
+              className={`h-1.5 rounded-full transition-all ${
+                i === current ? "w-10 bg-primary glow-green-sm" : "w-3 bg-foreground/20"
               }`}
             />
           ))}
