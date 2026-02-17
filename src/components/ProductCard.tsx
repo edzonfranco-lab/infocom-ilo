@@ -21,7 +21,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <Link to={`/producto/${product.id}`}>
-      <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-card border-border h-full">
+      <Card className="group overflow-hidden hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1 bg-card border-primary/10 hover:border-primary/30 h-full">
         <div className="relative aspect-square overflow-hidden bg-secondary">
           <img
             src={product.image}
@@ -37,7 +37,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
               </Badge>
             )}
             {product.isNew && (
-              <Badge className="bg-success text-success-foreground text-xs font-bold">
+              <Badge className="bg-primary text-primary-foreground text-xs font-bold glow-green-sm">
                 Nuevo
               </Badge>
             )}
@@ -49,7 +49,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
           {/* Hover actions */}
           <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-            <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full shadow-lg">
+            <Button size="icon" variant="secondary" className="h-9 w-9 rounded-full shadow-lg border border-primary/20">
               <Eye className="h-4 w-4" />
             </Button>
           </div>
@@ -71,7 +71,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           </div>
           <Button
             size="sm"
-            className="w-full gap-2 mt-2"
+            className="w-full gap-2 mt-2 glow-green-sm"
             onClick={handleAddToCart}
             disabled={product.stock === 0}
           >
