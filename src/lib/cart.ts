@@ -27,7 +27,7 @@ function notify() {
 }
 
 export function getCartItems(): CartItem[] {
-  return [...cartItems];
+  return cartItems;
 }
 
 export function addToCart(product: Product) {
