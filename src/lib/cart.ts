@@ -1,24 +1,10 @@
 import { Product } from '@/lib/constants';
 
-// We'll use zustand-like pattern with React context for now
-// Simple cart state management
-
 export interface CartItem {
   product: Product;
   quantity: number;
 }
 
-interface CartStore {
-  items: CartItem[];
-  addItem: (product: Product) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  clearCart: () => void;
-  totalItems: () => number;
-  totalPrice: () => number;
-}
-
-// Simple in-memory cart (will be replaced with context/zustand later)
 let cartItems: CartItem[] = [];
 const listeners: Set<() => void> = new Set();
 
@@ -65,7 +51,7 @@ export function clearCart() {
 }
 
 export function getCartTotal(): number {
-  return cartItems.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+  return cartItems.reduce((sum, i) => sum + Number(i.product.price) * i.quantity, 0);
 }
 
 export function getCartCount(): number {
