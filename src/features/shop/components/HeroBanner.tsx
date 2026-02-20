@@ -51,7 +51,7 @@ const HeroBanner = () => {
             <div className="relative container h-full flex items-center">
               <div className="max-w-lg space-y-4 sm:space-y-5">
                 <div className="inline-block px-3 py-1 text-xs font-display font-semibold text-primary border border-primary/30 rounded-full uppercase tracking-widest">
-                  INFOCOM TECNOLOGY
+                  INFOCOM TECNOLOGÍA
                 </div>
                 <h2 className="text-2xl sm:text-4xl lg:text-5xl font-display font-bold leading-tight tracking-wide">{slide.title}</h2>
                 <p className="text-sm sm:text-lg text-muted-foreground font-body">{slide.subtitle}</p>

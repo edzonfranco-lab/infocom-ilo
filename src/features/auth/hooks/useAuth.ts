@@ -8,45 +8,49 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+
+  const fetchRoles = useCallback(async (userId: string) => {
+    setRolesLoading(true);
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    setRoles((data || []).map((r: any) => r.role as AppRole));
+    setRolesLoading(false);
+  }, []);
 
   useEffect(() => {
+    // Set up auth listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Fetch roles using setTimeout to avoid deadlock
-          setTimeout(async () => {
-            const { data } = await supabase
-              .from("user_roles")
-              .select("role")
-              .eq("user_id", session.user.id);
-            setRoles((data || []).map((r: any) => r.role as AppRole));
-          }, 0);
+          // Use setTimeout to avoid Supabase auth deadlock
+          setTimeout(() => fetchRoles(session.user.id), 0);
         } else {
           setRoles([]);
+          setRolesLoading(false);
         }
         setLoading(false);
       }
     );
 
+    // Then get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .then(({ data }) => {
-            setRoles((data || []).map((r: any) => r.role as AppRole));
-          });
+        fetchRoles(session.user.id);
+      } else {
+        setRolesLoading(false);
       }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchRoles]);
 
   const isAdmin = roles.includes("admin");
 
@@ -54,5 +58,8 @@ export function useAuth() {
     await supabase.auth.signOut();
   }, []);
 
-  return { user, session, loading, roles, isAdmin, signOut };
+  // loading is true until both auth AND roles are resolved
+  const isLoading = loading || rolesLoading;
+
+  return { user, session, loading: isLoading, roles, isAdmin, signOut };
 }

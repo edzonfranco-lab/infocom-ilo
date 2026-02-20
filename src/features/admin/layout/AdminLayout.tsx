@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings, ArrowLeft, Menu, X } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings, ArrowLeft, Menu, X, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import logoDark from "@/assets/logo-dark-theme.png";
@@ -12,6 +12,7 @@ const navItems = [
   { to: "/admin/pedidos", icon: ShoppingBag, label: "Pedidos" },
   { to: "/admin/banners", icon: Image, label: "Banners" },
   { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago" },
+  { to: "/admin/empresa", icon: Building2, label: "Empresa" },
   { to: "/admin/configuracion", icon: Settings, label: "Configuración" },
 ];
 

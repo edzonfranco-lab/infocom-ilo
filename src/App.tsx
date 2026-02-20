@@ -33,6 +33,7 @@ import OrdersPage from "@/features/admin/pages/OrdersPage";
 import BannersPage from "@/features/admin/pages/BannersPage";
 import SettingsPage from "@/features/admin/pages/SettingsPage";
 import PaymentAccountsPage from "@/features/admin/pages/PaymentAccountsPage";
+import CompanyPage from "@/features/admin/pages/CompanyPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="marcas" element={<BrandsPage />} />
               <Route path="pedidos" element={<OrdersPage />} />
               <Route path="banners" element={<BannersPage />} />
+              <Route path="empresa" element={<CompanyPage />} />
               <Route path="configuracion" element={<SettingsPage />} />
               <Route path="pagos" element={<PaymentAccountsPage />} />
             </Route>
