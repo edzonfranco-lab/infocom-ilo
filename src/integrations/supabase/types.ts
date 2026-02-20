@@ -136,6 +136,150 @@ export type Database = {
           },
         ]
       }
+      company_certifications: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          issued_by: string | null
+          name: string
+          sort_order: number | null
+          year: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          issued_by?: string | null
+          name: string
+          sort_order?: number | null
+          year?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          issued_by?: string | null
+          name?: string
+          sort_order?: number | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      company_info: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          id: string
+          is_visible: boolean | null
+          section_key: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_visible?: boolean | null
+          section_key: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_visible?: boolean | null
+          section_key?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      company_locations: {
+        Row: {
+          address: string
+          city: string | null
+          created_at: string | null
+          department: string | null
+          gmaps_url: string | null
+          id: string
+          is_active: boolean | null
+          is_main: boolean | null
+          name: string
+          phone: string | null
+          sort_order: number | null
+        }
+        Insert: {
+          address: string
+          city?: string | null
+          created_at?: string | null
+          department?: string | null
+          gmaps_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_main?: boolean | null
+          name: string
+          phone?: string | null
+          sort_order?: number | null
+        }
+        Update: {
+          address?: string
+          city?: string | null
+          created_at?: string | null
+          department?: string | null
+          gmaps_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_main?: boolean | null
+          name?: string
+          phone?: string | null
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      company_team: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          full_name: string
+          id: string
+          is_visible: boolean | null
+          photo_url: string | null
+          role: string
+          sort_order: number | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          full_name: string
+          id?: string
+          is_visible?: boolean | null
+          photo_url?: string | null
+          role: string
+          sort_order?: number | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          is_visible?: boolean | null
+          photo_url?: string | null
+          role?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string

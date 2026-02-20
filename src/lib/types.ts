@@ -136,7 +136,7 @@ export interface CartItem {
 }
 
 export const CURRENCY = "S/";
-export const COMPANY_NAME = "INFOCOM TECNOLOGY";
+export const COMPANY_NAME = "INFOCOM TECNOLOGÍA";
 export const COMPANY_EMAIL = "infocomcotizaciones@gmail.com";
 export const COMPANY_PHONE = "+51 963 326 971";
 export const COMPANY_ADDRESS = "24 de Octubre Mz 53 Lt 03, casa, 18601 Ilo - Ilo, Moquegua - Perú";

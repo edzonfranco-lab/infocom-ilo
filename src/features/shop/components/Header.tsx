@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Search, ShoppingCart, User, Menu, X, ChevronDown, MessageCircle, Sun, Moon } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Search, ShoppingCart, User, Menu, X, ChevronDown, ChevronRight, MessageCircle, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,17 +12,32 @@ import logoDark from "@/assets/logo-dark-theme.png";
 import logoLight from "@/assets/logo-light-theme.png";
 import CartDrawer from "@/features/cart/components/CartDrawer";
 import { useCategories } from "@/features/shop/hooks/useCategories";
+import { MOCK_CATEGORIES } from "@/lib/constants";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
+  const [megaMenuOpen, setMegaMenuOpen] = useState(false);
+  const [activeCat, setActiveCat] = useState<string | null>(null);
   const { count } = useCart();
   const { theme, toggleTheme } = useTheme();
   const { user, isAdmin } = useAuth();
   const { categories } = useCategories();
+  const navigate = useNavigate();
 
   const logo = theme === "dark" ? logoDark : logoLight;
+
+  const cats = categories.length > 0 ? categories : MOCK_CATEGORIES.map(c => ({ ...c, children: c.subcategories })) as any[];
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/catalogo?q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      navigate("/catalogo");
+    }
+  };
 
   return (
     <>
@@ -37,7 +52,7 @@ const Header = () => {
               </a>
               <span className="hidden sm:inline">📞 {COMPANY_PHONE}</span>
               {user && isAdmin && (
-                <Link to="/admin" className="hover:underline font-bold">🛠 Admin</Link>
+                <Link to="/admin" className="hover:underline font-bold">★ Admin</Link>
               )}
             </div>
           </div>
@@ -51,14 +66,12 @@ const Header = () => {
             </Link>
 
             {/* Search bar */}
-            <div className="hidden md:flex flex-1 max-w-xl relative">
+            <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xl relative">
               <Input placeholder="Buscar productos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-10 bg-secondary/50 border-primary/20 focus:border-primary/50" />
-              <Link to={searchQuery ? `/catalogo?q=${encodeURIComponent(searchQuery)}` : "/catalogo"}>
-                <Button size="icon" variant="ghost" className="absolute right-0 top-0 h-full text-primary">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
+              <Button type="submit" size="icon" variant="ghost" className="absolute right-0 top-0 h-full text-primary">
+                <Search className="h-4 w-4" />
+              </Button>
+            </form>
 
             {/* Actions */}
             <div className="flex items-center gap-1">
@@ -85,32 +98,107 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation with Mega Menu */}
         <nav className="bg-card/80 backdrop-blur-xl border-b border-primary/10 hidden md:block">
           <div className="container flex items-center gap-1 py-0">
             <Link to="/" className="px-4 py-3 text-sm font-medium hover:text-primary transition-colors">Inicio</Link>
-            <div className="relative group">
+            
+            {/* Mega Menu Trigger */}
+            <div 
+              className="relative"
+              onMouseEnter={() => setMegaMenuOpen(true)}
+              onMouseLeave={() => { setMegaMenuOpen(false); setActiveCat(null); }}
+            >
               <button className="flex items-center gap-1 px-4 py-3 text-sm font-medium hover:text-primary transition-colors">
-                Catálogo <ChevronDown className="h-3 w-3" />
+                Catálogo <ChevronDown className={`h-3 w-3 transition-transform ${megaMenuOpen ? 'rotate-180' : ''}`} />
               </button>
-              <div className="absolute top-full left-0 bg-card/95 backdrop-blur-xl border border-primary/20 rounded-lg shadow-lg shadow-primary/10 p-4 min-w-[280px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <Link to="/catalogo" className="block px-3 py-2 font-medium text-sm hover:bg-primary/10 hover:text-primary rounded transition-colors mb-2">
-                  Ver Todo
-                </Link>
-                {categories.map((cat) => (
-                  <div key={cat.id} className="mb-1 last:mb-0">
-                    <Link to={`/catalogo?cat=${cat.slug}`} className="block px-3 py-2 font-medium text-sm hover:bg-primary/10 hover:text-primary rounded transition-colors">
-                      {cat.name}
-                    </Link>
-                    {cat.children?.map((sub) => (
-                      <Link key={sub.id} to={`/catalogo?cat=${sub.slug}`} className="block px-6 py-1.5 text-xs text-muted-foreground hover:text-primary hover:bg-primary/5 rounded transition-colors">
-                        {sub.name}
+
+              {/* Mega Menu Dropdown */}
+              {megaMenuOpen && (
+                <div className="absolute top-full left-0 bg-card/98 backdrop-blur-2xl border border-primary/20 rounded-xl shadow-2xl shadow-primary/10 z-50 min-w-[700px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex">
+                    {/* Categories sidebar */}
+                    <div className="w-[240px] border-r border-primary/10 bg-secondary/30 py-2">
+                      <Link 
+                        to="/catalogo" 
+                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors"
+                        onClick={() => setMegaMenuOpen(false)}
+                      >
+                        🛒 Ver Todo el Catálogo
                       </Link>
-                    ))}
+                      <div className="h-px bg-primary/10 my-1" />
+                      {cats.map((cat) => (
+                        <div
+                          key={cat.id}
+                          className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-all ${
+                            activeCat === cat.id 
+                              ? 'bg-primary/10 text-primary font-medium border-l-2 border-primary' 
+                              : 'hover:bg-secondary/50 text-foreground'
+                          }`}
+                          onMouseEnter={() => setActiveCat(cat.id)}
+                          onClick={() => { navigate(`/catalogo?cat=${cat.slug}`); setMegaMenuOpen(false); }}
+                        >
+                          <span>{cat.name}</span>
+                          {cat.children?.length > 0 && <ChevronRight className="h-3 w-3 opacity-50" />}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Subcategories panel */}
+                    <div className="flex-1 p-5 min-h-[300px]">
+                      {activeCat ? (
+                        (() => {
+                          const cat = cats.find(c => c.id === activeCat);
+                          if (!cat) return null;
+                          return (
+                            <div>
+                              <h3 className="font-display font-bold text-lg text-primary mb-4 flex items-center gap-2">
+                                {cat.name}
+                              </h3>
+                              {cat.children?.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                  {cat.children.map((sub: any) => (
+                                    <Link
+                                      key={sub.id}
+                                      to={`/catalogo?cat=${sub.slug}`}
+                                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm hover:bg-primary/10 hover:text-primary transition-all group"
+                                      onClick={() => setMegaMenuOpen(false)}
+                                    >
+                                      <div className="h-2 w-2 rounded-full bg-primary/30 group-hover:bg-primary transition-colors" />
+                                      {sub.name}
+                                    </Link>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  Explora todos los productos de {cat.name}
+                                </p>
+                              )}
+                              <Link
+                                to={`/catalogo?cat=${cat.slug}`}
+                                className="inline-flex items-center gap-1 mt-4 text-xs font-medium text-primary hover:underline"
+                                onClick={() => setMegaMenuOpen(false)}
+                              >
+                                Ver todos los productos →
+                              </Link>
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                          <div className="text-center">
+                            <p className="text-lg mb-1">🖥️</p>
+                            <p>Pasa el cursor sobre una categoría</p>
+                            <p className="text-xs mt-1">para ver subcategorías</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
+
             <Link to="/contacto" className="px-4 py-3 text-sm font-medium hover:text-primary transition-colors">Contacto</Link>
             <Link to="/nosotros" className="px-4 py-3 text-sm font-medium hover:text-primary transition-colors">Sobre Nosotros</Link>
           </div>
@@ -118,17 +206,26 @@ const Header = () => {
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-card/95 backdrop-blur-xl border-b border-primary/20 p-4 space-y-2">
-            <div className="relative mb-3">
-              <Input placeholder="Buscar productos..." className="pr-10 bg-secondary/50 border-primary/20" />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
+          <div className="md:hidden bg-card/95 backdrop-blur-xl border-b border-primary/20 p-4 space-y-2 animate-in slide-in-from-top-2">
+            <form onSubmit={handleSearch} className="relative mb-3">
+              <Input placeholder="Buscar productos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pr-10 bg-secondary/50 border-primary/20" />
+              <Button type="submit" size="icon" variant="ghost" className="absolute right-0 top-0 h-full">
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </form>
             <Link to="/" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>Inicio</Link>
-            <Link to="/catalogo" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>Catálogo</Link>
-            {categories.map((cat) => (
-              <Link key={cat.id} to={`/catalogo?cat=${cat.slug}`} className="block py-2 pl-4 text-sm hover:text-primary" onClick={() => setIsMenuOpen(false)}>
-                {cat.name}
-              </Link>
+            <Link to="/catalogo" className="block py-2 text-sm font-bold text-primary" onClick={() => setIsMenuOpen(false)}>🛒 Ver Todo el Catálogo</Link>
+            {cats.map((cat) => (
+              <div key={cat.id}>
+                <Link to={`/catalogo?cat=${cat.slug}`} className="block py-2 pl-4 text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>
+                  {cat.name}
+                </Link>
+                {cat.children?.map((sub: any) => (
+                  <Link key={sub.id} to={`/catalogo?cat=${sub.slug}`} className="block py-1.5 pl-8 text-xs text-muted-foreground hover:text-primary" onClick={() => setIsMenuOpen(false)}>
+                    {sub.name}
+                  </Link>
+                ))}
+              </div>
             ))}
             <Link to="/contacto" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>Contacto</Link>
             <Link to="/nosotros" className="block py-2 text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>Sobre Nosotros</Link>
