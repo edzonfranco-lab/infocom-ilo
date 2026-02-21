@@ -115,7 +115,7 @@ const Header = () => {
 
               {/* Mega Menu Dropdown */}
               {megaMenuOpen && (
-                <div className="absolute top-full left-0 bg-card/98 backdrop-blur-2xl border border-primary/20 rounded-xl shadow-2xl shadow-primary/10 z-50 min-w-[700px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 bg-card border border-primary/20 rounded-xl shadow-2xl shadow-primary/10 z-50 min-w-[700px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="flex">
                     {/* Categories sidebar */}
                     <div className="w-[240px] border-r border-primary/10 bg-secondary/30 py-2">
