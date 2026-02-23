@@ -99,7 +99,7 @@ const Header = () => {
         </div>
 
         {/* Navigation with Mega Menu */}
-        <nav className="bg-card/80 backdrop-blur-xl border-b border-primary/10 hidden md:block">
+        <nav className="bg-card/90 backdrop-blur-md border-b border-primary/10 hidden md:block">
           <div className="container flex items-center gap-1 py-0">
             <Link to="/" className="px-4 py-3 text-sm font-medium hover:text-primary transition-colors">Inicio</Link>
             
@@ -115,7 +115,7 @@ const Header = () => {
 
               {/* Mega Menu Dropdown */}
               {megaMenuOpen && (
-                <div className="absolute top-full left-0 bg-card border border-primary/20 rounded-xl shadow-2xl shadow-primary/10 z-50 min-w-[700px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 bg-card/95 backdrop-blur-md border border-primary/20 rounded-xl shadow-2xl shadow-primary/10 z-50 min-w-[700px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="flex">
                     {/* Categories sidebar */}
                     <div className="w-[240px] border-r border-primary/10 bg-secondary/30 py-2">

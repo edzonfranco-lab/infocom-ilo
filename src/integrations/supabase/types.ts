@@ -568,6 +568,84 @@ export type Database = {
         }
         Relationships: []
       }
+      service_orders: {
+        Row: {
+          accessories: string | null
+          assigned_technician_id: string | null
+          completed_at: string | null
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          delivered_at: string | null
+          device_brand: string | null
+          device_model: string | null
+          device_type: string
+          diagnosis: string | null
+          estimated_cost: number | null
+          final_cost: number | null
+          id: string
+          notes: string | null
+          order_number: number
+          priority: string
+          received_at: string
+          received_by_id: string | null
+          reported_issue: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accessories?: string | null
+          assigned_technician_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          delivered_at?: string | null
+          device_brand?: string | null
+          device_model?: string | null
+          device_type: string
+          diagnosis?: string | null
+          estimated_cost?: number | null
+          final_cost?: number | null
+          id?: string
+          notes?: string | null
+          order_number?: number
+          priority?: string
+          received_at?: string
+          received_by_id?: string | null
+          reported_issue: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accessories?: string | null
+          assigned_technician_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          delivered_at?: string | null
+          device_brand?: string | null
+          device_model?: string | null
+          device_type?: string
+          diagnosis?: string | null
+          estimated_cost?: number | null
+          final_cost?: number | null
+          id?: string
+          notes?: string | null
+          order_number?: number
+          priority?: string
+          received_at?: string
+          received_by_id?: string | null
+          reported_issue?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_settings: {
         Row: {
           id: string
@@ -583,6 +661,30 @@ export type Database = {
         }
         Update: {
           id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      theme_settings: {
+        Row: {
+          id: string
+          is_active: boolean | null
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean | null
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          id?: string
+          is_active?: boolean | null
           key?: string
           updated_at?: string
           value?: Json
