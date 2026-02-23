@@ -1,11 +1,12 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings, ArrowLeft, Menu, X, Building2 } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings, ArrowLeft, Menu, X, Building2, ClipboardList, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import logoDark from "@/assets/logo-dark-theme.png";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
+  { to: "/admin/recepcion", icon: ClipboardList, label: "Recepción Técnica" },
   { to: "/admin/productos", icon: Package, label: "Productos" },
   { to: "/admin/categorias", icon: FolderTree, label: "Categorías" },
   { to: "/admin/marcas", icon: Tags, label: "Marcas" },
@@ -13,6 +14,7 @@ const navItems = [
   { to: "/admin/banners", icon: Image, label: "Banners" },
   { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago" },
   { to: "/admin/empresa", icon: Building2, label: "Empresa" },
+  { to: "/admin/roles", icon: Shield, label: "Roles" },
   { to: "/admin/configuracion", icon: Settings, label: "Configuración" },
 ];
 

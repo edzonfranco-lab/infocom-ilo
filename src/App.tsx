@@ -3,7 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/features/theme/ThemeProvider";
+import { ThemeProvider, useTheme } from "@/features/theme/ThemeProvider";
+import SeasonalParticles from "@/features/theme/SeasonalParticles";
 import ProtectedRoute from "@/features/auth/components/ProtectedRoute";
 
 // Shop pages
@@ -34,10 +35,23 @@ import BannersPage from "@/features/admin/pages/BannersPage";
 import SettingsPage from "@/features/admin/pages/SettingsPage";
 import PaymentAccountsPage from "@/features/admin/pages/PaymentAccountsPage";
 import CompanyPage from "@/features/admin/pages/CompanyPage";
+import ReceptionPage from "@/features/admin/pages/ReceptionPage";
+import RolesPage from "@/features/admin/pages/RolesPage";
 
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const SeasonalWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { seasonalTheme } = useTheme();
+  const particles = seasonalTheme?.key !== "default" && seasonalTheme?.value?.particles;
+  return (
+    <>
+      {particles && <SeasonalParticles type={particles} />}
+      {children}
+    </>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -45,39 +59,43 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Shop */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/catalogo" element={<CatalogPage />} />
-            <Route path="/producto/:slug" element={<ProductDetailPage />} />
-            <Route path="/nosotros" element={<AboutPage />} />
-            <Route path="/contacto" element={<ContactPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/cuenta" element={<AccountPage />} />
+        <SeasonalWrapper>
+          <BrowserRouter>
+            <Routes>
+              {/* Shop */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/catalogo" element={<CatalogPage />} />
+              <Route path="/producto/:slug" element={<ProductDetailPage />} />
+              <Route path="/nosotros" element={<AboutPage />} />
+              <Route path="/contacto" element={<ContactPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/cuenta" element={<AccountPage />} />
 
-            {/* Auth */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/registro" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
+              {/* Auth */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/registro" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-            {/* Admin */}
-            <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
-              <Route index element={<DashboardPage />} />
-              <Route path="productos" element={<ProductsPage />} />
-              <Route path="categorias" element={<CategoriesPage />} />
-              <Route path="marcas" element={<BrandsPage />} />
-              <Route path="pedidos" element={<OrdersPage />} />
-              <Route path="banners" element={<BannersPage />} />
-              <Route path="empresa" element={<CompanyPage />} />
-              <Route path="configuracion" element={<SettingsPage />} />
-              <Route path="pagos" element={<PaymentAccountsPage />} />
-            </Route>
+              {/* Admin */}
+              <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
+                <Route index element={<DashboardPage />} />
+                <Route path="recepcion" element={<ReceptionPage />} />
+                <Route path="productos" element={<ProductsPage />} />
+                <Route path="categorias" element={<CategoriesPage />} />
+                <Route path="marcas" element={<BrandsPage />} />
+                <Route path="pedidos" element={<OrdersPage />} />
+                <Route path="banners" element={<BannersPage />} />
+                <Route path="empresa" element={<CompanyPage />} />
+                <Route path="roles" element={<RolesPage />} />
+                <Route path="configuracion" element={<SettingsPage />} />
+                <Route path="pagos" element={<PaymentAccountsPage />} />
+              </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </SeasonalWrapper>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
