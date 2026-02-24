@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_sales: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          date: string
+          id: string
+          notes: string | null
+          product_description: string
+          quantity: number
+          seller: string
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          product_description: string
+          quantity?: number
+          seller: string
+          total?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          product_description?: string
+          quantity?: number
+          seller?: string
+          total?: number
+          unit_price?: number
+        }
+        Relationships: []
+      }
+      accounting_services: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          date: string
+          description: string
+          device_type: string | null
+          diagnosis: string | null
+          id: string
+          notes: string | null
+          price: number
+          responsible: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          description: string
+          device_type?: string | null
+          diagnosis?: string | null
+          id?: string
+          notes?: string | null
+          price?: number
+          responsible: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          description?: string
+          device_type?: string | null
+          diagnosis?: string | null
+          id?: string
+          notes?: string | null
+          price?: number
+          responsible?: string
+        }
+        Relationships: []
+      }
+      attendance_records: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          marked_by: string | null
+          notes: string | null
+          staff_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          staff_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          marked_by?: string | null
+          notes?: string | null
+          staff_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       banners: {
         Row: {
           created_at: string
@@ -643,6 +759,48 @@ export type Database = {
           reported_issue?: string
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      staff_members: {
+        Row: {
+          created_at: string | null
+          document_number: string | null
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          position: string
+          start_date: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_number?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          position?: string
+          start_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_number?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          position?: string
+          start_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

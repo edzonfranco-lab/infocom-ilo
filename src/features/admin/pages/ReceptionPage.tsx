@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ClipboardList, Plus, Search, Clock, CheckCircle, Wrench, Package, AlertTriangle, Phone, User, Monitor } from "lucide-react";
+import PrintReceipt from "@/features/admin/components/PrintReceipt";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "Pendiente", color: "bg-warning/20 text-warning border-warning/30", icon: Clock },
@@ -265,8 +266,10 @@ const ReceptionPage = () => {
                 <div><span className="text-muted-foreground">Notas:</span><p>{selectedOrder.notes || "—"}</p></div>
                 <div><span className="text-muted-foreground">Recibido:</span><p>{new Date(selectedOrder.received_at).toLocaleString("es-PE")}</p></div>
 
-                {/* Status actions */}
-                <div className="pt-2 border-t border-border space-y-2">
+                {/* Print + Status actions */}
+                <div className="pt-2 border-t border-border space-y-3">
+                  <PrintReceipt order={selectedOrder} />
+                  <div>
                   <Label>Cambiar Estado</Label>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(STATUS_MAP).map(([k, v]) => (
@@ -275,6 +278,7 @@ const ReceptionPage = () => {
                         {v.label}
                       </Button>
                     ))}
+                  </div>
                   </div>
                 </div>
               </div>

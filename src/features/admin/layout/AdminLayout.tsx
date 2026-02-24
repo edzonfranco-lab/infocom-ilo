@@ -1,31 +1,42 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings, ArrowLeft, Menu, X, Building2, ClipboardList, Shield } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings, ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import logoDark from "@/assets/logo-dark-theme.png";
 
-const navItems = [
-  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true },
-  { to: "/admin/recepcion", icon: ClipboardList, label: "Recepción Técnica" },
-  { to: "/admin/productos", icon: Package, label: "Productos" },
-  { to: "/admin/categorias", icon: FolderTree, label: "Categorías" },
-  { to: "/admin/marcas", icon: Tags, label: "Marcas" },
-  { to: "/admin/pedidos", icon: ShoppingBag, label: "Pedidos" },
-  { to: "/admin/banners", icon: Image, label: "Banners" },
-  { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago" },
-  { to: "/admin/empresa", icon: Building2, label: "Empresa" },
-  { to: "/admin/roles", icon: Shield, label: "Roles" },
-  { to: "/admin/configuracion", icon: Settings, label: "Configuración" },
+// Role-based nav: owner (admin) sees everything, moderator sees limited
+const allNavItems = [
+  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true, roles: ["admin", "moderator"] },
+  { to: "/admin/recepcion", icon: ClipboardList, label: "Recepción Técnica", roles: ["admin", "moderator"] },
+  { to: "/admin/contabilidad", icon: DollarSign, label: "Contabilidad", roles: ["admin"] },
+  { to: "/admin/productos", icon: Package, label: "Productos", roles: ["admin", "moderator"] },
+  { to: "/admin/categorias", icon: FolderTree, label: "Categorías", roles: ["admin"] },
+  { to: "/admin/marcas", icon: Tags, label: "Marcas", roles: ["admin"] },
+  { to: "/admin/pedidos", icon: ShoppingBag, label: "Pedidos", roles: ["admin", "moderator"] },
+  { to: "/admin/banners", icon: Image, label: "Banners", roles: ["admin"] },
+  { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago", roles: ["admin"] },
+  { to: "/admin/empresa", icon: Building2, label: "Empresa", roles: ["admin"] },
+  { to: "/admin/personal", icon: Users, label: "Personal", roles: ["admin"] },
+  { to: "/admin/asistencias", icon: CalendarDays, label: "Asistencias", roles: ["admin"] },
+  { to: "/admin/roles", icon: Shield, label: "Roles", roles: ["admin"] },
+  { to: "/admin/configuracion", icon: Settings, label: "Configuración", roles: ["admin"] },
 ];
 
 const AdminLayout = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { roles } = useAuth();
 
   const isActive = (path: string, end?: boolean) => {
     if (end) return location.pathname === path;
     return location.pathname.startsWith(path);
   };
+
+  // Filter nav items based on user roles
+  const navItems = allNavItems.filter(item =>
+    item.roles.some(r => roles.includes(r as any))
+  );
 
   const sidebar = (
     <div className="h-full flex flex-col bg-card border-r border-primary/10">
@@ -66,20 +77,15 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop sidebar */}
       <aside className="hidden lg:block w-64 shrink-0 sticky top-0 h-screen">
         {sidebar}
       </aside>
-
-      {/* Mobile sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <div className="absolute left-0 top-0 bottom-0 w-64 z-50">{sidebar}</div>
         </div>
       )}
-
-      {/* Main content */}
       <div className="flex-1 min-w-0">
         <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center gap-3 lg:hidden">
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
