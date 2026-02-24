@@ -37,6 +37,9 @@ import PaymentAccountsPage from "@/features/admin/pages/PaymentAccountsPage";
 import CompanyPage from "@/features/admin/pages/CompanyPage";
 import ReceptionPage from "@/features/admin/pages/ReceptionPage";
 import RolesPage from "@/features/admin/pages/RolesPage";
+import StaffPage from "@/features/admin/pages/StaffPage";
+import AttendancePage from "@/features/admin/pages/AttendancePage";
+import AccountingPage from "@/features/admin/pages/AccountingPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -88,6 +91,9 @@ const App = () => (
                 <Route path="banners" element={<BannersPage />} />
                 <Route path="empresa" element={<CompanyPage />} />
                 <Route path="roles" element={<RolesPage />} />
+                <Route path="personal" element={<StaffPage />} />
+                <Route path="asistencias" element={<AttendancePage />} />
+                <Route path="contabilidad" element={<AccountingPage />} />
                 <Route path="configuracion" element={<SettingsPage />} />
                 <Route path="pagos" element={<PaymentAccountsPage />} />
               </Route>
