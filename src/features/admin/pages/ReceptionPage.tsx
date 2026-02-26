@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ClipboardList, Plus, Search, Clock, CheckCircle, Wrench, Package, AlertTriangle, Phone, User, Monitor } from "lucide-react";
+import { ClipboardList, Plus, Search, Clock, CheckCircle, Wrench, Package, AlertTriangle, Phone, User, Monitor, Pencil } from "lucide-react";
 import PrintReceipt from "@/features/admin/components/PrintReceipt";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "Pendiente", color: "bg-warning/20 text-warning border-warning/30", icon: Clock },
@@ -34,16 +34,29 @@ const emptyForm = {
   customer_name: "", customer_phone: "", customer_email: "",
   device_type: "", device_brand: "", device_model: "",
   accessories: "", reported_issue: "", priority: "normal",
-  estimated_cost: "", notes: "",
+  estimated_cost: "", notes: "", diagnosis: "", final_cost: "",
 };
 
 const ReceptionPage = () => {
   const queryClient = useQueryClient();
+  const { user, isAdmin } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Fetch staff to show received_by name
+  const { data: staffMap = {} } = useQuery({
+    queryKey: ["staff_by_user"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("user_id, full_name");
+      const m: Record<string, string> = {};
+      (data || []).forEach((p: any) => { if (p.user_id && p.full_name) m[p.user_id] = p.full_name; });
+      return m;
+    },
+  });
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["service_orders"],
@@ -57,9 +70,9 @@ const ReceptionPage = () => {
     },
   });
 
-  const createMutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async (formData: typeof emptyForm) => {
-      const { error } = await supabase.from("service_orders").insert({
+      const payload: any = {
         customer_name: formData.customer_name,
         customer_phone: formData.customer_phone || null,
         customer_email: formData.customer_email || null,
@@ -70,22 +83,32 @@ const ReceptionPage = () => {
         reported_issue: formData.reported_issue,
         priority: formData.priority,
         estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
+        final_cost: formData.final_cost ? parseFloat(formData.final_cost) : null,
+        diagnosis: formData.diagnosis || null,
         notes: formData.notes || null,
-      });
-      if (error) throw error;
+      };
+      if (editingId) {
+        const { error } = await supabase.from("service_orders").update(payload).eq("id", editingId);
+        if (error) throw error;
+      } else {
+        payload.received_by_id = user?.id || null;
+        const { error } = await supabase.from("service_orders").insert(payload);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service_orders"] });
-      toast.success("Orden de servicio registrada");
+      toast.success(editingId ? "Orden actualizada" : "Orden registrada");
       setForm(emptyForm);
+      setEditingId(null);
       setDialogOpen(false);
     },
-    onError: () => toast.error("Error al registrar la orden"),
+    onError: () => toast.error("Error al guardar"),
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status, ...extra }: { id: string; status: string; [k: string]: any }) => {
-      const updates: any = { status, ...extra };
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const updates: any = { status };
       if (status === "completed") updates.completed_at = new Date().toISOString();
       if (status === "delivered") updates.delivered_at = new Date().toISOString();
       const { error } = await supabase.from("service_orders").update(updates).eq("id", id);
@@ -97,8 +120,41 @@ const ReceptionPage = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("service_orders").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["service_orders"] });
+      toast.success("Orden eliminada");
+      setSelectedOrder(null);
+    },
+  });
+
+  const openEdit = (order: any) => {
+    setForm({
+      customer_name: order.customer_name || "",
+      customer_phone: order.customer_phone || "",
+      customer_email: order.customer_email || "",
+      device_type: order.device_type || "",
+      device_brand: order.device_brand || "",
+      device_model: order.device_model || "",
+      accessories: order.accessories || "",
+      reported_issue: order.reported_issue || "",
+      priority: order.priority || "normal",
+      estimated_cost: order.estimated_cost ? String(order.estimated_cost) : "",
+      final_cost: order.final_cost ? String(order.final_cost) : "",
+      diagnosis: order.diagnosis || "",
+      notes: order.notes || "",
+    });
+    setEditingId(order.id);
+    setDialogOpen(true);
+    setSelectedOrder(null);
+  };
+
   const filtered = orders.filter((o: any) => {
-    const matchSearch = !search || 
+    const matchSearch = !search ||
       o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
       o.device_type?.toLowerCase().includes(search.toLowerCase()) ||
       o.device_brand?.toLowerCase().includes(search.toLowerCase()) ||
@@ -117,16 +173,15 @@ const ReceptionPage = () => {
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <ClipboardList className="h-6 w-6 text-primary" /> Recepción Técnica
         </h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditingId(null); setForm(emptyForm); } }}>
           <DialogTrigger asChild>
             <Button className="gap-2"><Plus className="h-4 w-4" /> Nueva Orden</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary" /> Registrar Equipo</DialogTitle>
+              <DialogTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary" /> {editingId ? "Editar Orden" : "Registrar Equipo"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-6">
-              {/* Customer info */}
+            <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }} className="space-y-6">
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><User className="h-4 w-4" /> Datos del Cliente</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -136,7 +191,6 @@ const ReceptionPage = () => {
                 </div>
               </div>
 
-              {/* Device info */}
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><Monitor className="h-4 w-4" /> Datos del Equipo</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -144,17 +198,22 @@ const ReceptionPage = () => {
                   <div><Label>Marca</Label><Input value={form.device_brand} onChange={e => setForm({...form, device_brand: e.target.value})} placeholder="HP, Lenovo, Epson..." /></div>
                   <div><Label>Modelo</Label><Input value={form.device_model} onChange={e => setForm({...form, device_model: e.target.value})} placeholder="Modelo del equipo" /></div>
                 </div>
-                <div><Label>Accesorios / Acompañamiento</Label><Textarea value={form.accessories} onChange={e => setForm({...form, accessories: e.target.value})} placeholder="Cargador, mouse, bolsa, cable HDMI..." rows={2} /></div>
+                <div><Label>Accesorios</Label><Textarea value={form.accessories} onChange={e => setForm({...form, accessories: e.target.value})} placeholder="Cargador, mouse, bolsa..." rows={2} /></div>
               </div>
 
-              {/* Issue */}
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Falla Reportada</h3>
-                <Textarea required value={form.reported_issue} onChange={e => setForm({...form, reported_issue: e.target.value})} placeholder="Describir la falla que reporta el cliente..." rows={3} />
+                <Textarea required value={form.reported_issue} onChange={e => setForm({...form, reported_issue: e.target.value})} placeholder="Describir la falla..." rows={3} />
               </div>
 
-              {/* Extra */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {editingId && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><Wrench className="h-4 w-4" /> Diagnóstico Técnico</h3>
+                  <Textarea value={form.diagnosis} onChange={e => setForm({...form, diagnosis: e.target.value})} placeholder="Diagnóstico del técnico..." rows={2} />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <Label>Prioridad</Label>
                   <Select value={form.priority} onValueChange={v => setForm({...form, priority: v})}>
@@ -168,10 +227,11 @@ const ReceptionPage = () => {
                   </Select>
                 </div>
                 <div><Label>Costo Estimado (S/.)</Label><Input type="number" step="0.01" value={form.estimated_cost} onChange={e => setForm({...form, estimated_cost: e.target.value})} placeholder="0.00" /></div>
+                <div><Label>Costo Final (S/.)</Label><Input type="number" step="0.01" value={form.final_cost} onChange={e => setForm({...form, final_cost: e.target.value})} placeholder="0.00" /></div>
               </div>
               <div><Label>Notas adicionales</Label><Textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Observaciones internas..." rows={2} /></div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                {createMutation.isPending ? "Registrando..." : "Registrar Orden de Servicio"}
+              <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? "Guardando..." : editingId ? "Guardar Cambios" : "Registrar Orden de Servicio"}
               </Button>
             </form>
           </DialogContent>
@@ -212,6 +272,7 @@ const ReceptionPage = () => {
             const st = STATUS_MAP[order.status] || STATUS_MAP.pending;
             const pr = PRIORITY_MAP[order.priority] || PRIORITY_MAP.normal;
             const StIcon = st.icon;
+            const receivedBy = order.received_by_id ? (staffMap[order.received_by_id] || "Usuario") : "—";
             return (
               <Card key={order.id} className="border-primary/10 hover:border-primary/30 transition-colors cursor-pointer" onClick={() => setSelectedOrder(order)}>
                 <CardContent className="p-4">
@@ -225,11 +286,12 @@ const ReceptionPage = () => {
                       <p className="font-semibold">{order.customer_name}</p>
                       <p className="text-sm text-muted-foreground">{order.device_type} {order.device_brand && `• ${order.device_brand}`} {order.device_model && `• ${order.device_model}`}</p>
                       <p className="text-sm line-clamp-1">{order.reported_issue}</p>
+                      <p className="text-xs text-muted-foreground">Recepcionó: <span className="text-foreground font-medium">{receivedBy}</span></p>
                     </div>
                     <div className="text-right text-xs text-muted-foreground space-y-1 shrink-0">
                       <p>{new Date(order.received_at).toLocaleDateString("es-PE")}</p>
                       {order.estimated_cost && <p className="font-semibold text-foreground">S/. {Number(order.estimated_cost).toFixed(2)}</p>}
-                      {order.customer_phone && <a href={`tel:${order.customer_phone}`} className="flex items-center gap-1 text-primary hover:underline justify-end"><Phone className="h-3 w-3" />{order.customer_phone}</a>}
+                      {order.customer_phone && <a href={`tel:${order.customer_phone}`} className="flex items-center gap-1 text-primary hover:underline justify-end" onClick={e => e.stopPropagation()}><Phone className="h-3 w-3" />{order.customer_phone}</a>}
                     </div>
                   </div>
                 </CardContent>
@@ -242,48 +304,61 @@ const ReceptionPage = () => {
       {/* Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          {selectedOrder && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <span className="text-primary">#{selectedOrder.order_number}</span> — {selectedOrder.customer_name}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div><span className="text-muted-foreground">Teléfono:</span><p>{selectedOrder.customer_phone || "—"}</p></div>
-                  <div><span className="text-muted-foreground">Email:</span><p>{selectedOrder.customer_email || "—"}</p></div>
-                  <div><span className="text-muted-foreground">Equipo:</span><p>{selectedOrder.device_type}</p></div>
-                  <div><span className="text-muted-foreground">Marca / Modelo:</span><p>{selectedOrder.device_brand || "—"} / {selectedOrder.device_model || "—"}</p></div>
-                </div>
-                <div><span className="text-muted-foreground">Accesorios:</span><p>{selectedOrder.accessories || "Ninguno"}</p></div>
-                <div><span className="text-muted-foreground">Falla Reportada:</span><p className="font-medium">{selectedOrder.reported_issue}</p></div>
-                <div><span className="text-muted-foreground">Diagnóstico:</span><p>{selectedOrder.diagnosis || "Pendiente"}</p></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><span className="text-muted-foreground">Costo Estimado:</span><p>{selectedOrder.estimated_cost ? `S/. ${Number(selectedOrder.estimated_cost).toFixed(2)}` : "—"}</p></div>
-                  <div><span className="text-muted-foreground">Costo Final:</span><p>{selectedOrder.final_cost ? `S/. ${Number(selectedOrder.final_cost).toFixed(2)}` : "—"}</p></div>
-                </div>
-                <div><span className="text-muted-foreground">Notas:</span><p>{selectedOrder.notes || "—"}</p></div>
-                <div><span className="text-muted-foreground">Recibido:</span><p>{new Date(selectedOrder.received_at).toLocaleString("es-PE")}</p></div>
+          {selectedOrder && (() => {
+            const receivedBy = selectedOrder.received_by_id ? (staffMap[selectedOrder.received_by_id] || "Usuario") : "—";
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <span className="text-primary">#{selectedOrder.order_number}</span> — {selectedOrder.customer_name}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><span className="text-muted-foreground">Teléfono:</span><p>{selectedOrder.customer_phone || "—"}</p></div>
+                    <div><span className="text-muted-foreground">Email:</span><p>{selectedOrder.customer_email || "—"}</p></div>
+                    <div><span className="text-muted-foreground">Equipo:</span><p>{selectedOrder.device_type}</p></div>
+                    <div><span className="text-muted-foreground">Marca / Modelo:</span><p>{selectedOrder.device_brand || "—"} / {selectedOrder.device_model || "—"}</p></div>
+                  </div>
+                  <div><span className="text-muted-foreground">Accesorios:</span><p>{selectedOrder.accessories || "Ninguno"}</p></div>
+                  <div><span className="text-muted-foreground">Falla Reportada:</span><p className="font-medium">{selectedOrder.reported_issue}</p></div>
+                  <div><span className="text-muted-foreground">Diagnóstico:</span><p>{selectedOrder.diagnosis || "Pendiente"}</p></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><span className="text-muted-foreground">Costo Estimado:</span><p>{selectedOrder.estimated_cost ? `S/. ${Number(selectedOrder.estimated_cost).toFixed(2)}` : "—"}</p></div>
+                    <div><span className="text-muted-foreground">Costo Final:</span><p>{selectedOrder.final_cost ? `S/. ${Number(selectedOrder.final_cost).toFixed(2)}` : "—"}</p></div>
+                  </div>
+                  <div><span className="text-muted-foreground">Recepcionó:</span><p className="font-medium">{receivedBy}</p></div>
+                  <div><span className="text-muted-foreground">Notas:</span><p>{selectedOrder.notes || "—"}</p></div>
+                  <div><span className="text-muted-foreground">Recibido:</span><p>{new Date(selectedOrder.received_at).toLocaleString("es-PE")}</p></div>
 
-                {/* Print + Status actions */}
-                <div className="pt-2 border-t border-border space-y-3">
-                  <PrintReceipt order={selectedOrder} />
-                  <div>
-                  <Label>Cambiar Estado</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(STATUS_MAP).map(([k, v]) => (
-                      <Button key={k} size="sm" variant={selectedOrder.status === k ? "default" : "outline"} className="text-xs gap-1" disabled={selectedOrder.status === k}
-                        onClick={() => { updateStatusMutation.mutate({ id: selectedOrder.id, status: k }); setSelectedOrder({ ...selectedOrder, status: k }); }}>
-                        {v.label}
+                  <div className="pt-2 border-t border-border space-y-3">
+                    <div className="flex gap-2 flex-wrap">
+                      <PrintReceipt order={selectedOrder} />
+                      <Button variant="outline" size="sm" className="gap-2" onClick={() => openEdit(selectedOrder)}>
+                        <Pencil className="h-4 w-4" /> Editar Orden
                       </Button>
-                    ))}
-                  </div>
+                      {isAdmin && (
+                        <Button variant="destructive" size="sm" onClick={() => { if (confirm("¿Eliminar esta orden?")) deleteMutation.mutate(selectedOrder.id); }}>
+                          Eliminar
+                        </Button>
+                      )}
+                    </div>
+                    <div>
+                      <Label>Cambiar Estado</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(STATUS_MAP).map(([k, v]) => (
+                          <Button key={k} size="sm" variant={selectedOrder.status === k ? "default" : "outline"} className="text-xs gap-1" disabled={selectedOrder.status === k}
+                            onClick={() => { updateStatusMutation.mutate({ id: selectedOrder.id, status: k }); setSelectedOrder({ ...selectedOrder, status: k }); }}>
+                            {v.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
