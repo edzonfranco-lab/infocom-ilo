@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Download } from "lucide-react";
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const STATUS_LABELS: Record<string,{ label: string; color: string }> = {
@@ -106,6 +106,23 @@ const AttendancePage = () => {
           <CalendarDays className="h-6 w-6 text-primary" /> Control de Asistencias
         </h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+            const rows = [["Personal", ...days.map(d => String(d)), "F", "T", "J", "A", "%"].join(",")];
+            staff.forEach((s: any) => {
+              const st = getStats(s.id);
+              const dayCols = days.map(d => {
+                const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                return recordMap[s.id]?.[date]?.status || "";
+              });
+              rows.push([`"${s.full_name}"`, ...dayCols, st.f, st.t, st.j, st.a, st.pct + "%"].join(","));
+            });
+            const blob = new Blob(["\uFEFF" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = `asistencias_${MONTHS[month]}_${year}.csv`; a.click();
+            URL.revokeObjectURL(url);
+          }}>
+            <Download className="h-4 w-4" /> CSV
+          </Button>
           <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
           <span className="font-semibold text-sm min-w-[160px] text-center">{MONTHS[month]} {year}</span>
           <Button variant="outline" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
