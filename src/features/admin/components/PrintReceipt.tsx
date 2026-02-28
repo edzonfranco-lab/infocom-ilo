@@ -13,6 +13,12 @@ const PAPER_SIZES: Record<string, { label: string; width: string }> = {
   "80mm": { label: "Ticket 80mm", width: "300px" },
   A4: { label: "A4 (210mm)", width: "700px" },
 };
+.receipt-title{
+  font-size:12px;
+  font-weight:900;
+  margin-bottom:6px;
+  letter-spacing:1px;
+}
 
 interface ReceiptConfig {
   paperSize: string;
@@ -33,7 +39,7 @@ const DEFAULT_CONFIG: ReceiptConfig = {
   showSignatures: true,
   companyName: "INFOCOM",
   companySubtitle: "ESPECIALISTAS EN TECNOLOGIA\nSoporte Tecnico Especializado",
-  footerText: "Gracias por confiar en INFOCOM\nConserve este comprobante para recoger su equipo",
+  footerText: "Gracias por confiar en INFOCOM\nConserve este TICKET para recoger su equipo",
 };
 
 const loadConfig = (): ReceiptConfig => {
@@ -69,7 +75,9 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
 <div class="subtitle">${c.companySubtitle.replace(/\n/g, "<br>")}</div></div>
 <div class="line"></div>
 <div class="center big">#${order.order_number}</div>
-<div class="center subtitle">COMPROBANTE DE RECEPCION</div>
+<div class="center receipt-title">TICKET DE RECEPCION</div>
+<div class="row"><span>Fecha Recepcion:</span><span>${new Date(order.received_at).toLocaleString("es-PE")}</span></div>
+
 <div class="line"></div>
 <h3>DATOS DEL CLIENTE</h3>
 <div class="row"><span>Nombre:</span><span class="bold">${order.customer_name}</span></div>
@@ -86,7 +94,6 @@ ${order.device_model ? `<div class="row"><span>Modelo:</span><span>${order.devic
 <p style="margin:4px 0">${order.reported_issue}</p>
 <div class="line"></div>
 ${c.showEstimatedCost && order.estimated_cost ? `<div class="row"><span>Costo Estimado:</span><span class="bold">S/. ${Number(order.estimated_cost).toFixed(2)}</span></div>` : ""}
-<div class="row"><span>Fecha Recepcion:</span><span>${new Date(order.received_at).toLocaleString("es-PE")}</span></div>
 ${c.showConditions ? `<div class="line"></div><div class="center" style="margin:8px 0"><p style="font-size:${Math.max(fs - 3, 8)}px">CONDICIONES: El equipo sera revisado en un plazo estimado de 24-72 horas. El costo final puede variar segun el diagnostico tecnico. ${c.companyName} no se responsabiliza por datos no respaldados.</p></div>` : ""}
 ${c.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">Firma del Cliente</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">Firma del Tecnico</span></div></div>` : ""}`;
     } else if (type === "sale") {
@@ -109,7 +116,7 @@ ${c.showSignatures ? `<div class="line"></div><div class="row" style="margin-top
 <div class="center"><div class="title">${c.companyName}</div>
 <div class="subtitle">${c.companySubtitle.replace(/\n/g, "<br>")}</div></div>
 <div class="line"></div>
-<div class="center big">COMPROBANTE DE SERVICIO</div>
+<div class="center big">TICKET DE SERVICIO</div>
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
 <div class="row"><span>Responsable:</span><span class="bold">${order.responsible}</span></div>
@@ -122,7 +129,7 @@ ${order.diagnosis ? `<div class="row"><span>Diagnostico:</span><span>${order.dia
     }
 
     const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Comprobante</title>
+<html><head><meta charset="utf-8"><title>TICKET</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Courier New',monospace;font-size:${fs}px;font-weight:600;padding:8px;max-width:${sz.width};margin:0 auto;color:#000}
@@ -164,7 +171,7 @@ ${bodyContent}
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Configurar Comprobante</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Configurar TICKET</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Tamaño de Papel</Label>
