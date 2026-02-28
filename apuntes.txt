@@ -1,0 +1,2 @@
+- reducir medidas del comprobante, de preferencia que sea ajustable y personalizable, que lo que dice de prioridad alta no se muestre en el comprobante, que solo sea para el tecnico, ya que ese comprobante de la recepcion sera para el cliente
+- nota adiciona
