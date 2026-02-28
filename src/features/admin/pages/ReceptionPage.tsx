@@ -12,7 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { ClipboardList, Plus, Search, Clock, CheckCircle, Wrench, Package, AlertTriangle, Phone, User, Monitor, Pencil } from "lucide-react";
 import PrintReceipt from "@/features/admin/components/PrintReceipt";
+import DataImportExport from "@/features/admin/components/DataImportExport";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+
+const RECEPTION_COLUMNS = [
+  { key: "customer_name", label: "Cliente" }, { key: "customer_phone", label: "Telefono" },
+  { key: "device_type", label: "Tipo Equipo" }, { key: "device_brand", label: "Marca" },
+  { key: "device_model", label: "Modelo" }, { key: "reported_issue", label: "Falla Reportada" },
+  { key: "priority", label: "Prioridad" }, { key: "estimated_cost", label: "Costo Estimado" },
+];
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   pending: { label: "Pendiente", color: "bg-warning/20 text-warning border-warning/30", icon: Clock },
@@ -247,10 +255,10 @@ const ReceptionPage = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por cliente, equipo, N° orden..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input placeholder="Buscar por cliente, equipo, N orden..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
@@ -259,6 +267,28 @@ const ReceptionPage = () => {
             {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
           </SelectContent>
         </Select>
+        <DataImportExport
+          columns={RECEPTION_COLUMNS}
+          data={orders}
+          filenamePrefix="recepcion_tecnica"
+          templateDescription="Cada fila es una orden de servicio. Prioridad: low, normal, high, urgent."
+          onImport={async (rows) => {
+            const payload = rows.map(r => ({
+              customer_name: r.customer_name || "",
+              customer_phone: r.customer_phone || null,
+              device_type: r.device_type || "Equipo",
+              device_brand: r.device_brand || null,
+              device_model: r.device_model || null,
+              reported_issue: r.reported_issue || "Sin especificar",
+              priority: r.priority || "normal",
+              estimated_cost: parseFloat(r.estimated_cost) || null,
+              received_by_id: user?.id || null,
+            }));
+            const { error } = await supabase.from("service_orders").insert(payload);
+            if (error) throw error;
+            queryClient.invalidateQueries({ queryKey: ["service_orders"] });
+          }}
+        />
       </div>
 
       {/* Orders list */}
