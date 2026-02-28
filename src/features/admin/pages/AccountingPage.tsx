@@ -9,21 +9,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { DollarSign, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight, Trash2, Pencil, Download } from "lucide-react";
+import { DollarSign, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight, Trash2, Pencil, Printer } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import DataImportExport from "@/features/admin/components/DataImportExport";
+import PrintReceipt from "@/features/admin/components/PrintReceipt";
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
 const emptySaleForm = { date: new Date().toISOString().split("T")[0], product_description: "", seller: "", quantity: "1", unit_price: "", notes: "" };
 const emptyServiceForm = { date: new Date().toISOString().split("T")[0], description: "", responsible: "", device_type: "", diagnosis: "", price: "", notes: "" };
 
-const exportCSV = (data: any[], filename: string, headers: string[], keys: string[]) => {
-  const rows = [headers.join(","), ...data.map(r => keys.map(k => `"${String(r[k] ?? "").replace(/"/g, '""')}"`).join(","))];
-  const blob = new Blob(["\uFEFF" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-};
+const SALE_COLUMNS = [
+  { key: "date", label: "Fecha" }, { key: "product_description", label: "Descripcion" },
+  { key: "seller", label: "Vendedor" }, { key: "quantity", label: "Cantidad" },
+  { key: "unit_price", label: "Precio Unitario" }, { key: "total", label: "Total" }, { key: "notes", label: "Notas" },
+];
+const SERVICE_COLUMNS = [
+  { key: "date", label: "Fecha" }, { key: "description", label: "Descripcion" },
+  { key: "responsible", label: "Responsable" }, { key: "device_type", label: "Tipo Equipo" },
+  { key: "diagnosis", label: "Diagnostico" }, { key: "price", label: "Precio" }, { key: "notes", label: "Notas" },
+];
 
 const AccountingPage = () => {
   const qc = useQueryClient();
@@ -154,17 +159,34 @@ const AccountingPage = () => {
 
         {/* SALES TAB */}
         <TabsContent value="sales" className="space-y-4">
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => exportCSV(sales, `ventas_${MONTHS[month]}_${year}.csv`, ["Fecha","Descripción","Vendedor","Cant.","P.Unit.","Total","Notas"], ["date","product_description","seller","quantity","unit_price","total","notes"])}>
-              <Download className="h-4 w-4" /> Exportar CSV
-            </Button>
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <DataImportExport
+              columns={SALE_COLUMNS}
+              data={sales}
+              filenamePrefix={`ventas_${MONTHS[month]}_${year}`}
+              templateDescription="Cada fila es una venta. El total se calcula automaticamente (cantidad x precio unitario)."
+              onImport={async (rows) => {
+                const payload = rows.map(r => ({
+                  date: r.date || new Date().toISOString().split("T")[0],
+                  product_description: r.product_description || r["Descripcion"] || "",
+                  seller: r.seller || r["Vendedor"] || "",
+                  quantity: parseInt(r.quantity || r["Cantidad"]) || 1,
+                  unit_price: parseFloat(r.unit_price || r["Precio Unitario"]) || 0,
+                  total: (parseInt(r.quantity) || 1) * (parseFloat(r.unit_price) || 0),
+                  notes: r.notes || null,
+                }));
+                const { error } = await supabase.from("accounting_sales").insert(payload);
+                if (error) throw error;
+                qc.invalidateQueries({ queryKey: ["accounting_sales", month, year] });
+              }}
+            />
             <Dialog open={saleDialog} onOpenChange={(o) => { setSaleDialog(o); if (!o) { setEditingSaleId(null); setSaleForm(emptySaleForm); } }}>
               <DialogTrigger asChild><Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> Registrar Venta</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>{editingSaleId ? "Editar Venta" : "Registrar Venta"}</DialogTitle></DialogHeader>
                 <form onSubmit={e => { e.preventDefault(); saveSaleMutation.mutate(saleForm); }} className="space-y-3">
                   <div><Label>Fecha *</Label><Input type="date" required value={saleForm.date} onChange={e => setSaleForm({ ...saleForm, date: e.target.value })} /></div>
-                  <div><Label>Descripción del Producto *</Label><Input required value={saleForm.product_description} onChange={e => setSaleForm({ ...saleForm, product_description: e.target.value })} placeholder="PC PROFESIONAL RYZEN7..." /></div>
+                  <div><Label>Descripcion del Producto *</Label><Input required value={saleForm.product_description} onChange={e => setSaleForm({ ...saleForm, product_description: e.target.value })} placeholder="PC PROFESIONAL RYZEN7..." /></div>
                   <div><Label>Vendedor *</Label><Input required value={saleForm.seller} onChange={e => setSaleForm({ ...saleForm, seller: e.target.value })} placeholder="EDZON, JERSON..." /></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div><Label>Cantidad</Label><Input type="number" min="1" value={saleForm.quantity} onChange={e => setSaleForm({ ...saleForm, quantity: e.target.value })} /></div>
@@ -198,6 +220,7 @@ const AccountingPage = () => {
                     <TableCell className="text-right font-bold">S/. {Number(s.total).toFixed(2)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <PrintReceipt order={s} type="sale" />
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditSale(s)}><Pencil className="h-3 w-3" /></Button>
                         {isAdmin && <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if(confirm("¿Eliminar?")) deleteSaleMutation.mutate(s.id); }}><Trash2 className="h-3 w-3" /></Button>}
                       </div>
@@ -211,10 +234,27 @@ const AccountingPage = () => {
 
         {/* SERVICES TAB */}
         <TabsContent value="services" className="space-y-4">
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => exportCSV(services, `servicios_${MONTHS[month]}_${year}.csv`, ["Fecha","Descripción","Responsable","T.Equipo","Diagnóstico","Precio","Notas"], ["date","description","responsible","device_type","diagnosis","price","notes"])}>
-              <Download className="h-4 w-4" /> Exportar CSV
-            </Button>
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <DataImportExport
+              columns={SERVICE_COLUMNS}
+              data={services}
+              filenamePrefix={`servicios_${MONTHS[month]}_${year}`}
+              templateDescription="Cada fila es un servicio tecnico registrado."
+              onImport={async (rows) => {
+                const payload = rows.map(r => ({
+                  date: r.date || new Date().toISOString().split("T")[0],
+                  description: r.description || r["Descripcion"] || "",
+                  responsible: r.responsible || r["Responsable"] || "",
+                  device_type: r.device_type || null,
+                  diagnosis: r.diagnosis || null,
+                  price: parseFloat(r.price || r["Precio"]) || 0,
+                  notes: r.notes || null,
+                }));
+                const { error } = await supabase.from("accounting_services").insert(payload);
+                if (error) throw error;
+                qc.invalidateQueries({ queryKey: ["accounting_services", month, year] });
+              }}
+            />
             <Dialog open={serviceDialog} onOpenChange={(o) => { setServiceDialog(o); if (!o) { setEditingServiceId(null); setServiceForm(emptyServiceForm); } }}>
               <DialogTrigger asChild><Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> Registrar Servicio</Button></DialogTrigger>
               <DialogContent>
@@ -256,6 +296,7 @@ const AccountingPage = () => {
                     <TableCell className="text-right font-bold">S/. {Number(s.price).toFixed(2)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <PrintReceipt order={s} type="service" />
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditService(s)}><Pencil className="h-3 w-3" /></Button>
                         {isAdmin && <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if(confirm("¿Eliminar?")) deleteServiceMutation.mutate(s.id); }}><Trash2 className="h-3 w-3" /></Button>}
                       </div>

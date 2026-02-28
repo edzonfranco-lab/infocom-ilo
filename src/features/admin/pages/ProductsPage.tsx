@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
 import { CURRENCY } from "@/lib/types";
 import { toast } from "sonner";
+import ImageUpload from "@/features/admin/components/ImageUpload";
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -136,7 +137,21 @@ const ProductsPage = () => {
               </div>
               <div className="space-y-2"><Label>Descripción corta</Label><Input value={form.short_description} onChange={(e) => setForm({ ...form, short_description: e.target.value })} /></div>
               <div className="space-y-2"><Label>Descripción</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
-              <div className="space-y-2"><Label>Imágenes (URLs, una por línea)</Label><Textarea value={form.images} onChange={(e) => setForm({ ...form, images: e.target.value })} rows={3} placeholder="https://...&#10;https://..." /></div>
+              <div className="space-y-2">
+                <Label>Imagenes (URLs o subir archivos)</Label>
+                {(form.images ? form.images.split("\n").filter(Boolean) : []).map((img, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <img src={img} alt="" className="h-10 w-10 object-cover rounded border" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    <span className="text-xs truncate flex-1">{img.startsWith("data:") ? `(imagen ${i + 1})` : img}</span>
+                    <Button type="button" variant="ghost" size="sm" className="text-destructive h-7" onClick={() => {
+                      const imgs = form.images.split("\n").filter(Boolean);
+                      imgs.splice(i, 1);
+                      setForm({ ...form, images: imgs.join("\n") });
+                    }}>×</Button>
+                  </div>
+                ))}
+                <ImageUpload value="" onChange={v => { if (v) setForm({ ...form, images: (form.images ? form.images + "\n" + v : v) }); }} label="Agregar imagen" />
+              </div>
               <div className="flex flex-wrap gap-6">
                 <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Activo</Label></div>
                 <div className="flex items-center gap-2"><Switch checked={form.is_featured} onCheckedChange={(v) => setForm({ ...form, is_featured: v })} /><Label>Destacado</Label></div>

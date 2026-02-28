@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Image, Eye, EyeOff, GripVertical, Monitor, Smartphone } from "lucide-react";
+import { Plus, Pencil, Trash2, Image, Monitor, Smartphone } from "lucide-react";
 import { toast } from "sonner";
+import ImageUpload from "@/features/admin/components/ImageUpload";
 
 const BannersPage = () => {
   const [banners, setBanners] = useState<any[]>([]);
@@ -74,17 +75,9 @@ const BannersPage = () => {
                 <div className="space-y-2 col-span-2"><Label>Subtítulo</Label><Input value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} /></div>
               </div>
               <div className="space-y-3 p-3 rounded-lg bg-secondary/30 border border-border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Imágenes</p>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-xs"><Monitor className="h-3 w-3" /> Escritorio (URL) *</Label>
-                  <Input value={form.image_desktop} onChange={(e) => setForm({ ...form, image_desktop: e.target.value })} placeholder="https://..." />
-                  {form.image_desktop && <img src={form.image_desktop} alt="Preview" className="h-20 w-full object-cover rounded border border-border" />}
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-xs"><Smartphone className="h-3 w-3" /> Móvil (URL)</Label>
-                  <Input value={form.image_mobile} onChange={(e) => setForm({ ...form, image_mobile: e.target.value })} placeholder="https://..." />
-                  {form.image_mobile && <img src={form.image_mobile} alt="Preview" className="h-20 w-full object-cover rounded border border-border" />}
-                </div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Imagenes (URL o subir archivo)</p>
+                <ImageUpload value={form.image_desktop} onChange={v => setForm({ ...form, image_desktop: v })} label="Escritorio *" />
+                <ImageUpload value={form.image_mobile} onChange={v => setForm({ ...form, image_mobile: v })} label="Movil (opcional)" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2"><Label>Enlace</Label><Input value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder="/catalogo" /></div>
