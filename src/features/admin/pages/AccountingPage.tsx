@@ -180,7 +180,7 @@ const AccountingPage = () => {
                 qc.invalidateQueries({ queryKey: ["accounting_sales", month, year] });
               }}
             />
-            <Dialog open={saleDialog} onOpenChange={(o) => { setSaleDialog(o); if (!o) { setEditingSaleId(null); setSaleForm(emptySaleForm); } }}>
+            <Dialog open={saleDialog} onOpenChange={(o) => { if (!o && document.activeElement?.tagName !== "BODY") return; setSaleDialog(o); if (!o) { setEditingSaleId(null); setSaleForm(emptySaleForm); } }} modal={false}>
               <DialogTrigger asChild><Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> Registrar Venta</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>{editingSaleId ? "Editar Venta" : "Registrar Venta"}</DialogTitle></DialogHeader>
@@ -255,7 +255,7 @@ const AccountingPage = () => {
                 qc.invalidateQueries({ queryKey: ["accounting_services", month, year] });
               }}
             />
-            <Dialog open={serviceDialog} onOpenChange={(o) => { setServiceDialog(o); if (!o) { setEditingServiceId(null); setServiceForm(emptyServiceForm); } }}>
+            <Dialog open={serviceDialog} onOpenChange={(o) => { if (!o && document.activeElement?.tagName !== "BODY") return; setServiceDialog(o); if (!o) { setEditingServiceId(null); setServiceForm(emptyServiceForm); } }} modal={false}>
               <DialogTrigger asChild><Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> Registrar Servicio</Button></DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>{editingServiceId ? "Editar Servicio" : "Registrar Servicio Técnico"}</DialogTitle></DialogHeader>
