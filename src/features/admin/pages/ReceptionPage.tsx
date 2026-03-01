@@ -43,6 +43,7 @@ const emptyForm = {
   device_type: "", device_brand: "", device_model: "",
   accessories: "", reported_issue: "", priority: "normal",
   estimated_cost: "", notes: "", diagnosis: "", final_cost: "",
+  received_by_id: "",
 };
 
 const ReceptionPage = () => {
@@ -96,6 +97,9 @@ const ReceptionPage = () => {
         notes: formData.notes || null,
       };
       if (editingId) {
+        if (isAdmin && formData.received_by_id) {
+          payload.received_by_id = formData.received_by_id;
+        }
         const { error } = await supabase.from("service_orders").update(payload).eq("id", editingId);
         if (error) throw error;
       } else {
@@ -155,6 +159,7 @@ const ReceptionPage = () => {
       final_cost: order.final_cost ? String(order.final_cost) : "",
       diagnosis: order.diagnosis || "",
       notes: order.notes || "",
+      received_by_id: order.received_by_id || "",
     });
     setEditingId(order.id);
     setDialogOpen(true);
@@ -181,7 +186,7 @@ const ReceptionPage = () => {
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <ClipboardList className="h-6 w-6 text-primary" /> Recepción Técnica
         </h1>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditingId(null); setForm(emptyForm); } }}>
+        <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o && document.activeElement?.tagName !== "BODY") return; setDialogOpen(o); if (!o) { setEditingId(null); setForm(emptyForm); } }} modal={false}>
           <DialogTrigger asChild>
             <Button className="gap-2"><Plus className="h-4 w-4" /> Nueva Orden</Button>
           </DialogTrigger>
@@ -220,6 +225,22 @@ const ReceptionPage = () => {
                   <Textarea value={form.diagnosis} onChange={e => setForm({...form, diagnosis: e.target.value})} placeholder="Diagnóstico del técnico..." rows={2} />
                 </div>
               )}
+
+              {editingId && isAdmin && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><User className="h-4 w-4" /> Recepciono</h3>
+                  <Select value={form.received_by_id} onValueChange={v => setForm({...form, received_by_id: v})}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar personal" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(staffMap).map(([uid, name]) => (
+                        <SelectItem key={uid} value={uid}>{name as string}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Solo el administrador puede cambiar quien recepciono.</p>
+                </div>
+              )
+              }
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
