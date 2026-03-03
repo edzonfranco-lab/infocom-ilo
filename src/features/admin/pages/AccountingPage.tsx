@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  DollarSign, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
+  Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
   Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -344,7 +344,7 @@ const AccountingPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
-          <DollarSign className="h-6 w-6 text-primary" /> Contabilidad
+          <Receipt className="h-6 w-6 text-primary" /> Contabilidad
         </h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
@@ -503,7 +503,7 @@ const AccountingPage = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
+              <Receipt className="h-5 w-5 text-primary" />
               {editingId ? "Editar Transaccion" : "Nueva Transaccion"}
             </DialogTitle>
           </DialogHeader>
