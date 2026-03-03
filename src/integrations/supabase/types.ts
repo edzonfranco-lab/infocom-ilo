@@ -849,6 +849,151 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_history: {
+        Row: {
+          accion: string
+          created_at: string
+          detalles: Json | null
+          id: string
+          transaction_id: string
+          usuario_id: string | null
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          detalles?: Json | null
+          id?: string
+          transaction_id: string
+          usuario_id?: string | null
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          detalles?: Json | null
+          id?: string
+          transaction_id?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_history_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_items: {
+        Row: {
+          cantidad: number
+          created_at: string
+          descripcion: string
+          id: string
+          item_type: Database["public"]["Enums"]["item_type"]
+          precio_unitario: number
+          referencia_id: string | null
+          subtotal: number
+          transaction_id: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          descripcion: string
+          id?: string
+          item_type: Database["public"]["Enums"]["item_type"]
+          precio_unitario?: number
+          referencia_id?: string | null
+          subtotal?: number
+          transaction_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          descripcion?: string
+          id?: string
+          item_type?: Database["public"]["Enums"]["item_type"]
+          precio_unitario?: number
+          referencia_id?: string | null
+          subtotal?: number
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          anulado_en: string | null
+          anulado_por: string | null
+          cliente_nombre: string | null
+          cliente_telefono: string | null
+          created_at: string
+          created_by: string | null
+          emitido_en: string | null
+          emitido_por: string | null
+          estado: Database["public"]["Enums"]["transaction_status"]
+          fecha: string
+          id: string
+          impuestos: number
+          motivo_anulacion: string | null
+          notas: string | null
+          subtotal_productos: number
+          subtotal_servicios: number
+          tipo_general: Database["public"]["Enums"]["transaction_type"]
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          cliente_nombre?: string | null
+          cliente_telefono?: string | null
+          created_at?: string
+          created_by?: string | null
+          emitido_en?: string | null
+          emitido_por?: string | null
+          estado?: Database["public"]["Enums"]["transaction_status"]
+          fecha?: string
+          id?: string
+          impuestos?: number
+          motivo_anulacion?: string | null
+          notas?: string | null
+          subtotal_productos?: number
+          subtotal_servicios?: number
+          tipo_general?: Database["public"]["Enums"]["transaction_type"]
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          anulado_en?: string | null
+          anulado_por?: string | null
+          cliente_nombre?: string | null
+          cliente_telefono?: string | null
+          created_at?: string
+          created_by?: string | null
+          emitido_en?: string | null
+          emitido_por?: string | null
+          estado?: Database["public"]["Enums"]["transaction_status"]
+          fecha?: string
+          id?: string
+          impuestos?: number
+          motivo_anulacion?: string | null
+          notas?: string | null
+          subtotal_productos?: number
+          subtotal_servicios?: number
+          tipo_general?: Database["public"]["Enums"]["transaction_type"]
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -885,6 +1030,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      item_type: "producto" | "servicio"
       order_status:
         | "pending"
         | "confirmed"
@@ -901,6 +1047,8 @@ export type Database = {
         | "whatsapp"
         | "other"
       payment_status: "pending" | "paid" | "failed" | "refunded"
+      transaction_status: "borrador" | "emitido" | "anulado"
+      transaction_type: "venta" | "servicio" | "mixto"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1029,6 +1177,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      item_type: ["producto", "servicio"],
       order_status: [
         "pending",
         "confirmed",
@@ -1047,6 +1196,8 @@ export const Constants = {
         "other",
       ],
       payment_status: ["pending", "paid", "failed", "refunded"],
+      transaction_status: ["borrador", "emitido", "anulado"],
+      transaction_type: ["venta", "servicio", "mixto"],
     },
   },
 } as const
