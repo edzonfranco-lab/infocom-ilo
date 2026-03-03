@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CURRENCY } from "@/lib/types";
-import { Package, ShoppingBag, DollarSign, AlertTriangle, Wrench, CalendarDays, TrendingUp } from "lucide-react";
+import { Package, ShoppingBag, TrendingUp, AlertTriangle, Wrench, CalendarDays, Receipt } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const MONTHS_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -36,7 +36,7 @@ const DashboardPage = () => {
       const statusLabels: Record<string, string> = { pending: "Pendiente", in_progress: "En Proceso", completed: "Completado", delivered: "Entregado", cancelled: "Cancelado", waiting_parts: "Esp. Repuestos" };
       setServiceStatusData(Object.entries(statusCounts).map(([k, v]) => ({ name: statusLabels[k] || k, value: v })));
 
-      // Monthly sales vs services (last 6 months)
+      // Monthly data from NEW transactions table
       const monthlyArr: any[] = [];
       for (let i = 5; i >= 0; i--) {
         const d = new Date(year, now.getMonth() - i, 1);
@@ -45,13 +45,15 @@ const DashboardPage = () => {
         const start = `${y}-${String(m + 1).padStart(2, "0")}-01`;
         const end = `${y}-${String(m + 1).padStart(2, "0")}-${String(new Date(y, m + 1, 0).getDate()).padStart(2, "0")}`;
 
-        const [{ data: salesData }, { data: servicesData }] = await Promise.all([
-          supabase.from("accounting_sales").select("total").gte("date", start).lte("date", end),
-          supabase.from("accounting_services").select("price").gte("date", start).lte("date", end),
-        ]);
+        const { data: txData } = await supabase
+          .from("transactions")
+          .select("subtotal_productos, subtotal_servicios")
+          .eq("estado", "emitido")
+          .gte("fecha", start)
+          .lte("fecha", end);
 
-        const salesTotal = (salesData || []).reduce((s: number, r: any) => s + Number(r.total || 0), 0);
-        const servicesTotal = (servicesData || []).reduce((s: number, r: any) => s + Number(r.price || 0), 0);
+        const salesTotal = (txData || []).reduce((s: number, r: any) => s + Number(r.subtotal_productos || 0), 0);
+        const servicesTotal = (txData || []).reduce((s: number, r: any) => s + Number(r.subtotal_servicios || 0), 0);
         monthlyArr.push({ month: MONTHS_SHORT[m], ventas: salesTotal, servicios: servicesTotal });
       }
       setMonthlyData(monthlyArr);
@@ -73,7 +75,7 @@ const DashboardPage = () => {
   const cards = [
     { title: "Productos", value: stats.products, icon: Package, color: "text-blue-400" },
     { title: "Pedidos", value: stats.orders, icon: ShoppingBag, color: "text-green-400" },
-    { title: "Ingresos", value: `${CURRENCY}${stats.revenue.toLocaleString()}`, icon: DollarSign, color: "text-yellow-400" },
+    { title: "Ingresos", value: `${CURRENCY}${stats.revenue.toLocaleString()}`, icon: Receipt, color: "text-yellow-400" },
     { title: "Stock Bajo", value: stats.lowStock, icon: AlertTriangle, color: "text-red-400" },
     { title: "Serv. Pendientes", value: stats.pendingServices, icon: Wrench, color: "text-purple-400" },
     { title: "Asistencia Mes", value: `${stats.attendancePct}%`, icon: CalendarDays, color: "text-cyan-400" },
@@ -108,8 +110,11 @@ const DashboardPage = () => {
               <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", color: "hsl(var(--foreground))" }} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `S/${v}`} />
+                <Tooltip
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", color: "hsl(var(--foreground))" }}
+                  formatter={(value: number) => [`S/ ${value.toFixed(2)}`, undefined]}
+                />
                 <Bar dataKey="ventas" fill={CHART_COLORS[0]} radius={[4,4,0,0]} name="Ventas" />
                 <Bar dataKey="servicios" fill={CHART_COLORS[1]} radius={[4,4,0,0]} name="Servicios" />
               </BarChart>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,28 @@ const RolesPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newUserId, setNewUserId] = useState("");
   const [newRole, setNewRole] = useState("moderator");
+
+  // Fetch profiles to show names
+  const { data: profilesMap = {} } = useQuery({
+    queryKey: ["profiles_map"],
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("user_id, full_name, phone");
+      const m: Record<string, { name: string; phone: string | null }> = {};
+      (data || []).forEach((p: any) => {
+        if (p.user_id) m[p.user_id] = { name: p.full_name || "Sin nombre", phone: p.phone };
+      });
+      return m;
+    },
+  });
+
+  // Fetch staff to detect employees vs clients
+  const { data: staffUserIds = [] } = useQuery({
+    queryKey: ["staff_user_ids"],
+    queryFn: async () => {
+      const { data } = await supabase.from("staff_members").select("user_id").not("user_id", "is", null);
+      return (data || []).map((s: any) => s.user_id).filter(Boolean);
+    },
+  });
 
   const { data: roles = [], isLoading } = useQuery({
     queryKey: ["user_roles"],
@@ -58,12 +80,34 @@ const RolesPage = () => {
     },
   });
 
-  const filtered = roles.filter((r: any) =>
-    !search || r.user_id?.toLowerCase().includes(search.toLowerCase()) || r.role?.includes(search.toLowerCase())
-  );
+  const getUserLabel = (userId: string) => {
+    const profile = profilesMap[userId];
+    const isStaff = staffUserIds.includes(userId);
+    return {
+      name: profile?.name || "Usuario sin perfil",
+      badge: isStaff ? "Personal" : "Cliente",
+      badgeColor: isStaff ? "bg-primary/20 text-primary border-primary/30" : "bg-muted text-muted-foreground border-border",
+    };
+  };
+
+  const filtered = roles.filter((r: any) => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    const profile = profilesMap[r.user_id];
+    return r.user_id?.toLowerCase().includes(s) ||
+      r.role?.includes(s) ||
+      profile?.name?.toLowerCase().includes(s);
+  });
 
   const adminCount = roles.filter((r: any) => r.role === "admin").length;
   const modCount = roles.filter((r: any) => r.role === "moderator").length;
+
+  // Build list of users for the assign dialog
+  const allUserOptions = Object.entries(profilesMap).map(([uid, info]) => ({
+    uid,
+    name: info.name,
+    isStaff: staffUserIds.includes(uid),
+  }));
 
   return (
     <div className="space-y-6">
@@ -79,9 +123,22 @@ const RolesPage = () => {
             <DialogHeader><DialogTitle>Asignar Rol a Usuario</DialogTitle></DialogHeader>
             <form onSubmit={e => { e.preventDefault(); addRoleMutation.mutate({ userId: newUserId, role: newRole }); }} className="space-y-4">
               <div>
-                <Label>ID del Usuario (UUID)</Label>
-                <Input required value={newUserId} onChange={e => setNewUserId(e.target.value)} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" className="font-mono text-xs" />
-                <p className="text-xs text-muted-foreground mt-1">Copia el ID del usuario desde la lista de usuarios registrados</p>
+                <Label>Usuario</Label>
+                {allUserOptions.length > 0 ? (
+                  <Select value={newUserId} onValueChange={setNewUserId}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar usuario..." /></SelectTrigger>
+                    <SelectContent>
+                      {allUserOptions.map(u => (
+                        <SelectItem key={u.uid} value={u.uid}>
+                          {u.name} {u.isStaff ? "(Personal)" : "(Cliente)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input required value={newUserId} onChange={e => setNewUserId(e.target.value)} placeholder="UUID del usuario" className="font-mono text-xs" />
+                )}
+                <p className="text-xs text-muted-foreground mt-1">Selecciona el usuario al que deseas asignar un rol</p>
               </div>
               <div>
                 <Label>Rol</Label>
@@ -94,7 +151,7 @@ const RolesPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" className="w-full" disabled={addRoleMutation.isPending}>Asignar Rol</Button>
+              <Button type="submit" className="w-full" disabled={addRoleMutation.isPending || !newUserId}>Asignar Rol</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -110,7 +167,7 @@ const RolesPage = () => {
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar por ID de usuario o rol..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        <Input placeholder="Buscar por nombre, ID o rol..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       {/* Roles list */}
@@ -123,13 +180,18 @@ const RolesPage = () => {
           {filtered.map((r: any) => {
             const rm = ROLE_MAP[r.role] || ROLE_MAP.user;
             const RIcon = rm.icon;
+            const userInfo = getUserLabel(r.user_id);
             return (
               <Card key={r.id} className="border-primary/10">
                 <CardContent className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
                     <RIcon className="h-5 w-5 text-primary shrink-0" />
                     <div className="min-w-0">
-                      <p className="font-mono text-xs truncate">{r.user_id}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm truncate">{userInfo.name}</p>
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${userInfo.badgeColor}`}>{userInfo.badge}</Badge>
+                      </div>
+                      <p className="font-mono text-[10px] text-muted-foreground truncate">{r.user_id}</p>
                       <p className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString("es-PE")}</p>
                     </div>
                   </div>
