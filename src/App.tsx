@@ -40,6 +40,7 @@ import RolesPage from "@/features/admin/pages/RolesPage";
 import StaffPage from "@/features/admin/pages/StaffPage";
 import AttendancePage from "@/features/admin/pages/AttendancePage";
 import AccountingPage from "@/features/admin/pages/AccountingPage";
+import SupportPage from "@/features/admin/pages/SupportPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="asistencias" element={<AttendancePage />} />
                 <Route path="contabilidad" element={<AccountingPage />} />
                 <Route path="configuracion" element={<SettingsPage />} />
+                <Route path="soporte" element={<SupportPage />} />
                 <Route path="pagos" element={<PaymentAccountsPage />} />
               </Route>
 
