@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings, ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign } from "lucide-react";
+import { LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings, ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -9,6 +9,7 @@ import logoDark from "@/assets/logo-dark-theme.png";
 const allNavItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true, roles: ["admin", "moderator"] },
   { to: "/admin/recepcion", icon: ClipboardList, label: "Recepción Técnica", roles: ["admin", "moderator"] },
+  { to: "/admin/soporte", icon: Wrench, label: "Soporte Técnico", roles: ["admin", "moderator"] },
   { to: "/admin/contabilidad", icon: DollarSign, label: "Contabilidad", roles: ["admin"] },
   { to: "/admin/productos", icon: Package, label: "Productos", roles: ["admin", "moderator"] },
   { to: "/admin/categorias", icon: FolderTree, label: "Categorías", roles: ["admin"] },
