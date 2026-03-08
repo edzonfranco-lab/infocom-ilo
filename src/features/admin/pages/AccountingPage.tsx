@@ -479,11 +479,13 @@ const AccountingPage = () => {
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>
                             <Eye className="h-3 w-3" />
                           </Button>
+                          {tx.estado !== "anulado" && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
                           {tx.estado === "borrador" && (
                             <>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
-                                <Pencil className="h-3 w-3" />
-                              </Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => emitirMutation.mutate(tx.id)}>
                                 <FileText className="h-3 w-3" />
                               </Button>
@@ -563,45 +565,68 @@ const AccountingPage = () => {
                     </TableHeader>
                     <TableBody>
                       {items.map((item, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>
-                            <Badge variant={item.item_type === "producto" ? "default" : "secondary"} className="text-xs">
-                              {item.item_type === "producto" ? "Prod." : "Serv."}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.descripcion}
-                              onChange={e => updateItem(idx, { descripcion: e.target.value })}
-                              placeholder={item.item_type === "producto" ? "PC RYZEN 7..." : "MANTENIMIENTO..."}
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" min="1"
-                              value={item.cantidad}
-                              onChange={e => updateItem(idx, { cantidad: parseInt(e.target.value) || 1 })}
-                              className="h-8 text-xs w-16"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" step="0.01" min="0"
-                              value={item.precio_unitario}
-                              onChange={e => updateItem(idx, { precio_unitario: parseFloat(e.target.value) || 0 })}
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-xs">
-                            S/. {(item.cantidad * item.precio_unitario).toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(idx)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                        <React.Fragment key={idx}>
+                          <TableRow>
+                            <TableCell>
+                              <Badge variant={item.item_type === "producto" ? "default" : "secondary"} className="text-xs">
+                                {item.item_type === "producto" ? "Prod." : "Serv."}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.descripcion}
+                                onChange={e => updateItem(idx, { descripcion: e.target.value })}
+                                placeholder={item.item_type === "producto" ? "PC RYZEN 7..." : "MANTENIMIENTO..."}
+                                className="h-8 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number" min="1"
+                                value={item.cantidad}
+                                onChange={e => updateItem(idx, { cantidad: parseInt(e.target.value) || 1 })}
+                                className="h-8 text-xs w-16"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number" step="0.01" min="0"
+                                value={item.precio_unitario}
+                                onChange={e => updateItem(idx, { precio_unitario: parseFloat(e.target.value) || 0 })}
+                                className="h-8 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-xs">
+                              S/. {(item.cantidad * item.precio_unitario).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(idx)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {/* Extra fields for services */}
+                          {item.item_type === "servicio" && (
+                            <TableRow className="bg-secondary/10">
+                              <TableCell colSpan={6}>
+                                <div className="grid grid-cols-3 gap-2 py-1">
+                                  <div>
+                                    <Label className="text-[10px] text-muted-foreground">Responsable</Label>
+                                    <Input value={item.responsable || ""} onChange={e => updateItem(idx, { responsable: e.target.value })} placeholder="JERSON, EDZON..." className="h-7 text-xs" />
+                                  </div>
+                                  <div>
+                                    <Label className="text-[10px] text-muted-foreground">Tipo de Equipo</Label>
+                                    <Input value={item.tipo_equipo || ""} onChange={e => updateItem(idx, { tipo_equipo: e.target.value })} placeholder="LAPTOP, IMPRESORA..." className="h-7 text-xs" />
+                                  </div>
+                                  <div>
+                                    <Label className="text-[10px] text-muted-foreground">Diagnóstico</Label>
+                                    <Input value={item.diagnostico || ""} onChange={e => updateItem(idx, { diagnostico: e.target.value })} placeholder="FALLA FISICA..." className="h-7 text-xs" />
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>
