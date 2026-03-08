@@ -16,7 +16,7 @@ import { User, Package, LogOut, Settings, Lock, Save, Eye, EyeOff, Mail, Phone, 
 import { toast } from "sonner";
 
 const AccountPage = () => {
-  const { user, signOut, isAdmin, roles } = useAuth();
+  const { user, signOut, roles } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
