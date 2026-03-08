@@ -163,8 +163,11 @@ const AccountingPage = () => {
           cantidad: it.cantidad,
           precio_unitario: it.precio_unitario,
           subtotal: it.cantidad * it.precio_unitario,
+          responsable: it.responsable || null,
+          tipo_equipo: it.tipo_equipo || null,
+          diagnostico: it.diagnostico || null,
         }));
-        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload);
+        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload as any);
         if (ie) throw ie;
 
         // Log history
@@ -194,8 +197,11 @@ const AccountingPage = () => {
           cantidad: it.cantidad,
           precio_unitario: it.precio_unitario,
           subtotal: it.cantidad * it.precio_unitario,
+          responsable: it.responsable || null,
+          tipo_equipo: it.tipo_equipo || null,
+          diagnostico: it.diagnostico || null,
         }));
-        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload);
+        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload as any);
         if (ie) throw ie;
 
         await supabase.from("transaction_history").insert({
