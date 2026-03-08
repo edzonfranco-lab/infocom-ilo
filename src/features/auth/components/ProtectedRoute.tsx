@@ -1,13 +1,18 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import type { AppRole } from "@/lib/types";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  allowedRoles?: AppRole[];
+  fallbackPath?: string;
 }
 
-const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
-  const { user, loading, isAdmin, roles } = useAuth();
+const ADMIN_PANEL_ROLES: AppRole[] = ["admin", "moderator"];
+
+const ProtectedRoute = ({ children, requireAdmin = false, allowedRoles, fallbackPath = "/" }: ProtectedRouteProps) => {
+  const { user, loading, roles } = useAuth();
 
   if (loading) {
     return (
@@ -21,12 +26,13 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     return <Navigate to="/login" replace />;
   }
 
-  // Allow both admin and moderator to access admin panel
-  if (requireAdmin && !isAdmin && !roles.includes("moderator")) {
-    return <Navigate to="/" replace />;
+  const requiredRoles = allowedRoles?.length ? allowedRoles : (requireAdmin ? ADMIN_PANEL_ROLES : []);
+  if (requiredRoles.length > 0 && !requiredRoles.some((role) => roles.includes(role))) {
+    return <Navigate to={fallbackPath} replace />;
   }
 
   return <>{children}</>;
 };
 
 export default ProtectedRoute;
+

@@ -84,7 +84,7 @@ const AccountingPage = () => {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
-  const [activeTab, setActiveTab] = useState("todos");
+  const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios">("todos");
 
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
@@ -126,8 +126,8 @@ const AccountingPage = () => {
 
   // ─── Filtered views ───────────────────────────────────────────
   const filtered = useMemo(() => {
-    if (activeTab === "ventas") return transactions.filter(t => t.tipo_general === "venta" || t.tipo_general === "mixto");
-    if (activeTab === "servicios") return transactions.filter(t => t.tipo_general === "servicio" || t.tipo_general === "mixto");
+    if (activeTab === "ventas") return transactions.filter(t => Number(t.subtotal_productos || 0) > 0);
+    if (activeTab === "servicios") return transactions.filter(t => Number(t.subtotal_servicios || 0) > 0);
     return transactions;
   }, [transactions, activeTab]);
 
@@ -338,6 +338,21 @@ const AccountingPage = () => {
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
+  const getDisplayedAmounts = (tx: Transaction) => {
+    const productos = Number(tx.subtotal_productos || 0);
+    const servicios = Number(tx.subtotal_servicios || 0);
+
+    if (activeTab === "ventas") {
+      return { productos, servicios: 0, total: productos };
+    }
+
+    if (activeTab === "servicios") {
+      return { productos: 0, servicios, total: servicios };
+    }
+
+    return { productos, servicios, total: Number(tx.total || 0) };
+  };
+
   // ─── Export data ──────────────────────────────────────────────
   const exportColumns = [
     { key: "fecha", label: "Fecha" },
@@ -391,7 +406,7 @@ const AccountingPage = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "todos" | "ventas" | "servicios")}> 
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="todos" className="gap-1"><List className="h-4 w-4" /> Todos ({transactions.length})</TabsTrigger>
           <TabsTrigger value="ventas" className="gap-1"><ShoppingCart className="h-4 w-4" /> Ventas</TabsTrigger>
@@ -457,6 +472,8 @@ const AccountingPage = () => {
                 ) : filtered.map((tx) => {
                   const st = STATUS_MAP[tx.estado];
                   const tp = TYPE_MAP[tx.tipo_general];
+                  const displayedAmounts = getDisplayedAmounts(tx);
+
                   return (
                     <TableRow key={tx.id} className={tx.estado === "anulado" ? "opacity-50" : ""}>
                       <TableCell className="whitespace-nowrap">
@@ -471,9 +488,9 @@ const AccountingPage = () => {
                       <TableCell>
                         <Badge variant={st?.variant}>{st?.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">S/. {Number(tx.subtotal_productos).toFixed(2)}</TableCell>
-                      <TableCell className="text-right">S/. {Number(tx.subtotal_servicios).toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-bold">S/. {Number(tx.total).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">S/. {displayedAmounts.productos.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">S/. {displayedAmounts.servicios.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-bold">S/. {displayedAmounts.total.toFixed(2)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>

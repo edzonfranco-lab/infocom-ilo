@@ -10,14 +10,19 @@ export function useAuth() {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [rolesLoading, setRolesLoading] = useState(true);
 
-  const fetchRoles = useCallback(async (userId: string) => {
-    setRolesLoading(true);
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    setRoles((data || []).map((r: any) => r.role as AppRole));
-    setRolesLoading(false);
+  const fetchRoles = useCallback(async (userId: string, silent = false) => {
+    if (!silent) setRolesLoading(true);
+
+    try {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+
+      setRoles((data || []).map((r: any) => r.role as AppRole));
+    } finally {
+      if (!silent) setRolesLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -51,6 +56,28 @@ export function useAuth() {
 
     return () => subscription.unsubscribe();
   }, [fetchRoles]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const refreshRolesSilently = () => {
+      void fetchRoles(user.id, true);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshRolesSilently();
+    };
+
+    const interval = window.setInterval(refreshRolesSilently, 30000);
+    window.addEventListener("focus", refreshRolesSilently);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshRolesSilently);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [user?.id, fetchRoles]);
 
   const isAdmin = roles.includes("admin");
 
