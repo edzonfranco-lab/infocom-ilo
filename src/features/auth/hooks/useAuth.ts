@@ -64,16 +64,18 @@ export function useAuth() {
       void fetchRoles(user.id, true);
     };
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshRolesSilently();
+    };
+
     const interval = window.setInterval(refreshRolesSilently, 30000);
     window.addEventListener("focus", refreshRolesSilently);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") refreshRolesSilently();
-    });
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       window.clearInterval(interval);
       window.removeEventListener("focus", refreshRolesSilently);
-      document.removeEventListener("visibilitychange", refreshRolesSilently);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [user?.id, fetchRoles]);
 
