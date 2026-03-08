@@ -30,6 +30,10 @@ interface TransactionItem {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+  // Service-specific fields
+  responsable?: string;
+  tipo_equipo?: string;
+  diagnostico?: string;
 }
 
 interface Transaction {
