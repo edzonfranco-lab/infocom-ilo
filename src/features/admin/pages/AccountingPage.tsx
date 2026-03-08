@@ -313,9 +313,6 @@ const AccountingPage = () => {
     });
     setDetailOpen(true);
   };
-    });
-    setDetailOpen(true);
-  };
 
   const addItem = (type: "producto" | "servicio") => {
     setItems([...items, { item_type: type, descripcion: "", cantidad: 1, precio_unitario: 0, subtotal: 0, responsable: "", tipo_equipo: "", diagnostico: "" }]);
