@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, roles } = useAuth();
 
   if (loading) {
     return (
@@ -21,7 +21,8 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && !isAdmin) {
+  // Allow both admin and moderator to access admin panel
+  if (requireAdmin && !isAdmin && !roles.includes("moderator")) {
     return <Navigate to="/" replace />;
   }
 

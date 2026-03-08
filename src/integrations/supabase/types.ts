@@ -889,33 +889,42 @@ export type Database = {
           cantidad: number
           created_at: string
           descripcion: string
+          diagnostico: string | null
           id: string
           item_type: Database["public"]["Enums"]["item_type"]
           precio_unitario: number
           referencia_id: string | null
+          responsable: string | null
           subtotal: number
+          tipo_equipo: string | null
           transaction_id: string
         }
         Insert: {
           cantidad?: number
           created_at?: string
           descripcion: string
+          diagnostico?: string | null
           id?: string
           item_type: Database["public"]["Enums"]["item_type"]
           precio_unitario?: number
           referencia_id?: string | null
+          responsable?: string | null
           subtotal?: number
+          tipo_equipo?: string | null
           transaction_id: string
         }
         Update: {
           cantidad?: number
           created_at?: string
           descripcion?: string
+          diagnostico?: string | null
           id?: string
           item_type?: Database["public"]["Enums"]["item_type"]
           precio_unitario?: number
           referencia_id?: string | null
+          responsable?: string | null
           subtotal?: number
+          tipo_equipo?: string | null
           transaction_id?: string
         }
         Relationships: [

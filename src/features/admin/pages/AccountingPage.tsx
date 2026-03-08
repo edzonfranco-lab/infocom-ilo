@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +30,10 @@ interface TransactionItem {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+  // Service-specific fields
+  responsable?: string;
+  tipo_equipo?: string;
+  diagnostico?: string;
 }
 
 interface Transaction {
@@ -159,8 +163,11 @@ const AccountingPage = () => {
           cantidad: it.cantidad,
           precio_unitario: it.precio_unitario,
           subtotal: it.cantidad * it.precio_unitario,
+          responsable: it.responsable || null,
+          tipo_equipo: it.tipo_equipo || null,
+          diagnostico: it.diagnostico || null,
         }));
-        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload);
+        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload as any);
         if (ie) throw ie;
 
         // Log history
@@ -190,8 +197,11 @@ const AccountingPage = () => {
           cantidad: it.cantidad,
           precio_unitario: it.precio_unitario,
           subtotal: it.cantidad * it.precio_unitario,
+          responsable: it.responsable || null,
+          tipo_equipo: it.tipo_equipo || null,
+          diagnostico: it.diagnostico || null,
         }));
-        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload);
+        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload as any);
         if (ie) throw ie;
 
         await supabase.from("transaction_history").insert({
@@ -285,6 +295,7 @@ const AccountingPage = () => {
       id: d.id, item_type: d.item_type, referencia_id: d.referencia_id,
       descripcion: d.descripcion, cantidad: d.cantidad,
       precio_unitario: Number(d.precio_unitario), subtotal: Number(d.subtotal),
+      responsable: d.responsable || "", tipo_equipo: d.tipo_equipo || "", diagnostico: d.diagnostico || "",
     })));
     setFormOpen(true);
   };
@@ -297,13 +308,14 @@ const AccountingPage = () => {
         id: d.id, item_type: d.item_type, referencia_id: d.referencia_id,
         descripcion: d.descripcion, cantidad: d.cantidad,
         precio_unitario: Number(d.precio_unitario), subtotal: Number(d.subtotal),
+        responsable: d.responsable || "", tipo_equipo: d.tipo_equipo || "", diagnostico: d.diagnostico || "",
       })),
     });
     setDetailOpen(true);
   };
 
   const addItem = (type: "producto" | "servicio") => {
-    setItems([...items, { item_type: type, descripcion: "", cantidad: 1, precio_unitario: 0, subtotal: 0 }]);
+    setItems([...items, { item_type: type, descripcion: "", cantidad: 1, precio_unitario: 0, subtotal: 0, responsable: "", tipo_equipo: "", diagnostico: "" }]);
   };
 
   const updateItem = (index: number, partial: Partial<TransactionItem>) => {
@@ -467,11 +479,13 @@ const AccountingPage = () => {
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>
                             <Eye className="h-3 w-3" />
                           </Button>
+                          {tx.estado !== "anulado" && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
                           {tx.estado === "borrador" && (
                             <>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
-                                <Pencil className="h-3 w-3" />
-                              </Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => emitirMutation.mutate(tx.id)}>
                                 <FileText className="h-3 w-3" />
                               </Button>
@@ -551,45 +565,68 @@ const AccountingPage = () => {
                     </TableHeader>
                     <TableBody>
                       {items.map((item, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell>
-                            <Badge variant={item.item_type === "producto" ? "default" : "secondary"} className="text-xs">
-                              {item.item_type === "producto" ? "Prod." : "Serv."}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.descripcion}
-                              onChange={e => updateItem(idx, { descripcion: e.target.value })}
-                              placeholder={item.item_type === "producto" ? "PC RYZEN 7..." : "MANTENIMIENTO..."}
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" min="1"
-                              value={item.cantidad}
-                              onChange={e => updateItem(idx, { cantidad: parseInt(e.target.value) || 1 })}
-                              className="h-8 text-xs w-16"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" step="0.01" min="0"
-                              value={item.precio_unitario}
-                              onChange={e => updateItem(idx, { precio_unitario: parseFloat(e.target.value) || 0 })}
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-xs">
-                            S/. {(item.cantidad * item.precio_unitario).toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(idx)}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                        <React.Fragment key={idx}>
+                          <TableRow>
+                            <TableCell>
+                              <Badge variant={item.item_type === "producto" ? "default" : "secondary"} className="text-xs">
+                                {item.item_type === "producto" ? "Prod." : "Serv."}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.descripcion}
+                                onChange={e => updateItem(idx, { descripcion: e.target.value })}
+                                placeholder={item.item_type === "producto" ? "PC RYZEN 7..." : "MANTENIMIENTO..."}
+                                className="h-8 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number" min="1"
+                                value={item.cantidad}
+                                onChange={e => updateItem(idx, { cantidad: parseInt(e.target.value) || 1 })}
+                                className="h-8 text-xs w-16"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number" step="0.01" min="0"
+                                value={item.precio_unitario}
+                                onChange={e => updateItem(idx, { precio_unitario: parseFloat(e.target.value) || 0 })}
+                                className="h-8 text-xs"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-xs">
+                              S/. {(item.cantidad * item.precio_unitario).toFixed(2)}
+                            </TableCell>
+                            <TableCell>
+                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(idx)}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {/* Extra fields for services */}
+                          {item.item_type === "servicio" && (
+                            <TableRow className="bg-secondary/10">
+                              <TableCell colSpan={6}>
+                                <div className="grid grid-cols-3 gap-2 py-1">
+                                  <div>
+                                    <Label className="text-[10px] text-muted-foreground">Responsable</Label>
+                                    <Input value={item.responsable || ""} onChange={e => updateItem(idx, { responsable: e.target.value })} placeholder="JERSON, EDZON..." className="h-7 text-xs" />
+                                  </div>
+                                  <div>
+                                    <Label className="text-[10px] text-muted-foreground">Tipo de Equipo</Label>
+                                    <Input value={item.tipo_equipo || ""} onChange={e => updateItem(idx, { tipo_equipo: e.target.value })} placeholder="LAPTOP, IMPRESORA..." className="h-7 text-xs" />
+                                  </div>
+                                  <div>
+                                    <Label className="text-[10px] text-muted-foreground">Diagnóstico</Label>
+                                    <Input value={item.diagnostico || ""} onChange={e => updateItem(idx, { diagnostico: e.target.value })} placeholder="FALLA FISICA..." className="h-7 text-xs" />
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>
@@ -639,6 +676,9 @@ const AccountingPage = () => {
                         cantidad: it.cantidad,
                         precio_unitario: it.precio_unitario,
                         subtotal: it.cantidad * it.precio_unitario,
+                        responsable: it.responsable || null,
+                        tipo_equipo: it.tipo_equipo || null,
+                        diagnostico: it.diagnostico || null,
                       }));
                       await supabase.from("transaction_items").insert(payload);
                       await supabase.from("transaction_history").insert({
@@ -692,17 +732,28 @@ const AccountingPage = () => {
                     </TableHeader>
                     <TableBody>
                       {viewingTx.items.map((it, i) => (
-                        <TableRow key={i}>
-                          <TableCell>
-                            <Badge variant={it.item_type === "producto" ? "default" : "secondary"} className="text-xs">
-                              {it.item_type === "producto" ? "Prod." : "Serv."}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">{it.descripcion}</TableCell>
-                          <TableCell className="text-right">{it.cantidad}</TableCell>
-                          <TableCell className="text-right">S/. {Number(it.precio_unitario).toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-bold">S/. {Number(it.subtotal).toFixed(2)}</TableCell>
-                        </TableRow>
+                        <React.Fragment key={i}>
+                          <TableRow>
+                            <TableCell>
+                              <Badge variant={it.item_type === "producto" ? "default" : "secondary"} className="text-xs">
+                                {it.item_type === "producto" ? "Prod." : "Serv."}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{it.descripcion}</TableCell>
+                            <TableCell className="text-right">{it.cantidad}</TableCell>
+                            <TableCell className="text-right">S/. {Number(it.precio_unitario).toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-bold">S/. {Number(it.subtotal).toFixed(2)}</TableCell>
+                          </TableRow>
+                          {it.item_type === "servicio" && (it.responsable || it.tipo_equipo || it.diagnostico) && (
+                            <TableRow className="bg-secondary/10">
+                              <TableCell colSpan={5} className="text-xs text-muted-foreground py-1">
+                                {it.responsable && <span className="mr-3">👷 {it.responsable}</span>}
+                                {it.tipo_equipo && <span className="mr-3">💻 {it.tipo_equipo}</span>}
+                                {it.diagnostico && <span>🔧 {it.diagnostico}</span>}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>
