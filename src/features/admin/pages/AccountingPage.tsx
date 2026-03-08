@@ -84,7 +84,7 @@ const AccountingPage = () => {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
-  const [activeTab, setActiveTab] = useState("todos");
+  const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios">("todos");
 
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
@@ -126,8 +126,8 @@ const AccountingPage = () => {
 
   // ─── Filtered views ───────────────────────────────────────────
   const filtered = useMemo(() => {
-    if (activeTab === "ventas") return transactions.filter(t => t.tipo_general === "venta" || t.tipo_general === "mixto");
-    if (activeTab === "servicios") return transactions.filter(t => t.tipo_general === "servicio" || t.tipo_general === "mixto");
+    if (activeTab === "ventas") return transactions.filter(t => Number(t.subtotal_productos || 0) > 0);
+    if (activeTab === "servicios") return transactions.filter(t => Number(t.subtotal_servicios || 0) > 0);
     return transactions;
   }, [transactions, activeTab]);
 
