@@ -308,13 +308,17 @@ const AccountingPage = () => {
         id: d.id, item_type: d.item_type, referencia_id: d.referencia_id,
         descripcion: d.descripcion, cantidad: d.cantidad,
         precio_unitario: Number(d.precio_unitario), subtotal: Number(d.subtotal),
+        responsable: d.responsable || "", tipo_equipo: d.tipo_equipo || "", diagnostico: d.diagnostico || "",
       })),
+    });
+    setDetailOpen(true);
+  };
     });
     setDetailOpen(true);
   };
 
   const addItem = (type: "producto" | "servicio") => {
-    setItems([...items, { item_type: type, descripcion: "", cantidad: 1, precio_unitario: 0, subtotal: 0 }]);
+    setItems([...items, { item_type: type, descripcion: "", cantidad: 1, precio_unitario: 0, subtotal: 0, responsable: "", tipo_equipo: "", diagnostico: "" }]);
   };
 
   const updateItem = (index: number, partial: Partial<TransactionItem>) => {
