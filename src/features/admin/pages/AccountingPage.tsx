@@ -676,6 +676,9 @@ const AccountingPage = () => {
                         cantidad: it.cantidad,
                         precio_unitario: it.precio_unitario,
                         subtotal: it.cantidad * it.precio_unitario,
+                        responsable: it.responsable || null,
+                        tipo_equipo: it.tipo_equipo || null,
+                        diagnostico: it.diagnostico || null,
                       }));
                       await supabase.from("transaction_items").insert(payload);
                       await supabase.from("transaction_history").insert({
@@ -729,17 +732,28 @@ const AccountingPage = () => {
                     </TableHeader>
                     <TableBody>
                       {viewingTx.items.map((it, i) => (
-                        <TableRow key={i}>
-                          <TableCell>
-                            <Badge variant={it.item_type === "producto" ? "default" : "secondary"} className="text-xs">
-                              {it.item_type === "producto" ? "Prod." : "Serv."}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">{it.descripcion}</TableCell>
-                          <TableCell className="text-right">{it.cantidad}</TableCell>
-                          <TableCell className="text-right">S/. {Number(it.precio_unitario).toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-bold">S/. {Number(it.subtotal).toFixed(2)}</TableCell>
-                        </TableRow>
+                        <React.Fragment key={i}>
+                          <TableRow>
+                            <TableCell>
+                              <Badge variant={it.item_type === "producto" ? "default" : "secondary"} className="text-xs">
+                                {it.item_type === "producto" ? "Prod." : "Serv."}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{it.descripcion}</TableCell>
+                            <TableCell className="text-right">{it.cantidad}</TableCell>
+                            <TableCell className="text-right">S/. {Number(it.precio_unitario).toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-bold">S/. {Number(it.subtotal).toFixed(2)}</TableCell>
+                          </TableRow>
+                          {it.item_type === "servicio" && (it.responsable || it.tipo_equipo || it.diagnostico) && (
+                            <TableRow className="bg-secondary/10">
+                              <TableCell colSpan={5} className="text-xs text-muted-foreground py-1">
+                                {it.responsable && <span className="mr-3">👷 {it.responsable}</span>}
+                                {it.tipo_equipo && <span className="mr-3">💻 {it.tipo_equipo}</span>}
+                                {it.diagnostico && <span>🔧 {it.diagnostico}</span>}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
                       ))}
                     </TableBody>
                   </Table>
