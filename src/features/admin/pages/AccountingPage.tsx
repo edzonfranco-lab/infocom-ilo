@@ -295,6 +295,7 @@ const AccountingPage = () => {
       id: d.id, item_type: d.item_type, referencia_id: d.referencia_id,
       descripcion: d.descripcion, cantidad: d.cantidad,
       precio_unitario: Number(d.precio_unitario), subtotal: Number(d.subtotal),
+      responsable: d.responsable || "", tipo_equipo: d.tipo_equipo || "", diagnostico: d.diagnostico || "",
     })));
     setFormOpen(true);
   };
