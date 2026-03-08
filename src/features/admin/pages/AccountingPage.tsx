@@ -338,6 +338,21 @@ const AccountingPage = () => {
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
+  const getDisplayedAmounts = (tx: Transaction) => {
+    const productos = Number(tx.subtotal_productos || 0);
+    const servicios = Number(tx.subtotal_servicios || 0);
+
+    if (activeTab === "ventas") {
+      return { productos, servicios: 0, total: productos };
+    }
+
+    if (activeTab === "servicios") {
+      return { productos: 0, servicios, total: servicios };
+    }
+
+    return { productos, servicios, total: Number(tx.total || 0) };
+  };
+
   // ─── Export data ──────────────────────────────────────────────
   const exportColumns = [
     { key: "fecha", label: "Fecha" },
@@ -391,7 +406,7 @@ const AccountingPage = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "todos" | "ventas" | "servicios")}> 
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="todos" className="gap-1"><List className="h-4 w-4" /> Todos ({transactions.length})</TabsTrigger>
           <TabsTrigger value="ventas" className="gap-1"><ShoppingCart className="h-4 w-4" /> Ventas</TabsTrigger>
