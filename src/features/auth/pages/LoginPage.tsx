@@ -19,14 +19,28 @@ const LoginPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
+
     if (error) {
       toast.error(error.message === "Invalid login credentials" ? "Credenciales incorrectas" : error.message);
-    } else {
-      toast.success("¡Bienvenido!");
-      navigate("/");
+      return;
     }
+
+    let nextPath = "/cuenta";
+    if (data.user?.id) {
+      const { data: roleRows } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id);
+
+      const canEnterAdminPanel = (roleRows || []).some((row: any) => row.role === "admin" || row.role === "moderator");
+      if (canEnterAdminPanel) nextPath = "/admin";
+    }
+
+    toast.success("¡Bienvenido!");
+    navigate(nextPath);
   };
 
   return (

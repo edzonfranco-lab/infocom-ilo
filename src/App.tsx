@@ -57,6 +57,12 @@ const SeasonalWrapper = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute allowedRoles={["admin"]} fallbackPath="/admin">
+    {children}
+  </ProtectedRoute>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -82,22 +88,23 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPasswordPage />} />
 
               {/* Admin */}
-              <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
+              <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin", "moderator"]}><AdminLayout /></ProtectedRoute>}>
                 <Route index element={<DashboardPage />} />
                 <Route path="recepcion" element={<ReceptionPage />} />
                 <Route path="productos" element={<ProductsPage />} />
-                <Route path="categorias" element={<CategoriesPage />} />
-                <Route path="marcas" element={<BrandsPage />} />
                 <Route path="pedidos" element={<OrdersPage />} />
-                <Route path="banners" element={<BannersPage />} />
-                <Route path="empresa" element={<CompanyPage />} />
-                <Route path="roles" element={<RolesPage />} />
-                <Route path="personal" element={<StaffPage />} />
-                <Route path="asistencias" element={<AttendancePage />} />
-                <Route path="contabilidad" element={<AccountingPage />} />
-                <Route path="configuracion" element={<SettingsPage />} />
                 <Route path="soporte" element={<SupportPage />} />
-                <Route path="pagos" element={<PaymentAccountsPage />} />
+
+                <Route path="categorias" element={<AdminOnlyRoute><CategoriesPage /></AdminOnlyRoute>} />
+                <Route path="marcas" element={<AdminOnlyRoute><BrandsPage /></AdminOnlyRoute>} />
+                <Route path="banners" element={<AdminOnlyRoute><BannersPage /></AdminOnlyRoute>} />
+                <Route path="empresa" element={<AdminOnlyRoute><CompanyPage /></AdminOnlyRoute>} />
+                <Route path="roles" element={<AdminOnlyRoute><RolesPage /></AdminOnlyRoute>} />
+                <Route path="personal" element={<AdminOnlyRoute><StaffPage /></AdminOnlyRoute>} />
+                <Route path="asistencias" element={<AdminOnlyRoute><AttendancePage /></AdminOnlyRoute>} />
+                <Route path="contabilidad" element={<AdminOnlyRoute><AccountingPage /></AdminOnlyRoute>} />
+                <Route path="configuracion" element={<AdminOnlyRoute><SettingsPage /></AdminOnlyRoute>} />
+                <Route path="pagos" element={<AdminOnlyRoute><PaymentAccountsPage /></AdminOnlyRoute>} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

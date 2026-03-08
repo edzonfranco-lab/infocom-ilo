@@ -169,6 +169,8 @@ const AccountPage = () => {
     user: "Usuario",
   };
 
+  const canAccessAdminPanel = roles.includes("admin") || roles.includes("moderator");
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -176,7 +178,7 @@ const AccountPage = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-display font-bold">Mi Cuenta</h1>
           <div className="flex gap-2">
-            {isAdmin && <Link to="/admin"><Button variant="outline" size="sm"><Settings className="h-4 w-4 mr-1" /> Admin</Button></Link>}
+            {canAccessAdminPanel && <Link to="/admin"><Button variant="outline" size="sm"><Settings className="h-4 w-4 mr-1" /> Panel</Button></Link>}
             <Button variant="outline" size="sm" onClick={handleSignOut}><LogOut className="h-4 w-4 mr-1" /> Salir</Button>
           </div>
         </div>
