@@ -472,6 +472,8 @@ const AccountingPage = () => {
                 ) : filtered.map((tx) => {
                   const st = STATUS_MAP[tx.estado];
                   const tp = TYPE_MAP[tx.tipo_general];
+                  const displayedAmounts = getDisplayedAmounts(tx);
+
                   return (
                     <TableRow key={tx.id} className={tx.estado === "anulado" ? "opacity-50" : ""}>
                       <TableCell className="whitespace-nowrap">
@@ -486,9 +488,9 @@ const AccountingPage = () => {
                       <TableCell>
                         <Badge variant={st?.variant}>{st?.label}</Badge>
                       </TableCell>
-                      <TableCell className="text-right">S/. {Number(tx.subtotal_productos).toFixed(2)}</TableCell>
-                      <TableCell className="text-right">S/. {Number(tx.subtotal_servicios).toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-bold">S/. {Number(tx.total).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">S/. {displayedAmounts.productos.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">S/. {displayedAmounts.servicios.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-bold">S/. {displayedAmounts.total.toFixed(2)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>
