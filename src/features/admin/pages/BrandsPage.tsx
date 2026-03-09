@@ -8,14 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Tags, Sun, Moon } from "lucide-react";
+import { Plus, Pencil, Trash2, Tags, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const BrandsPage = () => {
   const [brands, setBrands] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", logo_url: "", logo_url_dark: "", sort_order: "0", is_active: true });
+  const [form, setForm] = useState({ name: "", slug: "", logo_url: "", sort_order: "0", is_active: true });
+  const [uploading, setUploading] = useState(false);
 
   const fetchAll = async () => {
     const { data } = await supabase.from("brands").select("*").order("sort_order");
@@ -23,18 +24,54 @@ const BrandsPage = () => {
   };
 
   useEffect(() => { fetchAll(); }, []);
-  const resetForm = () => { setForm({ name: "", slug: "", logo_url: "", logo_url_dark: "", sort_order: "0", is_active: true }); setEditing(null); };
+
+  const resetForm = () => {
+    setForm({ name: "", slug: "", logo_url: "", sort_order: String(brands.length), is_active: true });
+    setEditing(null);
+  };
+
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
   const openEdit = (b: any) => {
     setEditing(b);
-    setForm({ name: b.name, slug: b.slug, logo_url: b.logo_url || "", logo_url_dark: (b as any).logo_url_dark || "", sort_order: String(b.sort_order || 0), is_active: b.is_active ?? true });
+    setForm({ name: b.name, slug: b.slug, logo_url: b.logo_url || "", sort_order: String(b.sort_order || 0), is_active: b.is_active ?? true });
     setDialogOpen(true);
+  };
+
+  const openNew = () => {
+    resetForm();
+    setForm(prev => ({ ...prev, sort_order: String(brands.length) }));
+    setDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Solo se permiten imágenes"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Máximo 5MB"); return; }
+
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error } = await supabase.storage.from("brand-logos").upload(fileName, file);
+    if (error) { toast.error("Error al subir imagen"); setUploading(false); return; }
+
+    const { data: urlData } = supabase.storage.from("brand-logos").getPublicUrl(fileName);
+    setForm(prev => ({ ...prev, logo_url: urlData.publicUrl }));
+    toast.success("Imagen subida");
+    setUploading(false);
   };
 
   const handleSave = async () => {
     if (!form.name) { toast.error("El nombre es obligatorio"); return; }
-    const payload: any = { name: form.name, slug: form.slug || generateSlug(form.name), logo_url: form.logo_url || null, sort_order: Number(form.sort_order), is_active: form.is_active };
+    const payload: any = {
+      name: form.name,
+      slug: form.slug || generateSlug(form.name),
+      logo_url: form.logo_url || null,
+      sort_order: Number(form.sort_order),
+      is_active: form.is_active,
+    };
     if (editing) {
       await supabase.from("brands").update(payload).eq("id", editing.id);
       toast.success("Marca actualizada");
@@ -63,31 +100,62 @@ const BrandsPage = () => {
           <h1 className="text-2xl font-display font-bold flex items-center gap-2">
             <Tags className="h-6 w-6 text-primary" /> Marcas
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Gestiona las marcas que se muestran en el carrusel de la tienda</p>
+          <p className="text-sm text-muted-foreground mt-1">Gestiona las marcas del carrusel</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
-          <DialogTrigger asChild><Button className="gap-2"><Plus className="h-4 w-4" /> Nueva Marca</Button></DialogTrigger>
+          <DialogTrigger asChild>
+            <Button className="gap-2" onClick={openNew}><Plus className="h-4 w-4" /> Nueva Marca</Button>
+          </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader><DialogTitle>{editing ? "Editar" : "Nueva"} Marca</DialogTitle></DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2"><Label>Nombre *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} /></div>
-              <div className="space-y-2"><Label>Slug</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="font-mono text-xs" /></div>
-              <div className="space-y-3 p-3 rounded-lg bg-secondary/30 border border-border">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Logos</p>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-xs"><Sun className="h-3 w-3" /> Logo modo claro (URL)</Label>
-                  <Input value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." />
-                  {form.logo_url && <div className="bg-white p-2 rounded border border-border"><img src={form.logo_url} alt="Preview" className="h-8 object-contain mx-auto" /></div>}
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1.5 text-xs"><Moon className="h-3 w-3" /> Logo modo oscuro (URL)</Label>
-                  <Input value={form.logo_url_dark} onChange={(e) => setForm({ ...form, logo_url_dark: e.target.value })} placeholder="https://... (opcional, usa el claro si no se indica)" />
-                  {form.logo_url_dark && <div className="bg-background p-2 rounded border border-border"><img src={form.logo_url_dark} alt="Preview" className="h-8 object-contain mx-auto" /></div>}
-                </div>
+              <div className="space-y-2">
+                <Label>Nombre *</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} />
               </div>
+              <div className="space-y-2">
+                <Label>Slug</Label>
+                <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} className="font-mono text-xs" />
+              </div>
+
+              {/* Logo upload */}
+              <div className="space-y-2">
+                <Label>Logo</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={form.logo_url}
+                    onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
+                    placeholder="URL o sube una imagen"
+                    className="flex-1"
+                  />
+                  <label className="cursor-pointer">
+                    <Button variant="outline" size="icon" className="shrink-0" asChild disabled={uploading}>
+                      <span>{uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}</span>
+                    </Button>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+                  </label>
+                  {form.logo_url && (
+                    <Button variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setForm({ ...form, logo_url: "" })}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {form.logo_url && (
+                  <div className="bg-secondary/30 p-2 rounded border border-border">
+                    <img src={form.logo_url} alt="Preview" className="h-12 object-contain mx-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Orden</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></div>
-                <div className="flex items-center gap-2 pt-6"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Activa</Label></div>
+                <div className="space-y-2">
+                  <Label>Orden</Label>
+                  <Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} />
+                </div>
+                <div className="flex items-center gap-2 pt-6">
+                  <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                  <Label>Activa</Label>
+                </div>
               </div>
               <Button onClick={handleSave} className="w-full">{editing ? "Guardar Cambios" : "Crear Marca"}</Button>
             </div>
