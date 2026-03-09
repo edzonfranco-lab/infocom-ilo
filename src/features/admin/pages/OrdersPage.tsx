@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { CURRENCY, ORDER_STATUS_LABELS } from "@/lib/types";
 import type { OrderStatus } from "@/lib/types";
 import { toast } from "sonner";
-import { Eye } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-400",
@@ -20,6 +21,7 @@ const statusColors: Record<string, string> = {
 };
 
 const OrdersPage = () => {
+  const { isAdmin } = useAuth();
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [orderItems, setOrderItems] = useState<any[]>([]);
@@ -47,10 +49,21 @@ const OrdersPage = () => {
     if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, status });
   };
 
+  const deleteOrder = async (orderId: string) => {
+    if (!confirm("¿Eliminar este pedido? Esta acción no se puede deshacer.")) return;
+    // Delete items first, then order
+    await supabase.from("order_items").delete().eq("order_id", orderId);
+    const { error } = await supabase.from("orders").delete().eq("id", orderId);
+    if (error) { toast.error("Error al eliminar"); return; }
+    toast.success("Pedido eliminado");
+    if (selectedOrder?.id === orderId) setSelectedOrder(null);
+    fetchAll();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-display font-bold">Pedidos ({orders.length})</h1>
+        <h1 className="text-2xl font-display font-bold">Pedidos Online ({orders.length})</h1>
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -76,6 +89,11 @@ const OrdersPage = () => {
                   <SelectContent>{Object.entries(ORDER_STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
                 </Select>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => viewOrder(o)}><Eye className="h-3 w-3" /></Button>
+                {isAdmin && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteOrder(o.id)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

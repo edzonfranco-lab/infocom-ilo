@@ -46,26 +46,45 @@ const parseCSV = (text: string): string[][] => {
   return rows;
 };
 
+const escapeCSV = (val: string) => {
+  if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+    return `"${val.replace(/"/g, '""')}"`;
+  }
+  return val;
+};
+
 const exportCSV = (data: any[], columns: Column[], filename: string) => {
-  const header = columns.map(c => c.label).join(",");
-  const lines = data.map(r => columns.map(c => `"${String(r[c.key] ?? "").replace(/"/g, '""')}"`).join(","));
-  const blob = new Blob(["\uFEFF" + header + "\n" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  const header = columns.map(c => escapeCSV(c.label)).join(",");
+  const lines = data.map(r =>
+    columns.map(c => escapeCSV(String(r[c.key] ?? ""))).join(",")
+  );
+  const content = header + "\n" + lines.join("\n");
+  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = filename + ".csv"; a.click();
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
 
 const exportExcel = (data: any[], columns: Column[], filename: string) => {
-  // Simple XML-based Excel export
-  let xml = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Datos"><Table>`;
-  xml += `<Row>${columns.map(c => `<Cell><Data ss:Type="String">${c.label}</Data></Cell>`).join("")}</Row>`;
-  data.forEach(r => {
-    xml += `<Row>${columns.map(c => `<Cell><Data ss:Type="String">${String(r[c.key] ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</Data></Cell>`).join("")}</Row>`;
-  });
-  xml += `</Table></Worksheet></Workbook>`;
-  const blob = new Blob([xml], { type: "application/vnd.ms-excel" });
+  // Use tab-separated values with .xls extension - most compatible approach
+  const header = columns.map(c => c.label).join("\t");
+  const lines = data.map(r =>
+    columns.map(c => String(r[c.key] ?? "").replace(/\t/g, " ").replace(/\n/g, " ")).join("\t")
+  );
+  const content = header + "\n" + lines.join("\n");
+  const blob = new Blob(["\uFEFF" + content], { type: "application/vnd.ms-excel;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = filename + ".xls"; a.click();
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename + ".xls";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
 
@@ -115,16 +134,24 @@ const DataImportExport = ({ columns, data, filenamePrefix, onImport, templateDes
 
   const handleExport = () => {
     if (data.length === 0) { toast.error("No hay datos para exportar"); return; }
-    if (exportFormat === "csv") exportCSV(data, columns, filenamePrefix);
-    else if (exportFormat === "excel") exportExcel(data, columns, filenamePrefix);
+    const ts = new Date().toISOString().split("T")[0];
+    const fname = `${filenamePrefix}_${ts}`;
+    if (exportFormat === "csv") exportCSV(data, columns, fname);
+    else if (exportFormat === "excel") exportExcel(data, columns, fname);
+    toast.success("Archivo exportado");
   };
 
   const downloadTemplate = () => {
     const header = columns.map(c => c.label).join(",");
-    const example = columns.map(c => `"ejemplo"`).join(",");
+    const example = columns.map(() => `"ejemplo"`).join(",");
     const blob = new Blob(["\uFEFF" + header + "\n" + example], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `plantilla_${filenamePrefix}.csv`; a.click();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `plantilla_${filenamePrefix}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
@@ -174,7 +201,7 @@ const DataImportExport = ({ columns, data, filenamePrefix, onImport, templateDes
                     <thead><tr className="bg-secondary/50">{columns.map(c => <th key={c.key} className="p-1 text-left font-semibold">{c.label}</th>)}</tr></thead>
                     <tbody>{preview.slice(0, 5).map((r, i) => <tr key={i} className="border-t">{columns.map(c => <td key={c.key} className="p-1 truncate max-w-[120px]">{r[c.key]}</td>)}</tr>)}</tbody>
                   </table>
-                  {preview.length > 5 && <p className="p-1 text-center text-muted-foreground">...y {preview.length - 5} mas</p>}
+                  {preview.length > 5 && <p className="p-1 text-center text-muted-foreground">...y {preview.length - 5} más</p>}
                 </div>
                 <Button className="w-full" onClick={confirmImport} disabled={importing}>
                   {importing ? "Importando..." : `Importar ${preview.length} registros`}
