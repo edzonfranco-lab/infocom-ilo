@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ShoppingCart, Search, Plus, Minus, X, Trash2, Receipt, User, Loader2 } from "lucide-react";
+import { ShoppingCart, Search, Plus, Minus, X, Receipt, User, Loader2, Printer, AlertCircle, FileText } from "lucide-react";
 import { CURRENCY, PAYMENT_METHOD_LABELS } from "@/lib/types";
 import type { PaymentMethod } from "@/lib/types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -23,13 +23,19 @@ interface CartItem {
   quantity: number;
 }
 
+type SaleType = "boleta" | "simple";
+
 const SalesPage = () => {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [dniLoading, setDniLoading] = useState(false);
+  const [dniNotFound, setDniNotFound] = useState(false);
+
+  const [saleType, setSaleType] = useState<SaleType>("simple");
 
   const [customerForm, setCustomerForm] = useState({
     dni: "",
@@ -39,6 +45,10 @@ const SalesPage = () => {
     email: "",
     metodo_pago: "" as string,
   });
+
+  // Last completed sale for printing
+  const [lastSale, setLastSale] = useState<{ items: CartItem[]; customer: typeof customerForm; total: number; date: string; saleType: SaleType } | null>(null);
+  const [printOpen, setPrintOpen] = useState(false);
 
   const { data: products = [] } = useQuery({
     queryKey: ["pos_products"],
@@ -107,6 +117,7 @@ const SalesPage = () => {
       return;
     }
     setDniLoading(true);
+    setDniNotFound(false);
     try {
       const { data, error } = await supabase.functions.invoke("dni-lookup", {
         body: { dni: customerForm.dni },
@@ -115,27 +126,43 @@ const SalesPage = () => {
       if (data?.nombre) {
         setCustomerForm(prev => ({ ...prev, nombre: data.nombre }));
         toast.success("Datos encontrados");
-      } else if (data?.error) {
-        toast.error(data.error);
+      } else {
+        setDniNotFound(true);
+        toast.warning("No se encontró el DNI. Ingresa el nombre manualmente.");
       }
     } catch {
-      toast.error("Error al consultar DNI");
+      setDniNotFound(true);
+      toast.warning("No se pudo consultar el DNI. Ingresa el nombre manualmente.");
     }
     setDniLoading(false);
   };
 
+  const openCheckout = () => {
+    setDniNotFound(false);
+    setCheckoutOpen(true);
+  };
+
   const handleCheckout = async () => {
-    if (!customerForm.nombre) { toast.error("Nombre es requerido"); return; }
+    if (saleType === "boleta" && !customerForm.nombre) {
+      toast.error("Nombre es requerido para boleta");
+      return;
+    }
     if (!customerForm.metodo_pago) { toast.error("Selecciona método de pago"); return; }
     setProcessing(true);
 
     try {
-      // Create transaction in accounting
+      const notaParts = [];
+      if (saleType === "boleta") notaParts.push(`BOLETA | DNI: ${customerForm.dni || "N/A"}`);
+      else notaParts.push("VENTA SIMPLE");
+      if (customerForm.direccion) notaParts.push(`Dir: ${customerForm.direccion}`);
+      if (customerForm.email) notaParts.push(`Email: ${customerForm.email}`);
+      notaParts.push(`Pago: ${PAYMENT_METHOD_LABELS[customerForm.metodo_pago as PaymentMethod] || customerForm.metodo_pago}`);
+
       const { data: tx, error: txErr } = await supabase.from("transactions").insert({
         fecha: new Date().toISOString().split("T")[0],
-        cliente_nombre: customerForm.nombre,
+        cliente_nombre: customerForm.nombre || null,
         cliente_telefono: customerForm.telefono || null,
-        notas: `DNI: ${customerForm.dni || "N/A"} | Dir: ${customerForm.direccion || "N/A"} | Email: ${customerForm.email || "N/A"} | Pago: ${PAYMENT_METHOD_LABELS[customerForm.metodo_pago as PaymentMethod] || customerForm.metodo_pago}`,
+        notas: notaParts.join(" | "),
         estado: "emitido" as any,
         emitido_en: new Date().toISOString(),
         emitido_por: user?.email || "POS",
@@ -143,7 +170,6 @@ const SalesPage = () => {
       }).select("id").single();
       if (txErr) throw txErr;
 
-      // Create transaction items
       const itemPayload = cart.map(c => ({
         transaction_id: tx.id,
         item_type: "producto" as const,
@@ -156,27 +182,86 @@ const SalesPage = () => {
       const { error: itemErr } = await supabase.from("transaction_items").insert(itemPayload as any);
       if (itemErr) throw itemErr;
 
-      // Log history
       await supabase.from("transaction_history").insert({
         transaction_id: tx.id,
         accion: "venta_pos",
-        detalles: { items: itemPayload, cliente: customerForm } as any,
+        detalles: { items: itemPayload, cliente: customerForm, tipo: saleType } as any,
         usuario_id: user?.id || null,
       });
 
-      // Reduce stock
       for (const c of cart) {
         await supabase.from("products").update({ stock: c.stock - c.quantity } as any).eq("id", c.product_id);
       }
 
+      // Store last sale for printing
+      setLastSale({
+        items: [...cart],
+        customer: { ...customerForm },
+        total,
+        date: new Date().toLocaleString("es-PE"),
+        saleType,
+      });
+
       toast.success("¡Venta registrada exitosamente!");
+      qc.invalidateQueries({ queryKey: ["pos_products"] });
       setCart([]);
       setCheckoutOpen(false);
       setCustomerForm({ dni: "", nombre: "", direccion: "", telefono: "", email: "", metodo_pago: "" });
+      setPrintOpen(true);
     } catch (e: any) {
       toast.error(e.message || "Error al procesar venta");
     }
     setProcessing(false);
+  };
+
+  const printReceipt = () => {
+    if (!lastSale) return;
+    const templateStr = localStorage.getItem("receipt_template_v2");
+    const template = templateStr ? { ...{ companyName: "INFOCOM", companySubtitle: "ESPECIALISTAS EN TECNOLOGIA\nSoporte Tecnico Especializado", footerText: "Gracias por confiar en INFOCOM\nConserve este comprobante", saleTitle: "BOLETA DE VENTA", paperSize: "58mm", fontSize: "12" }, ...JSON.parse(templateStr) } : { companyName: "INFOCOM", companySubtitle: "ESPECIALISTAS EN TECNOLOGIA\nSoporte Tecnico Especializado", footerText: "Gracias por confiar en INFOCOM\nConserve este comprobante", saleTitle: "BOLETA DE VENTA", paperSize: "58mm", fontSize: "12" };
+
+    const PAPER_SIZES: Record<string, string> = { "50mm": "180px", "58mm": "210px", "80mm": "300px", A4: "700px" };
+    const sz = PAPER_SIZES[template.paperSize] || "210px";
+    const fs = parseInt(template.fontSize) || 12;
+    const title = lastSale.saleType === "boleta" ? template.saleTitle : "NOTA DE VENTA";
+
+    const itemsHtml = lastSale.items.map(c =>
+      `<div class="row"><span>${c.quantity}x ${c.name}</span><span class="bold">S/${(c.price * c.quantity).toLocaleString()}</span></div>`
+    ).join("");
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ticket</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Courier New',monospace;font-size:${fs}px;font-weight:700;padding:8px;max-width:${sz};margin:0 auto;color:#000}
+.center{text-align:center}.bold{font-weight:900}.line{border-top:1px dashed #000;margin:6px 0}
+.row{display:flex;justify-content:space-between;margin:2px 0;gap:4px}
+.title{font-size:${fs + 4}px;font-weight:900;margin-bottom:2px}
+.subtitle{font-size:${Math.max(fs - 2, 8)}px;margin-bottom:6px;font-weight:700}
+.big{font-size:${fs + 6}px;font-weight:900}
+.footer{margin-top:12px;font-size:${Math.max(fs - 3, 8)}px;text-align:center;font-weight:700}
+@media print{body{padding:4px}@page{margin:2mm}}
+</style></head><body>
+<div class="center"><div class="title">${template.companyName}</div>
+<div class="subtitle">${template.companySubtitle.replace(/\n/g, "<br>")}</div></div>
+<div class="line"></div>
+<div class="center big">${title}</div>
+<div class="line"></div>
+<div class="row"><span>Fecha:</span><span>${lastSale.date}</span></div>
+${lastSale.customer.nombre ? `<div class="row"><span>Cliente:</span><span class="bold">${lastSale.customer.nombre}</span></div>` : ""}
+${lastSale.saleType === "boleta" && lastSale.customer.dni ? `<div class="row"><span>DNI:</span><span>${lastSale.customer.dni}</span></div>` : ""}
+${lastSale.customer.telefono ? `<div class="row"><span>Telefono:</span><span>${lastSale.customer.telefono}</span></div>` : ""}
+<div class="line"></div>
+${itemsHtml}
+<div class="line"></div>
+<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/${lastSale.total.toLocaleString()}</span></div>
+<div class="row"><span>Metodo:</span><span>${PAYMENT_METHOD_LABELS[lastSale.customer.metodo_pago as PaymentMethod] || lastSale.customer.metodo_pago}</span></div>
+<div class="footer"><p>${template.footerText.replace(/\n/g, "<br>")}</p></div>
+</body></html>`;
+
+    const w = window.open("", "_blank", "width=500,height=700");
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 300);
   };
 
   return (
@@ -286,7 +371,7 @@ const SalesPage = () => {
               className="w-full gap-2"
               size="lg"
               disabled={cart.length === 0}
-              onClick={() => setCheckoutOpen(true)}
+              onClick={openCheckout}
             >
               <Receipt className="h-4 w-4" /> Generar Venta
             </Button>
@@ -299,49 +384,91 @@ const SalesPage = () => {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" /> Datos del Comprador
+              <User className="h-5 w-5" /> Datos de Venta
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Sale type toggle */}
             <div className="space-y-2">
-              <Label>DNI</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={customerForm.dni}
-                  onChange={e => setCustomerForm(prev => ({ ...prev, dni: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
-                  placeholder="12345678"
-                  maxLength={8}
-                />
+              <Label className="font-bold">Tipo de Venta</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Button
-                  variant="outline"
-                  onClick={lookupDNI}
-                  disabled={dniLoading || customerForm.dni.length !== 8}
-                  className="shrink-0"
+                  type="button"
+                  variant={saleType === "simple" ? "default" : "outline"}
+                  className="gap-2"
+                  onClick={() => setSaleType("simple")}
                 >
-                  {dniLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  <ShoppingCart className="h-4 w-4" /> Venta Simple
+                </Button>
+                <Button
+                  type="button"
+                  variant={saleType === "boleta" ? "default" : "outline"}
+                  className="gap-2"
+                  onClick={() => setSaleType("boleta")}
+                >
+                  <FileText className="h-4 w-4" /> Boleta con DNI
                 </Button>
               </div>
             </div>
 
+            {/* DNI field - only for boleta */}
+            {saleType === "boleta" && (
+              <div className="space-y-2">
+                <Label>DNI</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={customerForm.dni}
+                    onChange={e => {
+                      setDniNotFound(false);
+                      setCustomerForm(prev => ({ ...prev, dni: e.target.value.replace(/\D/g, "").slice(0, 8) }));
+                    }}
+                    placeholder="12345678"
+                    maxLength={8}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={lookupDNI}
+                    disabled={dniLoading || customerForm.dni.length !== 8}
+                    className="shrink-0"
+                  >
+                    {dniLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {dniNotFound && (
+                  <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 p-2 rounded-md">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>No se encontró el DNI. Ingresa el nombre manualmente.</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label>Nombre completo *</Label>
-              <Input value={customerForm.nombre} onChange={e => setCustomerForm(prev => ({ ...prev, nombre: e.target.value }))} />
+              <Label>{saleType === "boleta" ? "Nombre completo *" : "Nombre (opcional)"}</Label>
+              <Input
+                value={customerForm.nombre}
+                onChange={e => setCustomerForm(prev => ({ ...prev, nombre: e.target.value }))}
+                placeholder={saleType === "boleta" ? "Nombre del cliente" : "Cliente general"}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label>Dirección</Label>
-              <Input value={customerForm.direccion} onChange={e => setCustomerForm(prev => ({ ...prev, direccion: e.target.value }))} />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Teléfono *</Label>
+              <Label>Teléfono {saleType === "boleta" ? "*" : "(opcional)"}</Label>
               <Input value={customerForm.telefono} onChange={e => setCustomerForm(prev => ({ ...prev, telefono: e.target.value }))} />
             </div>
 
-            <div className="space-y-2">
-              <Label>Correo (opcional)</Label>
-              <Input value={customerForm.email} onChange={e => setCustomerForm(prev => ({ ...prev, email: e.target.value }))} />
-            </div>
+            {saleType === "boleta" && (
+              <>
+                <div className="space-y-2">
+                  <Label>Dirección</Label>
+                  <Input value={customerForm.direccion} onChange={e => setCustomerForm(prev => ({ ...prev, direccion: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Correo (opcional)</Label>
+                  <Input value={customerForm.email} onChange={e => setCustomerForm(prev => ({ ...prev, email: e.target.value }))} />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <Label>Método de pago *</Label>
@@ -360,7 +487,7 @@ const SalesPage = () => {
                 <span>TOTAL:</span>
                 <span className="text-primary">{CURRENCY}{total.toLocaleString()}</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{cart.length} producto(s)</p>
+              <p className="text-xs text-muted-foreground mt-1">{cart.length} producto(s) · {saleType === "boleta" ? "Boleta" : "Venta Simple"}</p>
             </div>
 
             <div className="flex gap-2">
@@ -370,6 +497,37 @@ const SalesPage = () => {
               <Button onClick={handleCheckout} disabled={processing} className="flex-1">
                 {processing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Generar Venta
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Print dialog after sale */}
+      <Dialog open={printOpen} onOpenChange={setPrintOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Receipt className="h-5 w-5" /> ¡Venta Registrada!
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              La venta se registró exitosamente en contabilidad.
+            </p>
+            {lastSale && (
+              <div className="bg-secondary/30 rounded-lg p-3 text-sm space-y-1">
+                {lastSale.customer.nombre && <p><span className="text-muted-foreground">Cliente:</span> <span className="font-bold">{lastSale.customer.nombre}</span></p>}
+                <p className="font-bold text-lg text-primary">{CURRENCY}{lastSale.total.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{lastSale.items.length} producto(s)</p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setPrintOpen(false)} className="flex-1">
+                Cerrar
+              </Button>
+              <Button onClick={() => { printReceipt(); }} className="flex-1 gap-2">
+                <Printer className="h-4 w-4" /> Imprimir Ticket
               </Button>
             </div>
           </div>
