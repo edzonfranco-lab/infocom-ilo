@@ -48,6 +48,8 @@ const DEFAULT_TEMPLATE: ReceiptTemplate = {
   fontSize: "12",
   companyName: "INFOCOM",
   companySubtitle: "ESPECIALISTAS EN TECNOLOGIA\nSoporte Tecnico Especializado",
+  headerMode: "text",
+  logoUrl: "",
   footerText: "Gracias por confiar en INFOCOM\nConserve este ticket para recoger su equipo",
   receptionTitle: "TICKET DE RECEPCION",
   receptionSectionClient: "DATOS DEL CLIENTE",
