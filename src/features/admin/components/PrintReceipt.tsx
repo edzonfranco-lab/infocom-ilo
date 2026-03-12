@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Printer, Settings2, FileText } from "lucide-react";
+import { Printer, Settings2, FileText, Upload, Loader2, ImageIcon, Type } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const PAPER_SIZES: Record<string, { label: string; width: string }> = {
   "50mm": { label: "Ticket 50mm", width: "180px" },
@@ -16,17 +18,14 @@ const PAPER_SIZES: Record<string, { label: string; width: string }> = {
   A4: { label: "A4 (210mm)", width: "700px" },
 };
 
-interface ReceiptTemplate {
-  // General
+export interface ReceiptTemplate {
   paperSize: string;
   fontSize: string;
   companyName: string;
   companySubtitle: string;
   footerText: string;
-  // Header mode: 'text' = company name text, 'logo' = logo image
   headerMode: "text" | "logo";
   logoUrl: string;
-  // Reception
   receptionTitle: string;
   receptionSectionClient: string;
   receptionSectionDevice: string;
@@ -37,13 +36,11 @@ interface ReceiptTemplate {
   showSignatures: boolean;
   signatureLeft: string;
   signatureRight: string;
-  // Sale
   saleTitle: string;
-  // Service
   serviceTitle: string;
 }
 
-const DEFAULT_TEMPLATE: ReceiptTemplate = {
+export const DEFAULT_TEMPLATE: ReceiptTemplate = {
   paperSize: "58mm",
   fontSize: "12",
   companyName: "INFOCOM",
@@ -67,18 +64,17 @@ const DEFAULT_TEMPLATE: ReceiptTemplate = {
 
 const TEMPLATE_KEY = "receipt_template_v2";
 
-const loadTemplate = (): ReceiptTemplate => {
+export const loadTemplate = (): ReceiptTemplate => {
   try {
     const saved = localStorage.getItem(TEMPLATE_KEY);
     return saved ? { ...DEFAULT_TEMPLATE, ...JSON.parse(saved) } : DEFAULT_TEMPLATE;
   } catch { return DEFAULT_TEMPLATE; }
 };
 
-const saveTemplate = (t: ReceiptTemplate) => localStorage.setItem(TEMPLATE_KEY, JSON.stringify(t));
+export const saveTemplate = (t: ReceiptTemplate) => localStorage.setItem(TEMPLATE_KEY, JSON.stringify(t));
 
-// Per-order overrides stored in localStorage
 interface OrderOverrides {
-  issueLabel?: string; // e.g. "SERVICIO SOLICITADO" instead of "FALLA REPORTADA"
+  issueLabel?: string;
 }
 
 const loadOrderOverrides = (orderId: string): OrderOverrides => {
@@ -92,6 +88,14 @@ const saveOrderOverrides = (orderId: string, o: OrderOverrides) => {
   localStorage.setItem(`receipt_overrides_${orderId}`, JSON.stringify(o));
 };
 
+/** Build the header HTML used in all ticket types */
+export const buildHeaderHtml = (t: ReceiptTemplate) => {
+  if (t.headerMode === "logo" && t.logoUrl) {
+    return `<div class="center"><img src="${t.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" /><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+  }
+  return `<div class="center"><div class="title">${t.companyName}</div><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+};
+
 interface PrintReceiptProps {
   order: any;
   type?: "reception" | "sale" | "service";
@@ -103,6 +107,32 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
   const [orderOverrides, setOrderOverrides] = useState<OrderOverrides>(() =>
     order?.id ? loadOrderOverrides(order.id) : {}
   );
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Solo se permiten imágenes");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `logo-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("receipt-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("receipt-assets").getPublicUrl(path);
+      updateTemplate({ logoUrl: urlData.publicUrl, headerMode: "logo" });
+      toast.success("Logo subido correctamente");
+    } catch (err: any) {
+      toast.error("Error al subir logo: " + err.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handlePrint = () => {
     const t = template;
@@ -113,10 +143,7 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
 
     let bodyContent = "";
     const issueLabel = orderOverrides.issueLabel || t.receptionSectionIssueLabel;
-
-    const headerHtml = t.headerMode === "logo" && t.logoUrl
-      ? `<div class="center"><img src="${t.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" /><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`
-      : `<div class="center"><div class="title">${t.companyName}</div><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+    const headerHtml = buildHeaderHtml(t);
 
     if (type === "reception") {
       bodyContent = `
@@ -251,7 +278,7 @@ ${bodyContent}
                         <SelectItem value="MANTENIMIENTO">MANTENIMIENTO</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">Cambia el titulo de la seccion en el ticket impreso. Ej: si el cliente deja para instalar juegos, selecciona "SERVICIO SOLICITADO".</p>
+                    <p className="text-xs text-muted-foreground">Cambia el titulo de la seccion en el ticket impreso.</p>
                   </div>
                 </div>
               )}
@@ -261,7 +288,7 @@ ${bodyContent}
             {/* Global template */}
             <TabsContent value="template" className="space-y-4 mt-3">
               <div className="space-y-2">
-                <Label className="font-bold">Tamano de Papel</Label>
+                <Label className="font-bold">Tamaño de Papel</Label>
                 <Select value={template.paperSize} onValueChange={v => updateTemplate({ paperSize: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -272,74 +299,120 @@ ${bodyContent}
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="font-bold">Tamano de Fuente (px)</Label>
+                <Label className="font-bold">Tamaño de Fuente (px)</Label>
                 <Input type="number" min="8" max="20" value={template.fontSize} onChange={e => updateTemplate({ fontSize: e.target.value })} />
               </div>
 
+              {/* HEADER: Switch style like signatures */}
               <div className="border-t border-border pt-3 space-y-3">
-                <h4 className="font-bold text-sm text-primary">Encabezado</h4>
-                <div className="space-y-2">
-                  <Label className="font-bold">Modo de Encabezado</Label>
-                  <Select value={template.headerMode} onValueChange={v => updateTemplate({ headerMode: v as "text" | "logo" })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="text">Nombre de Empresa (texto)</SelectItem>
-                      <SelectItem value="logo">Logo (imagen sin fondo)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <h4 className="font-bold text-sm text-primary">Encabezado del Ticket</h4>
+                
+                {/* Activar Título */}
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={template.headerMode === "text"}
+                    onCheckedChange={(checked) => {
+                      if (checked) updateTemplate({ headerMode: "text" });
+                    }}
+                  />
+                  <Label className="flex items-center gap-2">
+                    <Type className="h-4 w-4" /> Activar Título (texto)
+                  </Label>
                 </div>
-                {template.headerMode === "logo" && (
-                  <div className="space-y-2">
-                    <Label>URL del Logo (sin fondo, PNG recomendado)</Label>
-                    <Input value={template.logoUrl} onChange={e => updateTemplate({ logoUrl: e.target.value })} placeholder="https://..." />
-                    {template.logoUrl && (
-                      <div className="p-2 bg-secondary/30 rounded-lg text-center">
-                        <img src={template.logoUrl} alt="Preview" className="max-h-12 mx-auto" />
-                      </div>
-                    )}
-                  </div>
-                )}
                 {template.headerMode === "text" && (
-                  <div className="space-y-2">
-                    <Label>Nombre de Empresa</Label>
+                  <div className="ml-8 space-y-2 border-l-2 border-primary/30 pl-3">
+                    <Label className="text-xs">Nombre de Empresa</Label>
                     <Input value={template.companyName} onChange={e => updateTemplate({ companyName: e.target.value })} />
                   </div>
                 )}
+
+                {/* Activar Logo */}
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={template.headerMode === "logo"}
+                    onCheckedChange={(checked) => {
+                      if (checked) updateTemplate({ headerMode: "logo" });
+                    }}
+                  />
+                  <Label className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" /> Activar Logo (imagen)
+                  </Label>
+                </div>
+                {template.headerMode === "logo" && (
+                  <div className="ml-8 space-y-3 border-l-2 border-primary/30 pl-3">
+                    {template.logoUrl && (
+                      <div className="p-3 bg-secondary/30 rounded-lg text-center">
+                        <img src={template.logoUrl} alt="Logo actual" className="max-h-14 mx-auto" />
+                        <p className="text-xs text-muted-foreground mt-1">Logo actual</p>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label className="text-xs">Subir logo (PNG sin fondo recomendado)</Label>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleUploadLogo}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-2"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                      >
+                        {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                        {uploading ? "Subiendo..." : template.logoUrl ? "Cambiar Logo" : "Subir Logo"}
+                      </Button>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">O pegar URL directamente:</Label>
+                      <Input
+                        value={template.logoUrl}
+                        onChange={e => updateTemplate({ logoUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  <Label>Subtitulo (usar \n para salto de linea)</Label>
+                  <Label>Subtítulo (usar Enter para salto de línea)</Label>
                   <Textarea value={template.companySubtitle} onChange={e => updateTemplate({ companySubtitle: e.target.value })} rows={2} />
                 </div>
               </div>
 
               <div className="border-t border-border pt-3 space-y-3">
-                <h4 className="font-bold text-sm text-primary">Titulos de Ticket</h4>
+                <h4 className="font-bold text-sm text-primary">Títulos de Ticket</h4>
                 <div className="space-y-2">
-                  <Label>Titulo - Recepcion Tecnica</Label>
+                  <Label>Título - Recepción Técnica</Label>
                   <Input value={template.receptionTitle} onChange={e => updateTemplate({ receptionTitle: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Titulo - Boleta de Venta</Label>
+                  <Label>Título - Boleta de Venta</Label>
                   <Input value={template.saleTitle} onChange={e => updateTemplate({ saleTitle: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Titulo - Ticket de Servicio</Label>
+                  <Label>Título - Ticket de Servicio</Label>
                   <Input value={template.serviceTitle} onChange={e => updateTemplate({ serviceTitle: e.target.value })} />
                 </div>
               </div>
 
               {type === "reception" && (
                 <div className="border-t border-border pt-3 space-y-3">
-                  <h4 className="font-bold text-sm text-primary">Secciones del Ticket de Recepcion</h4>
+                  <h4 className="font-bold text-sm text-primary">Secciones del Ticket de Recepción</h4>
                   <div className="space-y-2">
-                    <Label>Seccion Cliente</Label>
+                    <Label>Sección Cliente</Label>
                     <Input value={template.receptionSectionClient} onChange={e => updateTemplate({ receptionSectionClient: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Seccion Equipo</Label>
+                    <Label>Sección Equipo</Label>
                     <Input value={template.receptionSectionDevice} onChange={e => updateTemplate({ receptionSectionDevice: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Seccion Falla/Servicio (por defecto)</Label>
+                    <Label>Sección Falla/Servicio (por defecto)</Label>
                     <Input value={template.receptionSectionIssueLabel} onChange={e => updateTemplate({ receptionSectionIssueLabel: e.target.value })} />
                   </div>
                   <div className="flex items-center gap-2">
@@ -376,11 +449,11 @@ ${bodyContent}
               )}
 
               <div className="border-t border-border pt-3 space-y-2">
-                <Label className="font-bold">Pie de Ticket (usar \n para salto de linea)</Label>
+                <Label className="font-bold">Pie de Ticket (usar Enter para salto de línea)</Label>
                 <Textarea value={template.footerText} onChange={e => updateTemplate({ footerText: e.target.value })} rows={2} />
               </div>
 
-              <p className="text-xs text-muted-foreground">Los cambios en la plantilla se guardan automaticamente y aplican a todos los tickets futuros.</p>
+              <p className="text-xs text-muted-foreground">Los cambios se guardan automáticamente y aplican a todos los tickets.</p>
               <Button variant="outline" size="sm" className="w-full" onClick={() => { setTemplate(DEFAULT_TEMPLATE); saveTemplate(DEFAULT_TEMPLATE); }}>
                 Restaurar Valores por Defecto
               </Button>
