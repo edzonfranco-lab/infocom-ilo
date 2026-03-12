@@ -160,8 +160,7 @@ ${headerHtml}
 <div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.total).toFixed(2)}</span></div>`;
     } else {
       bodyContent = `
-<div class="center"><div class="title">${t.companyName}</div>
-<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>
+${headerHtml}
 <div class="line"></div>
 <div class="center big">${t.serviceTitle}</div>
 <div class="line"></div>
