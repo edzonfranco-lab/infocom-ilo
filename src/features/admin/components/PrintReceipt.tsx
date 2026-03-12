@@ -23,6 +23,9 @@ interface ReceiptTemplate {
   companyName: string;
   companySubtitle: string;
   footerText: string;
+  // Header mode: 'text' = company name text, 'logo' = logo image
+  headerMode: "text" | "logo";
+  logoUrl: string;
   // Reception
   receptionTitle: string;
   receptionSectionClient: string;
@@ -45,6 +48,8 @@ const DEFAULT_TEMPLATE: ReceiptTemplate = {
   fontSize: "12",
   companyName: "INFOCOM",
   companySubtitle: "ESPECIALISTAS EN TECNOLOGIA\nSoporte Tecnico Especializado",
+  headerMode: "text",
+  logoUrl: "",
   footerText: "Gracias por confiar en INFOCOM\nConserve este ticket para recoger su equipo",
   receptionTitle: "TICKET DE RECEPCION",
   receptionSectionClient: "DATOS DEL CLIENTE",
@@ -109,10 +114,13 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     let bodyContent = "";
     const issueLabel = orderOverrides.issueLabel || t.receptionSectionIssueLabel;
 
+    const headerHtml = t.headerMode === "logo" && t.logoUrl
+      ? `<div class="center"><img src="${t.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" /><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`
+      : `<div class="center"><div class="title">${t.companyName}</div><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+
     if (type === "reception") {
       bodyContent = `
-<div class="center"><div class="title">${t.companyName}</div>
-<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>
+${headerHtml}
 <div class="line"></div>
 <div class="center big">#${order.order_number}</div>
 <div class="center receipt-title">${t.receptionTitle}</div>
@@ -138,8 +146,7 @@ ${t.showConditions ? `<div class="center conditions"><p>${t.receptionConditionsT
 ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">${t.signatureRight}</span></div></div>` : ""}`;
     } else if (type === "sale") {
       bodyContent = `
-<div class="center"><div class="title">${t.companyName}</div>
-<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>
+${headerHtml}
 <div class="line"></div>
 <div class="center big">${t.saleTitle}</div>
 <div class="line"></div>
@@ -153,8 +160,7 @@ ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top
 <div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.total).toFixed(2)}</span></div>`;
     } else {
       bodyContent = `
-<div class="center"><div class="title">${t.companyName}</div>
-<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>
+${headerHtml}
 <div class="line"></div>
 <div class="center big">${t.serviceTitle}</div>
 <div class="line"></div>
@@ -273,9 +279,32 @@ ${bodyContent}
               <div className="border-t border-border pt-3 space-y-3">
                 <h4 className="font-bold text-sm text-primary">Encabezado</h4>
                 <div className="space-y-2">
-                  <Label>Nombre de Empresa</Label>
-                  <Input value={template.companyName} onChange={e => updateTemplate({ companyName: e.target.value })} />
+                  <Label className="font-bold">Modo de Encabezado</Label>
+                  <Select value={template.headerMode} onValueChange={v => updateTemplate({ headerMode: v as "text" | "logo" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Nombre de Empresa (texto)</SelectItem>
+                      <SelectItem value="logo">Logo (imagen sin fondo)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+                {template.headerMode === "logo" && (
+                  <div className="space-y-2">
+                    <Label>URL del Logo (sin fondo, PNG recomendado)</Label>
+                    <Input value={template.logoUrl} onChange={e => updateTemplate({ logoUrl: e.target.value })} placeholder="https://..." />
+                    {template.logoUrl && (
+                      <div className="p-2 bg-secondary/30 rounded-lg text-center">
+                        <img src={template.logoUrl} alt="Preview" className="max-h-12 mx-auto" />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {template.headerMode === "text" && (
+                  <div className="space-y-2">
+                    <Label>Nombre de Empresa</Label>
+                    <Input value={template.companyName} onChange={e => updateTemplate({ companyName: e.target.value })} />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Subtitulo (usar \n para salto de linea)</Label>
                   <Textarea value={template.companySubtitle} onChange={e => updateTemplate({ companySubtitle: e.target.value })} rows={2} />
