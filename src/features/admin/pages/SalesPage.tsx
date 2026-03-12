@@ -217,7 +217,6 @@ const SalesPage = () => {
 
   const printReceipt = () => {
     if (!lastSale) return;
-    const { loadTemplate, buildHeaderHtml } = require("@/features/admin/components/PrintReceipt");
     const template = loadTemplate();
 
     const PAPER_SIZES: Record<string, string> = { "50mm": "180px", "58mm": "210px", "80mm": "300px", A4: "700px" };
