@@ -23,6 +23,9 @@ interface ReceiptTemplate {
   companyName: string;
   companySubtitle: string;
   footerText: string;
+  // Header mode: 'text' = company name text, 'logo' = logo image
+  headerMode: "text" | "logo";
+  logoUrl: string;
   // Reception
   receptionTitle: string;
   receptionSectionClient: string;
