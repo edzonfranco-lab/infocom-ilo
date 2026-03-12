@@ -216,18 +216,15 @@ const SalesPage = () => {
 
   const printReceipt = () => {
     if (!lastSale) return;
-    const templateStr = localStorage.getItem("receipt_template_v2");
-    const defaults = { companyName: "INFOCOM", companySubtitle: "ESPECIALISTAS EN TECNOLOGIA\nSoporte Tecnico Especializado", footerText: "Gracias por confiar en INFOCOM\nConserve este comprobante", saleTitle: "BOLETA DE VENTA", paperSize: "58mm", fontSize: "12", headerMode: "text", logoUrl: "" };
-    const template = templateStr ? { ...defaults, ...JSON.parse(templateStr) } : defaults;
+    const { loadTemplate, buildHeaderHtml } = require("@/features/admin/components/PrintReceipt");
+    const template = loadTemplate();
 
     const PAPER_SIZES: Record<string, string> = { "50mm": "180px", "58mm": "210px", "80mm": "300px", A4: "700px" };
     const sz = PAPER_SIZES[template.paperSize] || "210px";
     const fs = parseInt(template.fontSize) || 12;
     const title = lastSale.saleType === "boleta" ? template.saleTitle : "NOTA DE VENTA";
 
-    const headerHtml = template.headerMode === "logo" && template.logoUrl
-      ? `<div class="center"><img src="${template.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" /><div class="subtitle">${template.companySubtitle.replace(/\n/g, "<br>")}</div></div>`
-      : `<div class="center"><div class="title">${template.companyName}</div><div class="subtitle">${template.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+    const headerHtml = buildHeaderHtml(template);
 
     const itemsHtml = lastSale.items.map(c =>
       `<div class="row"><span>${c.quantity}x ${c.name}</span><span class="bold">S/${(c.price * c.quantity).toLocaleString()}</span></div>`
