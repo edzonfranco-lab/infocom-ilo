@@ -146,8 +146,7 @@ ${t.showConditions ? `<div class="center conditions"><p>${t.receptionConditionsT
 ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">${t.signatureRight}</span></div></div>` : ""}`;
     } else if (type === "sale") {
       bodyContent = `
-<div class="center"><div class="title">${t.companyName}</div>
-<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>
+${headerHtml}
 <div class="line"></div>
 <div class="center big">${t.saleTitle}</div>
 <div class="line"></div>
