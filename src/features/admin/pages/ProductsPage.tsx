@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,123 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search, Package } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, Upload, X, Loader2, GripVertical } from "lucide-react";
 import { CURRENCY } from "@/lib/types";
 import { toast } from "sonner";
-import ImageUpload from "@/features/admin/components/ImageUpload";
+
+const BUCKET = "product-images";
+
+const ProductImageUploader = ({ images, onChange }: { images: string[]; onChange: (imgs: string[]) => void }) => {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const newUrls: string[] = [];
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith("image/")) continue;
+        const ext = file.name.split(".").pop() || "png";
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true });
+        if (error) throw error;
+        const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+        newUrls.push(data.publicUrl);
+      }
+      onChange([...images, ...newUrls]);
+      toast.success(`${newUrls.length} imagen(es) subida(s)`);
+    } catch (err: any) {
+      toast.error("Error al subir: " + err.message);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  const removeImage = (idx: number) => {
+    onChange(images.filter((_, i) => i !== idx));
+  };
+
+  const moveImage = (idx: number, direction: -1 | 1) => {
+    const newImgs = [...images];
+    const target = idx + direction;
+    if (target < 0 || target >= newImgs.length) return;
+    [newImgs[idx], newImgs[target]] = [newImgs[target], newImgs[idx]];
+    onChange(newImgs);
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label className="font-bold">Imágenes del Producto</Label>
+      
+      {/* Image grid */}
+      {images.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {images.map((img, i) => (
+            <div key={i} className="relative group rounded-lg border border-border overflow-hidden aspect-square bg-secondary/30">
+              <img src={img} alt={`Imagen ${i + 1}`} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                {i > 0 && (
+                  <Button type="button" variant="secondary" size="icon" className="h-6 w-6" onClick={() => moveImage(i, -1)}>
+                    ←
+                  </Button>
+                )}
+                <Button type="button" variant="destructive" size="icon" className="h-6 w-6" onClick={() => removeImage(i)}>
+                  <X className="h-3 w-3" />
+                </Button>
+                {i < images.length - 1 && (
+                  <Button type="button" variant="secondary" size="icon" className="h-6 w-6" onClick={() => moveImage(i, 1)}>
+                    →
+                  </Button>
+                )}
+              </div>
+              {i === 0 && (
+                <Badge className="absolute top-1 left-1 text-[9px] px-1 py-0">Principal</Badge>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload button */}
+      <div className="flex gap-2">
+        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full gap-2"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {uploading ? "Subiendo..." : "Agregar Imágenes"}
+        </Button>
+      </div>
+
+      {/* URL input */}
+      <div className="flex gap-2">
+        <Input
+          placeholder="O pegar URL de imagen..."
+          className="text-xs"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              const val = (e.target as HTMLInputElement).value.trim();
+              if (val) {
+                onChange([...images, val]);
+                (e.target as HTMLInputElement).value = "";
+              }
+              e.preventDefault();
+            }
+          }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">La primera imagen será la principal. Puedes subir varias a la vez o pegar URLs.</p>
+    </div>
+  );
+};
 
 const ProductsPage = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -27,7 +140,7 @@ const ProductsPage = () => {
   const [form, setForm] = useState({
     name: "", slug: "", description: "", short_description: "", sku: "",
     price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5",
-    category_id: "", brand_id: "", images: "",
+    category_id: "", brand_id: "", images: [] as string[],
     is_active: true, is_featured: false, is_new: false, discount_percent: "0",
   });
 
@@ -46,7 +159,7 @@ const ProductsPage = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", slug: "", description: "", short_description: "", sku: "", price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5", category_id: "", brand_id: "", images: "", is_active: true, is_featured: false, is_new: false, discount_percent: "0" });
+    setForm({ name: "", slug: "", description: "", short_description: "", sku: "", price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5", category_id: "", brand_id: "", images: [], is_active: true, is_featured: false, is_new: false, discount_percent: "0" });
     setEditing(null);
   };
 
@@ -56,7 +169,8 @@ const ProductsPage = () => {
       name: p.name, slug: p.slug, description: p.description || "", short_description: p.short_description || "", sku: p.sku || "",
       price: String(p.price), original_price: p.original_price ? String(p.original_price) : "", cost_price: p.cost_price ? String(p.cost_price) : "",
       stock: String(p.stock), min_stock: String(p.min_stock || 5), category_id: p.category_id || "", brand_id: p.brand_id || "",
-      images: (p.images || []).join("\n"), is_active: p.is_active, is_featured: p.is_featured, is_new: p.is_new, discount_percent: String(p.discount_percent || 0),
+      images: p.images || [],
+      is_active: p.is_active, is_featured: p.is_featured, is_new: p.is_new, discount_percent: String(p.discount_percent || 0),
     });
     setDialogOpen(true);
   };
@@ -70,7 +184,7 @@ const ProductsPage = () => {
       sku: form.sku || null, price: Number(form.price), original_price: form.original_price ? Number(form.original_price) : null,
       cost_price: form.cost_price ? Number(form.cost_price) : null, stock: Number(form.stock), min_stock: Number(form.min_stock),
       category_id: form.category_id || null, brand_id: form.brand_id || null,
-      images: form.images.split("\n").map(s => s.trim()).filter(Boolean),
+      images: form.images,
       is_active: form.is_active, is_featured: form.is_featured, is_new: form.is_new, discount_percent: Number(form.discount_percent),
     };
 
@@ -137,21 +251,13 @@ const ProductsPage = () => {
               </div>
               <div className="space-y-2"><Label>Descripción corta</Label><Input value={form.short_description} onChange={(e) => setForm({ ...form, short_description: e.target.value })} /></div>
               <div className="space-y-2"><Label>Descripción</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
-              <div className="space-y-2">
-                <Label>Imagenes (URLs o subir archivos)</Label>
-                {(form.images ? form.images.split("\n").filter(Boolean) : []).map((img, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <img src={img} alt="" className="h-10 w-10 object-cover rounded border" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                    <span className="text-xs truncate flex-1">{img.startsWith("data:") ? `(imagen ${i + 1})` : img}</span>
-                    <Button type="button" variant="ghost" size="sm" className="text-destructive h-7" onClick={() => {
-                      const imgs = form.images.split("\n").filter(Boolean);
-                      imgs.splice(i, 1);
-                      setForm({ ...form, images: imgs.join("\n") });
-                    }}>×</Button>
-                  </div>
-                ))}
-                <ImageUpload value="" onChange={v => { if (v) setForm({ ...form, images: (form.images ? form.images + "\n" + v : v) }); }} label="Agregar imagen" />
-              </div>
+              
+              {/* Multi-image uploader */}
+              <ProductImageUploader
+                images={form.images}
+                onChange={(imgs) => setForm({ ...form, images: imgs })}
+              />
+
               <div className="flex flex-wrap gap-6">
                 <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Activo</Label></div>
                 <div className="flex items-center gap-2"><Switch checked={form.is_featured} onCheckedChange={(v) => setForm({ ...form, is_featured: v })} /><Label>Destacado</Label></div>
@@ -172,7 +278,12 @@ const ProductsPage = () => {
           {filtered.map((p) => (
             <Card key={p.id} className="border-primary/10">
               <CardContent className="p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
-                <img src={p.images?.[0] || "https://via.placeholder.com/60"} alt="" className="h-12 w-12 sm:h-14 sm:w-14 object-cover rounded-lg shrink-0" />
+                <div className="flex gap-1 shrink-0">
+                  <img src={p.images?.[0] || "/placeholder.svg"} alt="" className="h-12 w-12 sm:h-14 sm:w-14 object-cover rounded-lg" />
+                  {(p.images?.length || 0) > 1 && (
+                    <Badge variant="secondary" className="self-end text-[9px] px-1 py-0 -ml-3 mb-0.5">+{p.images.length - 1}</Badge>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm line-clamp-1">{p.name}</p>
                   <div className="flex items-center gap-2 mt-1">

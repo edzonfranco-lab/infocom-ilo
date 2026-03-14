@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -62,16 +62,59 @@ export const DEFAULT_TEMPLATE: ReceiptTemplate = {
   serviceTitle: "TICKET DE SERVICIO",
 };
 
-const TEMPLATE_KEY = "receipt_template_v2";
+const STORE_KEY = "receipt_template";
 
+/** Load template from DB (async) with localStorage fallback for initial render */
 export const loadTemplate = (): ReceiptTemplate => {
   try {
-    const saved = localStorage.getItem(TEMPLATE_KEY);
+    const saved = localStorage.getItem("receipt_template_v2");
     return saved ? { ...DEFAULT_TEMPLATE, ...JSON.parse(saved) } : DEFAULT_TEMPLATE;
   } catch { return DEFAULT_TEMPLATE; }
 };
 
-export const saveTemplate = (t: ReceiptTemplate) => localStorage.setItem(TEMPLATE_KEY, JSON.stringify(t));
+/** Save template to both DB and localStorage */
+export const saveTemplateToDb = async (t: ReceiptTemplate) => {
+  // Save to localStorage as immediate cache
+  localStorage.setItem("receipt_template_v2", JSON.stringify(t));
+  // Persist to database
+  const { data: existing } = await supabase
+    .from("store_settings")
+    .select("id")
+    .eq("key", STORE_KEY)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("store_settings").update({ value: t as any }).eq("key", STORE_KEY);
+  } else {
+    await supabase.from("store_settings").insert({ key: STORE_KEY, value: t as any });
+  }
+};
+
+/** Load template from DB, falling back to localStorage */
+export const loadTemplateFromDb = async (): Promise<ReceiptTemplate> => {
+  try {
+    const { data } = await supabase
+      .from("store_settings")
+      .select("value")
+      .eq("key", STORE_KEY)
+      .maybeSingle();
+
+    if (data?.value) {
+      const t = { ...DEFAULT_TEMPLATE, ...(data.value as any) };
+      // Sync to localStorage
+      localStorage.setItem("receipt_template_v2", JSON.stringify(t));
+      return t;
+    }
+  } catch { /* fall through */ }
+  return loadTemplate();
+};
+
+// Keep backward compat
+export const saveTemplate = (t: ReceiptTemplate) => {
+  localStorage.setItem("receipt_template_v2", JSON.stringify(t));
+  // Fire and forget DB save
+  saveTemplateToDb(t).catch(() => {});
+};
 
 interface OrderOverrides {
   issueLabel?: string;
@@ -108,7 +151,18 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     order?.id ? loadOrderOverrides(order.id) : {}
   );
   const [uploading, setUploading] = useState(false);
+  const [dbLoaded, setDbLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load from DB on mount
+  useEffect(() => {
+    if (!dbLoaded) {
+      loadTemplateFromDb().then(t => {
+        setTemplate(t);
+        setDbLoaded(true);
+      });
+    }
+  }, [dbLoaded]);
 
   const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -453,7 +507,9 @@ ${bodyContent}
                 <Textarea value={template.footerText} onChange={e => updateTemplate({ footerText: e.target.value })} rows={2} />
               </div>
 
-              <p className="text-xs text-muted-foreground">Los cambios se guardan automáticamente y aplican a todos los tickets.</p>
+              <div className="p-2 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="text-xs text-primary font-medium">✅ Los cambios se guardan automáticamente en la base de datos y se mantienen permanentemente.</p>
+              </div>
               <Button variant="outline" size="sm" className="w-full" onClick={() => { setTemplate(DEFAULT_TEMPLATE); saveTemplate(DEFAULT_TEMPLATE); }}>
                 Restaurar Valores por Defecto
               </Button>
