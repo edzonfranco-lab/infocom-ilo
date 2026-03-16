@@ -799,6 +799,8 @@ const AccountingPage = () => {
                     order={{
                       id: viewingTx.id,
                       date: viewingTx.fecha,
+                      customer_name: viewingTx.cliente_nombre || "",
+                      customer_phone: viewingTx.cliente_telefono || "",
                       seller: viewingTx.emitido_por || "Admin",
                       product_description: viewingTx.items.map(it => `${it.cantidad}x ${it.descripcion}`).join(", "),
                       quantity: viewingTx.items.reduce((a, it) => a + it.cantidad, 0),
