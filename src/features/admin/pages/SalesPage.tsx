@@ -45,10 +45,11 @@ const SalesPage = () => {
     telefono: "",
     email: "",
     metodo_pago: "" as string,
+    monto_recibido: "",
   });
 
   // Last completed sale for printing
-  const [lastSale, setLastSale] = useState<{ items: CartItem[]; customer: typeof customerForm; total: number; date: string; saleType: SaleType } | null>(null);
+  const [lastSale, setLastSale] = useState<{ items: CartItem[]; customer: typeof customerForm; total: number; date: string; saleType: SaleType; change: number } | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
 
   const { data: products = [] } = useQuery({
@@ -194,6 +195,9 @@ const SalesPage = () => {
         await supabase.from("products").update({ stock: c.stock - c.quantity } as any).eq("id", c.product_id);
       }
 
+      const montoRecibido = parseFloat(customerForm.monto_recibido) || 0;
+      const cambio = montoRecibido > total ? montoRecibido - total : 0;
+
       // Store last sale for printing
       setLastSale({
         items: [...cart],
@@ -201,13 +205,14 @@ const SalesPage = () => {
         total,
         date: new Date().toLocaleString("es-PE"),
         saleType,
+        change: cambio,
       });
 
       toast.success("¡Venta registrada exitosamente!");
       qc.invalidateQueries({ queryKey: ["pos_products"] });
       setCart([]);
       setCheckoutOpen(false);
-      setCustomerForm({ dni: "", nombre: "", direccion: "", telefono: "", email: "", metodo_pago: "" });
+      setCustomerForm({ dni: "", nombre: "", direccion: "", telefono: "", email: "", metodo_pago: "", monto_recibido: "" });
       setPrintOpen(true);
     } catch (e: any) {
       toast.error(e.message || "Error al procesar venta");
@@ -255,6 +260,8 @@ ${itemsHtml}
 <div class="line"></div>
 <div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/${lastSale.total.toLocaleString()}</span></div>
 <div class="row"><span>Metodo:</span><span>${PAYMENT_METHOD_LABELS[lastSale.customer.metodo_pago as PaymentMethod] || lastSale.customer.metodo_pago}</span></div>
+${lastSale.customer.metodo_pago === "cash" && lastSale.change > 0 ? `<div class="row"><span>Recibido:</span><span>S/${parseFloat(lastSale.customer.monto_recibido).toFixed(2)}</span></div>
+<div class="row"><span class="bold">Vuelto:</span><span class="bold">S/${lastSale.change.toFixed(2)}</span></div>` : ""}
 <div class="footer"><p>${template.footerText.replace(/\n/g, "<br>")}</p></div>
 </body></html>`;
 
@@ -483,6 +490,42 @@ ${itemsHtml}
               </Select>
             </div>
 
+            {/* Cash change calculator - show when payment is cash */}
+            {customerForm.metodo_pago === "cash" && (
+              <div className="space-y-2 p-3 border border-primary/20 rounded-lg bg-primary/5">
+                <Label className="font-bold">💵 Monto Recibido</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ej: 100.00"
+                  value={customerForm.monto_recibido}
+                  onChange={e => setCustomerForm(prev => ({ ...prev, monto_recibido: e.target.value }))}
+                />
+                {parseFloat(customerForm.monto_recibido) > 0 && (
+                  <div className="text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span>Total a cobrar:</span>
+                      <span className="font-bold">{CURRENCY}{total.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Monto recibido:</span>
+                      <span className="font-bold">{CURRENCY}{parseFloat(customerForm.monto_recibido).toLocaleString()}</span>
+                    </div>
+                    <div className={`flex justify-between text-lg font-bold border-t border-border pt-1 ${parseFloat(customerForm.monto_recibido) >= total ? "text-success" : "text-destructive"}`}>
+                      <span>Vuelto:</span>
+                      <span>
+                        {parseFloat(customerForm.monto_recibido) >= total
+                          ? `${CURRENCY}${(parseFloat(customerForm.monto_recibido) - total).toFixed(2)}`
+                          : `Faltan ${CURRENCY}${(total - parseFloat(customerForm.monto_recibido)).toFixed(2)}`
+                        }
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="bg-secondary/30 p-3 rounded-lg">
               <div className="flex justify-between font-bold text-lg">
                 <span>TOTAL:</span>
@@ -519,7 +562,11 @@ ${itemsHtml}
             {lastSale && (
               <div className="bg-secondary/30 rounded-lg p-3 text-sm space-y-1">
                 {lastSale.customer.nombre && <p><span className="text-muted-foreground">Cliente:</span> <span className="font-bold">{lastSale.customer.nombre}</span></p>}
+                <p><span className="text-muted-foreground">Método:</span> <span className="font-bold">{PAYMENT_METHOD_LABELS[lastSale.customer.metodo_pago as PaymentMethod] || lastSale.customer.metodo_pago}</span></p>
                 <p className="font-bold text-lg text-primary">{CURRENCY}{lastSale.total.toLocaleString()}</p>
+                {lastSale.change > 0 && (
+                  <p className="text-success font-bold text-base">Vuelto: {CURRENCY}{lastSale.change.toFixed(2)}</p>
+                )}
                 <p className="text-xs text-muted-foreground">{lastSale.items.length} producto(s)</p>
               </div>
             )}
