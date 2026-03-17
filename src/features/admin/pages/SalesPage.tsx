@@ -260,6 +260,8 @@ ${itemsHtml}
 <div class="line"></div>
 <div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/${lastSale.total.toLocaleString()}</span></div>
 <div class="row"><span>Metodo:</span><span>${PAYMENT_METHOD_LABELS[lastSale.customer.metodo_pago as PaymentMethod] || lastSale.customer.metodo_pago}</span></div>
+${lastSale.customer.metodo_pago === "cash" && lastSale.change > 0 ? `<div class="row"><span>Recibido:</span><span>S/${parseFloat(lastSale.customer.monto_recibido).toFixed(2)}</span></div>
+<div class="row"><span class="bold">Vuelto:</span><span class="bold">S/${lastSale.change.toFixed(2)}</span></div>` : ""}
 <div class="footer"><p>${template.footerText.replace(/\n/g, "<br>")}</p></div>
 </body></html>`;
 
