@@ -733,6 +733,16 @@ const AccountingPage = () => {
                 <div><span className="text-muted-foreground">Tipo:</span> <span className="font-bold capitalize">{viewingTx.tipo_general}</span></div>
                 <div><span className="text-muted-foreground">Emitido por:</span> <span className="font-bold">{viewingTx.emitido_por || "—"}</span></div>
                 {viewingTx.cliente_nombre && <div className="col-span-2"><span className="text-muted-foreground">Cliente:</span> <span className="font-bold">{viewingTx.cliente_nombre}</span></div>}
+                {viewingTx.cliente_telefono && <div><span className="text-muted-foreground">Teléfono:</span> <span className="font-bold">{viewingTx.cliente_telefono}</span></div>}
+                {(() => {
+                  const notas = viewingTx.notas || "";
+                  const dniMatch = notas.match(/DNI:\s*(\d+)/);
+                  const pagoMatch = notas.match(/Pago:\s*([^|]+)/);
+                  return (<>
+                    {dniMatch && <div><span className="text-muted-foreground">DNI:</span> <span className="font-bold">{dniMatch[1]}</span></div>}
+                    {pagoMatch && <div><span className="text-muted-foreground">Método Pago:</span> <span className="font-bold">{pagoMatch[1].trim()}</span></div>}
+                  </>);
+                })()}
               </div>
 
               {viewingTx.items && viewingTx.items.length > 0 && (
