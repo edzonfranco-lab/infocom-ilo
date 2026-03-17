@@ -488,6 +488,42 @@ ${itemsHtml}
               </Select>
             </div>
 
+            {/* Cash change calculator - show when payment is cash */}
+            {customerForm.metodo_pago === "cash" && (
+              <div className="space-y-2 p-3 border border-primary/20 rounded-lg bg-primary/5">
+                <Label className="font-bold">💵 Monto Recibido</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ej: 100.00"
+                  value={customerForm.monto_recibido}
+                  onChange={e => setCustomerForm(prev => ({ ...prev, monto_recibido: e.target.value }))}
+                />
+                {parseFloat(customerForm.monto_recibido) > 0 && (
+                  <div className="text-sm space-y-1">
+                    <div className="flex justify-between">
+                      <span>Total a cobrar:</span>
+                      <span className="font-bold">{CURRENCY}{total.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Monto recibido:</span>
+                      <span className="font-bold">{CURRENCY}{parseFloat(customerForm.monto_recibido).toLocaleString()}</span>
+                    </div>
+                    <div className={`flex justify-between text-lg font-bold border-t border-border pt-1 ${parseFloat(customerForm.monto_recibido) >= total ? "text-success" : "text-destructive"}`}>
+                      <span>Vuelto:</span>
+                      <span>
+                        {parseFloat(customerForm.monto_recibido) >= total
+                          ? `${CURRENCY}${(parseFloat(customerForm.monto_recibido) - total).toFixed(2)}`
+                          : `Faltan ${CURRENCY}${(total - parseFloat(customerForm.monto_recibido)).toFixed(2)}`
+                        }
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="bg-secondary/30 p-3 rounded-lg">
               <div className="flex justify-between font-bold text-lg">
                 <span>TOTAL:</span>
