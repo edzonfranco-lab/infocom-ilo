@@ -195,6 +195,9 @@ const SalesPage = () => {
         await supabase.from("products").update({ stock: c.stock - c.quantity } as any).eq("id", c.product_id);
       }
 
+      const montoRecibido = parseFloat(customerForm.monto_recibido) || 0;
+      const cambio = montoRecibido > total ? montoRecibido - total : 0;
+
       // Store last sale for printing
       setLastSale({
         items: [...cart],
@@ -202,6 +205,7 @@ const SalesPage = () => {
         total,
         date: new Date().toLocaleString("es-PE"),
         saleType,
+        change: cambio,
       });
 
       toast.success("¡Venta registrada exitosamente!");
