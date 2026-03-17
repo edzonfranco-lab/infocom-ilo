@@ -45,6 +45,7 @@ const SalesPage = () => {
     telefono: "",
     email: "",
     metodo_pago: "" as string,
+    monto_recibido: "",
   });
 
   // Last completed sale for printing
