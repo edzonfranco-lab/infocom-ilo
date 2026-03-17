@@ -235,13 +235,16 @@ ${headerHtml}
 ${order.customer_name ? `<div class="row"><span>Cliente:</span><span class="bold">${order.customer_name}</span></div>` : ""}
 ${order.customer_phone ? `<div class="row"><span>Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
 ${order.customer_dni ? `<div class="row"><span>DNI:</span><span>${order.customer_dni}</span></div>` : ""}
+${order.payment_method ? `<div class="row"><span>Metodo Pago:</span><span class="bold">${order.payment_method}</span></div>` : ""}
 <div class="row"><span>Vendedor:</span><span class="bold">${order.seller}</span></div>
 <div class="line"></div>
 <div class="row"><span>Producto:</span><span class="bold">${order.product_description}</span></div>
 <div class="row"><span>Cantidad:</span><span>${order.quantity}</span></div>
 <div class="row"><span>P. Unitario:</span><span>S/. ${Number(order.unit_price).toFixed(2)}</span></div>
 <div class="line"></div>
-<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.total).toFixed(2)}</span></div>`;
+<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.total).toFixed(2)}</span></div>
+${order.amount_given ? `<div class="row"><span>Recibido:</span><span>S/. ${Number(order.amount_given).toFixed(2)}</span></div>
+<div class="row"><span class="bold">Vuelto:</span><span class="bold">S/. ${(Number(order.amount_given) - Number(order.total)).toFixed(2)}</span></div>` : ""}`;
     } else {
       bodyContent = `
 ${headerHtml}
