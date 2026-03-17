@@ -254,6 +254,8 @@ ${headerHtml}
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
 ${order.customer_name ? `<div class="row"><span>Cliente:</span><span class="bold">${order.customer_name}</span></div>` : ""}
 ${order.customer_phone ? `<div class="row"><span>Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
+${order.customer_dni ? `<div class="row"><span>DNI:</span><span>${order.customer_dni}</span></div>` : ""}
+${order.payment_method ? `<div class="row"><span>Metodo Pago:</span><span class="bold">${order.payment_method}</span></div>` : ""}
 <div class="row"><span>Responsable:</span><span class="bold">${order.responsible}</span></div>
 <div class="line"></div>
 <div class="row"><span>Servicio:</span><span class="bold">${order.description}</span></div>
