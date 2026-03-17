@@ -562,7 +562,11 @@ ${lastSale.customer.metodo_pago === "cash" && lastSale.change > 0 ? `<div class=
             {lastSale && (
               <div className="bg-secondary/30 rounded-lg p-3 text-sm space-y-1">
                 {lastSale.customer.nombre && <p><span className="text-muted-foreground">Cliente:</span> <span className="font-bold">{lastSale.customer.nombre}</span></p>}
+                <p><span className="text-muted-foreground">Método:</span> <span className="font-bold">{PAYMENT_METHOD_LABELS[lastSale.customer.metodo_pago as PaymentMethod] || lastSale.customer.metodo_pago}</span></p>
                 <p className="font-bold text-lg text-primary">{CURRENCY}{lastSale.total.toLocaleString()}</p>
+                {lastSale.change > 0 && (
+                  <p className="text-success font-bold text-base">Vuelto: {CURRENCY}{lastSale.change.toFixed(2)}</p>
+                )}
                 <p className="text-xs text-muted-foreground">{lastSale.items.length} producto(s)</p>
               </div>
             )}
