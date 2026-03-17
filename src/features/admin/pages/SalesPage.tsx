@@ -212,7 +212,7 @@ const SalesPage = () => {
       qc.invalidateQueries({ queryKey: ["pos_products"] });
       setCart([]);
       setCheckoutOpen(false);
-      setCustomerForm({ dni: "", nombre: "", direccion: "", telefono: "", email: "", metodo_pago: "" });
+      setCustomerForm({ dni: "", nombre: "", direccion: "", telefono: "", email: "", metodo_pago: "", monto_recibido: "" });
       setPrintOpen(true);
     } catch (e: any) {
       toast.error(e.message || "Error al procesar venta");
