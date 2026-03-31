@@ -8,12 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Image, Monitor, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import ImageUpload from "@/features/admin/components/ImageUpload";
 
 const BannersPage = () => {
   const [banners, setBanners] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ title: "", subtitle: "", image_desktop: "", image_mobile: "", link_url: "", cta_text: "", sort_order: "0", is_active: true });
@@ -23,7 +25,12 @@ const BannersPage = () => {
     setBanners(data || []);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  const fetchCategories = async () => {
+    const { data } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order");
+    setCategories(data || []);
+  };
+
+  useEffect(() => { fetchAll(); fetchCategories(); }, []);
   const resetForm = () => { setForm({ title: "", subtitle: "", image_desktop: "", image_mobile: "", link_url: "", cta_text: "", sort_order: "0", is_active: true }); setEditing(null); };
 
   const openEdit = (b: any) => {
@@ -80,7 +87,28 @@ const BannersPage = () => {
                 <ImageUpload value={form.image_mobile} onChange={v => setForm({ ...form, image_mobile: v })} label="Movil (opcional)" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2"><Label>Enlace</Label><Input value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder="/catalogo" /></div>
+                <div className="space-y-2">
+                  <Label>Enlace</Label>
+                  <Select value={form.link_url || "custom"} onValueChange={(v) => setForm({ ...form, link_url: v === "custom" ? "" : v })}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar destino" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="/catalogo">📦 Todo el Catálogo</SelectItem>
+                      {categories.filter(c => !c.parent_id).map(cat => {
+                        const subs = categories.filter(s => s.parent_id === cat.id);
+                        return [
+                          <SelectItem key={cat.id} value={`/catalogo?cat=${cat.slug}`}>📁 {cat.name}</SelectItem>,
+                          ...subs.map(sub => (
+                            <SelectItem key={sub.id} value={`/catalogo?cat=${sub.slug}`}>{"  "}↳ {sub.name}</SelectItem>
+                          ))
+                        ];
+                      })}
+                      <SelectItem value="custom">✏️ URL personalizada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {(form.link_url === "" || (!form.link_url.startsWith("/catalogo"))) && form.link_url !== "/catalogo" && (
+                    <Input value={form.link_url} onChange={(e) => setForm({ ...form, link_url: e.target.value })} placeholder="/ruta-personalizada" className="mt-1" />
+                  )}
+                </div>
                 <div className="space-y-2"><Label>Texto CTA</Label><Input value={form.cta_text} onChange={(e) => setForm({ ...form, cta_text: e.target.value })} placeholder="Ver más" /></div>
                 <div className="space-y-2"><Label>Orden</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></div>
                 <div className="flex items-center gap-2 pt-6"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Activo</Label></div>

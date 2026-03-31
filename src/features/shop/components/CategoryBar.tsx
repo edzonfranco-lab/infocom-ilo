@@ -3,7 +3,9 @@ import {
   Laptop, Monitor, Keyboard, Projector, Printer, Package, Camera, 
   Cpu, HardDrive, Headphones, Mouse, Wifi, Shield, Server, 
   Smartphone, Tablet, Watch, Usb, Cable, Plug, Battery,
-  MonitorSmartphone, Tv, Speaker, Gamepad2, ScanLine, Router
+  MonitorSmartphone, Tv, Speaker, Gamepad2, ScanLine, Router,
+  MemoryStick, CircuitBoard, Fan, Wrench, ShoppingBag, Zap,
+  Globe, Lock, Microchip, Radio, Disc
 } from "lucide-react";
 import { useCategories } from "@/features/shop/hooks/useCategories";
 import { MOCK_CATEGORIES } from "@/lib/constants";
@@ -16,7 +18,7 @@ const iconMap: Record<string, any> = {
   projector: Projector, proyectores: Projector, proyector: Projector,
   printer: Printer, impresoras: Printer, impresora: Printer,
   cpu: Cpu, procesador: Cpu, componentes: Cpu,
-  "hard-drive": HardDrive, almacenamiento: HardDrive, disco: HardDrive,
+  "hard-drive": HardDrive, almacenamiento: HardDrive, disco: HardDrive, ssd: HardDrive,
   headphones: Headphones, audifonos: Headphones, audio: Headphones,
   mouse: Mouse, raton: Mouse,
   wifi: Wifi, redes: Wifi, red: Wifi, networking: Wifi,
@@ -35,7 +37,18 @@ const iconMap: Record<string, any> = {
   gamepad: Gamepad2, gaming: Gamepad2,
   scanner: ScanLine, escaner: ScanLine,
   router: Router, routers: Router,
-  accesorios: Package,
+  memory: MemoryStick, memoria: MemoryStick, ram: MemoryStick,
+  circuit: CircuitBoard, placa: CircuitBoard, tarjeta: CircuitBoard, "placa-madre": CircuitBoard,
+  fan: Fan, ventilador: Fan, cooler: Fan, refrigeracion: Fan,
+  wrench: Wrench, herramientas: Wrench, herramienta: Wrench,
+  shopping: ShoppingBag, accesorios: ShoppingBag,
+  zap: Zap, electrico: Zap,
+  globe: Globe, internet: Globe,
+  lock: Lock, candado: Lock,
+  microchip: Microchip, chip: Microchip,
+  radio: Radio,
+  disc: Disc,
+  package: Package,
 };
 
 const CategoryBar = () => {
