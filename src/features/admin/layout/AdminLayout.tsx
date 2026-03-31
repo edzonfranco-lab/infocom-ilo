@@ -26,6 +26,7 @@ const allNavItems: NavItem[] = [
     to: "/admin/productos", icon: Package, label: "Productos", roles: ["admin", "moderator"],
     children: [
       { to: "/admin/productos", icon: Package, label: "Inventario", end: true, roles: ["admin", "moderator"] },
+      { to: "/admin/vitrinas", icon: LayoutGrid, label: "Vitrinas", roles: ["admin"] },
       { to: "/admin/categorias", icon: FolderTree, label: "Categorías", roles: ["admin"] },
       { to: "/admin/marcas", icon: Tags, label: "Marcas", roles: ["admin"] },
     ],
