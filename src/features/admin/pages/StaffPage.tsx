@@ -59,6 +59,7 @@ const StaffPage = () => {
         full_name: f.full_name, position: f.position,
         phone: f.phone || null, email: f.email || null,
         document_number: f.document_number || null, user_id: f.user_id || null,
+        institution: f.institution || null,
       };
       if (editingId) {
         const { error } = await supabase.from("staff_members").update(payload).eq("id", editingId);
