@@ -132,6 +132,7 @@ const StaffPage = () => {
     setForm({
       full_name: s.full_name, position: s.position, phone: s.phone || "",
       email: s.email || "", document_number: s.document_number || "", user_id: s.user_id || "",
+      institution: s.institution || "",
     });
     setEditingId(s.id); setDialogOpen(true);
   };
