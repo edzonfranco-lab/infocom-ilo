@@ -178,6 +178,7 @@ const ProductsPage = () => {
       stock: String(p.stock), min_stock: String(p.min_stock || 5), category_id: p.category_id || "", brand_id: p.brand_id || "",
       images: p.images || [],
       is_active: p.is_active, is_featured: p.is_featured, is_new: p.is_new, discount_percent: String(p.discount_percent || 0),
+      vitrina_id: p.vitrina_id || "", vitrina_floor: p.vitrina_floor ? String(p.vitrina_floor) : "",
     });
     setDialogOpen(true);
   };
