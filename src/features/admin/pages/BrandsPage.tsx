@@ -26,7 +26,7 @@ const BrandsPage = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", slug: "", logo_url: "", sort_order: String(brands.length), is_active: true });
+    setForm({ name: "", slug: "", logo_url: "", is_active: true });
     setEditing(null);
   };
 
