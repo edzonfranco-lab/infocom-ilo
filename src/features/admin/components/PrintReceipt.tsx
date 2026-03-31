@@ -48,6 +48,7 @@ export interface ReceiptTemplate {
 export const DEFAULT_TEMPLATE: ReceiptTemplate = {
   paperSize: "58mm",
   fontSize: "12",
+  printerType: "thermal",
   companyName: "INFOCOM",
   companySubtitle: "ESPECIALISTAS EN TECNOLOGIA\nSoporte Tecnico Especializado",
   headerMode: "text",
