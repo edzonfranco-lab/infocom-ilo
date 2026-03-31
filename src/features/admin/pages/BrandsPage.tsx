@@ -40,7 +40,6 @@ const BrandsPage = () => {
 
   const openNew = () => {
     resetForm();
-    setForm(prev => ({ ...prev, sort_order: String(brands.length) }));
     setDialogOpen(true);
   };
 
