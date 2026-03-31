@@ -46,7 +46,7 @@ const allNavItems: NavItem[] = [
     to: "/admin/personal", icon: Users, label: "Personal", roles: ["admin"],
     children: [
       { to: "/admin/personal", icon: Users, label: "Gestión", end: true, roles: ["admin"] },
-      { to: "/admin/asistencias", icon: CalendarDays, label: "Asistencias", roles: ["admin"] },
+      { to: "/admin/asistencias", icon: CalendarDays, label: "Asistencias", roles: ["admin", "moderator"] },
     ],
   },
   { to: "/admin/roles", icon: Shield, label: "Roles", roles: ["admin"] },
