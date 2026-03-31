@@ -313,6 +313,11 @@ ${Number(order.subtotal_servicios || 0) > 0 ? `<div class="row"><span>Subtotal S
   .footer{margin-top:12px;font-size:${Math.max(fs - 3, 8)}px;text-align:center;font-weight:700}
   .big{font-size:${fs + 6}px;font-weight:900}
   .conditions{margin:8px 0;font-size:${Math.max(fs - 2, 8)}px;font-weight:700;text-align:center}
+  .items-table{width:100%;border-collapse:collapse;margin:4px 0;font-size:${Math.max(fs - 1, 8)}px}
+  .items-table th{border-bottom:1px solid #000;padding:2px 1px;text-align:left;font-weight:900;font-size:${Math.max(fs - 1, 8)}px}
+  .items-table td{padding:2px 1px;vertical-align:top;word-break:break-word}
+  .items-table .tc{text-align:center}
+  .items-table .tr{text-align:right;white-space:nowrap}
   @media print{body{padding:4px}@page{margin:2mm}}
 </style></head><body>
 ${bodyContent}
