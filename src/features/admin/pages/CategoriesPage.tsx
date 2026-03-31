@@ -68,7 +68,7 @@ const CategoriesPage = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", sort_order: "0", is_active: true });
+  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", is_active: true });
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
 
