@@ -494,18 +494,28 @@ ${bodyContent}
             {/* Global template */}
             <TabsContent value="template" className="space-y-4 mt-3">
               <div className="space-y-2">
-                <Label className="font-bold">Tamaño de Papel</Label>
+                <Label className="font-bold">Tipo de Impresora por Defecto</Label>
+                <Select value={template.printerType || "thermal"} onValueChange={(v: "thermal" | "a4") => updateTemplate({ printerType: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="thermal">Impresora Boletera (Termica)</SelectItem>
+                    <SelectItem value="a4">Impresora Normal (A4)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-bold">Tamaño Papel Boletera</Label>
                 <Select value={template.paperSize} onValueChange={v => updateTemplate({ paperSize: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(PAPER_SIZES).map(([k, v]) => (
+                    {Object.entries(THERMAL_SIZES).map(([k, v]) => (
                       <SelectItem key={k} value={k}>{v.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="font-bold">Tamaño de Fuente (px)</Label>
+                <Label className="font-bold">Tamaño de Fuente Boletera (px)</Label>
                 <Input type="number" min="8" max="20" value={template.fontSize} onChange={e => updateTemplate({ fontSize: e.target.value })} />
               </div>
 
