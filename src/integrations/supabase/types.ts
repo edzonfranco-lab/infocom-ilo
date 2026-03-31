@@ -584,6 +584,8 @@ export type Database = {
           specifications: Json | null
           stock: number
           updated_at: string
+          vitrina_floor: number | null
+          vitrina_id: string | null
           weight: number | null
         }
         Insert: {
@@ -608,6 +610,8 @@ export type Database = {
           specifications?: Json | null
           stock?: number
           updated_at?: string
+          vitrina_floor?: number | null
+          vitrina_id?: string | null
           weight?: number | null
         }
         Update: {
@@ -632,6 +636,8 @@ export type Database = {
           specifications?: Json | null
           stock?: number
           updated_at?: string
+          vitrina_floor?: number | null
+          vitrina_id?: string | null
           weight?: number | null
         }
         Relationships: [
@@ -647,6 +653,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_vitrina_id_fkey"
+            columns: ["vitrina_id"]
+            isOneToOne: false
+            referencedRelation: "vitrinas"
             referencedColumns: ["id"]
           },
         ]
@@ -1027,6 +1040,45 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vitrinas: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          floors: number
+          id: string
+          is_active: boolean | null
+          location: string | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          floors?: number
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          floors?: number
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
