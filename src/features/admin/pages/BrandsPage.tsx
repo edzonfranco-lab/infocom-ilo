@@ -68,9 +68,9 @@ const BrandsPage = () => {
       name: form.name,
       slug: form.slug || generateSlug(form.name),
       logo_url: form.logo_url || null,
-      sort_order: Number(form.sort_order),
       is_active: form.is_active,
     };
+    if (!editing) payload.sort_order = brands.length;
     if (editing) {
       await supabase.from("brands").update(payload).eq("id", editing.id);
       toast.success("Marca actualizada");
