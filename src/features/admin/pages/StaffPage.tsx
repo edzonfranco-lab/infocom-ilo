@@ -17,11 +17,11 @@ const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Vierne
 const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const emptyForm = {
-  full_name: "", position: "Practicante", phone: "", email: "", document_number: "", user_id: "",
+  full_name: "", position: "Practicante", phone: "", email: "", document_number: "", user_id: "", institution: "",
 };
 
 const emptyScheduleForm = {
-  day_of_week: "1", shift_name: "Turno 1", start_time: "09:00", end_time: "18:00",
+  days: [] as number[], shift_name: "Turno Completo", start_time: "09:00", end_time: "18:00",
 };
 
 const StaffPage = () => {
@@ -59,6 +59,7 @@ const StaffPage = () => {
         full_name: f.full_name, position: f.position,
         phone: f.phone || null, email: f.email || null,
         document_number: f.document_number || null, user_id: f.user_id || null,
+        institution: f.institution || null,
       };
       if (editingId) {
         const { error } = await supabase.from("staff_members").update(payload).eq("id", editingId);
@@ -89,22 +90,25 @@ const StaffPage = () => {
 
   const saveScheduleMutation = useMutation({
     mutationFn: async () => {
-      if (!scheduleStaffId) return;
-      const { error } = await supabase.from("staff_schedules").insert({
+      if (!scheduleStaffId || scheduleForm.days.length === 0) {
+        throw new Error("Selecciona al menos un día");
+      }
+      const rows = scheduleForm.days.map(day => ({
         staff_id: scheduleStaffId,
-        day_of_week: Number(scheduleForm.day_of_week),
+        day_of_week: day,
         shift_name: scheduleForm.shift_name,
         start_time: scheduleForm.start_time,
         end_time: scheduleForm.end_time,
-      } as any);
+      }));
+      const { error } = await supabase.from("staff_schedules").insert(rows as any);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff_schedules"] });
-      toast.success("Horario asignado");
+      toast.success("Horarios asignados");
       setScheduleForm(emptyScheduleForm);
     },
-    onError: (e: any) => toast.error(e.message?.includes("unique") ? "Ya existe ese turno para ese día" : "Error al guardar horario"),
+    onError: (e: any) => toast.error(e.message?.includes("unique") ? "Ya existe ese turno para algún día seleccionado" : e.message || "Error al guardar horario"),
   });
 
   const deleteScheduleMutation = useMutation({
@@ -128,6 +132,7 @@ const StaffPage = () => {
     setForm({
       full_name: s.full_name, position: s.position, phone: s.phone || "",
       email: s.email || "", document_number: s.document_number || "", user_id: s.user_id || "",
+      institution: s.institution || "",
     });
     setEditingId(s.id); setDialogOpen(true);
   };
@@ -173,6 +178,9 @@ const StaffPage = () => {
                 <div><Label>DNI / Documento</Label><Input value={form.document_number} onChange={e => setForm({ ...form, document_number: e.target.value })} /></div>
               </div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+              {(form.position === "Practicante") && (
+                <div><Label>Institución / Entidad de origen</Label><Input value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} placeholder="SENATI, TECSUP, Universidad..." /></div>
+              )}
               <div>
                 <Label>ID de Usuario (opcional — vincular cuenta)</Label>
                 <Input value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })} placeholder="UUID del usuario registrado" className="font-mono text-xs" />
@@ -311,22 +319,44 @@ const StaffPage = () => {
           </DialogHeader>
           <form onSubmit={e => { e.preventDefault(); saveScheduleMutation.mutate(); }} className="space-y-4">
             <div>
-              <Label>Día de la Semana</Label>
-              <Select value={scheduleForm.day_of_week} onValueChange={v => setScheduleForm({ ...scheduleForm, day_of_week: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DAY_NAMES.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Días de la Semana (selecciona varios)</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {DAY_NAMES.map((d, i) => {
+                  const selected = scheduleForm.days.includes(i);
+                  return (
+                    <Button
+                      key={i} type="button" size="sm"
+                      variant={selected ? "default" : "outline"}
+                      onClick={() => setScheduleForm({
+                        ...scheduleForm,
+                        days: selected ? scheduleForm.days.filter(x => x !== i) : [...scheduleForm.days, i],
+                      })}
+                    >
+                      {DAY_SHORT[i]}
+                    </Button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => setScheduleForm({ ...scheduleForm, days: [1,2,3,4,5] })}>Lun-Vie</Button>
+                <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => setScheduleForm({ ...scheduleForm, days: [1,2,3,4,5,6] })}>Lun-Sáb</Button>
+                <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => setScheduleForm({ ...scheduleForm, days: [] })}>Limpiar</Button>
+              </div>
             </div>
             <div>
               <Label>Nombre del Turno</Label>
-              <Select value={scheduleForm.shift_name} onValueChange={v => setScheduleForm({ ...scheduleForm, shift_name: v })}>
+              <Select value={scheduleForm.shift_name} onValueChange={v => {
+                let start = scheduleForm.start_time, end = scheduleForm.end_time;
+                if (v === "Turno Completo") { start = "09:00"; end = "18:00"; }
+                else if (v === "Turno 1") { start = "09:00"; end = "13:00"; }
+                else if (v === "Turno 2") { start = "14:00"; end = "18:00"; }
+                setScheduleForm({ ...scheduleForm, shift_name: v, start_time: start, end_time: end });
+              }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Turno Completo">Turno Completo (09:00-18:00)</SelectItem>
                   <SelectItem value="Turno 1">Turno 1 (Mañana)</SelectItem>
                   <SelectItem value="Turno 2">Turno 2 (Tarde)</SelectItem>
-                  <SelectItem value="Turno 3">Turno 3 (Noche)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, LayoutGrid, MapPin, Layers, Package, Search } from "lucide-react";
 import { toast } from "sonner";
 import { CURRENCY } from "@/lib/types";
+import StoreMap from "@/features/admin/components/StoreMap";
 
 const VitrinasPage = () => {
   const [vitrinas, setVitrinas] = useState<any[]>([]);
@@ -172,6 +173,14 @@ const VitrinasPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Optional Store Map */}
+      <StoreMap
+        vitrinas={vitrinas}
+        productCounts={Object.fromEntries(vitrinas.map(v => [v.id, getProductsInVitrina(v.id).length]))}
+        onVitrinaClick={(id) => setSelectedVitrina(selectedVitrina === id ? null : id)}
+        selectedVitrina={selectedVitrina}
+      />
 
       {/* Vitrinas grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

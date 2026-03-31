@@ -2,8 +2,9 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings,
   ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign,
-  Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid
+  Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid, UserCheck, CalendarClock, Bell
 } from "lucide-react";
+import NotificationBell from "@/features/admin/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -39,6 +40,13 @@ const allNavItems: NavItem[] = [
     ],
   },
   { to: "/admin/contabilidad", icon: DollarSign, label: "Contabilidad", roles: ["admin"] },
+  {
+    to: "/admin/clientes", icon: UserCheck, label: "Clientes", roles: ["admin", "moderator"],
+    children: [
+      { to: "/admin/clientes", icon: UserCheck, label: "Directorio", end: true, roles: ["admin", "moderator"] },
+      { to: "/admin/agenda", icon: CalendarClock, label: "Agenda / Citas", roles: ["admin", "moderator"] },
+    ],
+  },
   { to: "/admin/banners", icon: Image, label: "Banners", roles: ["admin"] },
   { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago", roles: ["admin"] },
   { to: "/admin/empresa", icon: Building2, label: "Empresa", roles: ["admin"] },
@@ -178,12 +186,19 @@ const AdminLayout = () => {
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center gap-3 lg:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <span className="font-display font-bold text-primary">INFOCOM {roleLabel}</span>
+        <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center justify-between lg:hidden">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+              <Menu className="h-5 w-5" />
+            </Button>
+            <span className="font-display font-bold text-primary">INFOCOM {roleLabel}</span>
+          </div>
+          <NotificationBell />
         </header>
+        {/* Desktop notification bell */}
+        <div className="hidden lg:flex sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-primary/10 px-6 py-2 justify-end">
+          <NotificationBell />
+        </div>
         <main className="p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
