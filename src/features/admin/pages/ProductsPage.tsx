@@ -194,6 +194,7 @@ const ProductsPage = () => {
       category_id: form.category_id || null, brand_id: form.brand_id || null,
       images: form.images,
       is_active: form.is_active, is_featured: form.is_featured, is_new: form.is_new, discount_percent: Number(form.discount_percent),
+      vitrina_id: form.vitrina_id || null, vitrina_floor: form.vitrina_floor ? Number(form.vitrina_floor) : null,
     };
 
     if (editing) {
