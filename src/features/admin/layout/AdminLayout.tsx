@@ -186,12 +186,19 @@ const AdminLayout = () => {
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center gap-3 lg:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <span className="font-display font-bold text-primary">INFOCOM {roleLabel}</span>
+        <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-primary/10 px-4 py-3 flex items-center justify-between lg:hidden">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+              <Menu className="h-5 w-5" />
+            </Button>
+            <span className="font-display font-bold text-primary">INFOCOM {roleLabel}</span>
+          </div>
+          <NotificationBell />
         </header>
+        {/* Desktop notification bell */}
+        <div className="hidden lg:flex sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-primary/10 px-6 py-2 justify-end">
+          <NotificationBell />
+        </div>
         <main className="p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>

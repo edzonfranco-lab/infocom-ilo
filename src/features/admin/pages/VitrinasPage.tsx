@@ -174,6 +174,14 @@ const VitrinasPage = () => {
         </Card>
       </div>
 
+      {/* Optional Store Map */}
+      <StoreMap
+        vitrinas={vitrinas}
+        productCounts={Object.fromEntries(vitrinas.map(v => [v.id, getProductsInVitrina(v.id).length]))}
+        onVitrinaClick={(id) => setSelectedVitrina(selectedVitrina === id ? null : id)}
+        selectedVitrina={selectedVitrina}
+      />
+
       {/* Vitrinas grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {vitrinas.map(v => {
