@@ -15,6 +15,7 @@ import ImageUpload from "@/features/admin/components/ImageUpload";
 
 const BannersPage = () => {
   const [banners, setBanners] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ title: "", subtitle: "", image_desktop: "", image_mobile: "", link_url: "", cta_text: "", sort_order: "0", is_active: true });
