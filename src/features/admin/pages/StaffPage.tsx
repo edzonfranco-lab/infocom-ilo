@@ -319,22 +319,44 @@ const StaffPage = () => {
           </DialogHeader>
           <form onSubmit={e => { e.preventDefault(); saveScheduleMutation.mutate(); }} className="space-y-4">
             <div>
-              <Label>Día de la Semana</Label>
-              <Select value={scheduleForm.day_of_week} onValueChange={v => setScheduleForm({ ...scheduleForm, day_of_week: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DAY_NAMES.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Días de la Semana (selecciona varios)</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {DAY_NAMES.map((d, i) => {
+                  const selected = scheduleForm.days.includes(i);
+                  return (
+                    <Button
+                      key={i} type="button" size="sm"
+                      variant={selected ? "default" : "outline"}
+                      onClick={() => setScheduleForm({
+                        ...scheduleForm,
+                        days: selected ? scheduleForm.days.filter(x => x !== i) : [...scheduleForm.days, i],
+                      })}
+                    >
+                      {DAY_SHORT[i]}
+                    </Button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => setScheduleForm({ ...scheduleForm, days: [1,2,3,4,5] })}>Lun-Vie</Button>
+                <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => setScheduleForm({ ...scheduleForm, days: [1,2,3,4,5,6] })}>Lun-Sáb</Button>
+                <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => setScheduleForm({ ...scheduleForm, days: [] })}>Limpiar</Button>
+              </div>
             </div>
             <div>
               <Label>Nombre del Turno</Label>
-              <Select value={scheduleForm.shift_name} onValueChange={v => setScheduleForm({ ...scheduleForm, shift_name: v })}>
+              <Select value={scheduleForm.shift_name} onValueChange={v => {
+                let start = scheduleForm.start_time, end = scheduleForm.end_time;
+                if (v === "Turno Completo") { start = "09:00"; end = "18:00"; }
+                else if (v === "Turno 1") { start = "09:00"; end = "13:00"; }
+                else if (v === "Turno 2") { start = "14:00"; end = "18:00"; }
+                setScheduleForm({ ...scheduleForm, shift_name: v, start_time: start, end_time: end });
+              }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Turno Completo">Turno Completo (09:00-18:00)</SelectItem>
                   <SelectItem value="Turno 1">Turno 1 (Mañana)</SelectItem>
                   <SelectItem value="Turno 2">Turno 2 (Tarde)</SelectItem>
-                  <SelectItem value="Turno 3">Turno 3 (Noche)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
