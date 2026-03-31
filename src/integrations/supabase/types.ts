@@ -92,6 +92,63 @@ export type Database = {
         }
         Relationships: []
       }
+      appointments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          description: string | null
+          duration_minutes: number
+          id: string
+          scheduled_at: string
+          staff_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          scheduled_at: string
+          staff_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          scheduled_at?: string
+          staff_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           check_in_time: string | null
@@ -399,6 +456,87 @@ export type Database = {
           photo_url?: string | null
           role?: string
           sort_order?: number | null
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          address: string | null
+          created_at: string
+          document_number: string | null
+          email: string | null
+          full_name: string
+          id: string
+          is_vip: boolean
+          last_purchase_at: string | null
+          notes: string | null
+          phone: string | null
+          total_purchases: number
+          total_spent: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          document_number?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          is_vip?: boolean
+          last_purchase_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          total_purchases?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          document_number?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_vip?: boolean
+          last_purchase_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          total_purchases?: number
+          total_spent?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message: string
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -788,6 +926,7 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          institution: string | null
           is_active: boolean | null
           phone: string | null
           position: string
@@ -801,6 +940,7 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          institution?: string | null
           is_active?: boolean | null
           phone?: string | null
           position?: string
@@ -814,6 +954,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          institution?: string | null
           is_active?: boolean | null
           phone?: string | null
           position?: string
