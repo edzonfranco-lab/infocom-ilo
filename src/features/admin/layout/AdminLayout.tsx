@@ -141,13 +141,15 @@ const AdminLayout = () => {
     );
   };
 
+  const roleLabel = roles.includes("admin" as any) ? "ADMIN" : "PERSONAL";
+
   const sidebar = (
     <div className="h-full flex flex-col bg-card border-r border-primary/10">
       <div className="p-4 border-b border-primary/10">
         <Link to="/" className="flex items-center gap-3">
           <img src={logoDark} alt="INFOCOM" className="h-8 object-contain" />
           <div>
-            <span className="font-display font-bold text-sm text-primary">ADMIN</span>
+            <span className="font-display font-bold text-sm text-primary">{roleLabel}</span>
           </div>
         </Link>
       </div>
