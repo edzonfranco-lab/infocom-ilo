@@ -40,6 +40,13 @@ const allNavItems: NavItem[] = [
     ],
   },
   { to: "/admin/contabilidad", icon: DollarSign, label: "Contabilidad", roles: ["admin"] },
+  {
+    to: "/admin/clientes", icon: UserCheck, label: "Clientes", roles: ["admin", "moderator"],
+    children: [
+      { to: "/admin/clientes", icon: UserCheck, label: "Directorio", end: true, roles: ["admin", "moderator"] },
+      { to: "/admin/agenda", icon: CalendarClock, label: "Agenda / Citas", roles: ["admin", "moderator"] },
+    ],
+  },
   { to: "/admin/banners", icon: Image, label: "Banners", roles: ["admin"] },
   { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago", roles: ["admin"] },
   { to: "/admin/empresa", icon: Building2, label: "Empresa", roles: ["admin"] },
