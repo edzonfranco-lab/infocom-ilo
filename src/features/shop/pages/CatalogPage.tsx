@@ -34,8 +34,11 @@ const CatalogPage = () => {
   const [priceMin, setPriceMin] = useState(searchParams.get("pmin") || "");
   const [priceMax, setPriceMax] = useState(searchParams.get("pmax") || "");
 
+  const brandSlug = searchParams.get("brand") || "";
+
   const { products, loading } = useProducts({
     category: catSlug || undefined,
+    brand: brandSlug || undefined,
     search: search || undefined,
     sort: sortParam,
     priceMin: searchParams.get("pmin") ? Number(searchParams.get("pmin")) : undefined,
