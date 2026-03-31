@@ -20,7 +20,7 @@ const VitrinasPage = () => {
   const [selectedVitrina, setSelectedVitrina] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState({
-    name: "", code: "", description: "", location: "", floors: "1", is_active: true, sort_order: "0"
+    name: "", code: "", description: "", location: "", floors: "1", is_active: true
   });
 
   const fetchAll = async () => {
