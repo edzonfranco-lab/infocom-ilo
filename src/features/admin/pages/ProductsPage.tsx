@@ -131,10 +131,14 @@ const ProductsPage = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
+  const [vitrinas, setVitrinas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [filterVitrina, setFilterVitrina] = useState("");
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
 
   // Form
   const [form, setForm] = useState({
@@ -142,17 +146,20 @@ const ProductsPage = () => {
     price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5",
     category_id: "", brand_id: "", images: [] as string[],
     is_active: true, is_featured: false, is_new: false, discount_percent: "0",
+    vitrina_id: "", vitrina_floor: "",
   });
 
   const fetchAll = async () => {
-    const [{ data: prods }, { data: cats }, { data: brs }] = await Promise.all([
-      supabase.from("products").select("*, categories(*), brands(*)").order("created_at", { ascending: false }),
+    const [{ data: prods }, { data: cats }, { data: brs }, { data: vits }] = await Promise.all([
+      supabase.from("products").select("*, categories(*), brands(*), vitrinas(*)").order("created_at", { ascending: false }),
       supabase.from("categories").select("*").order("name"),
       supabase.from("brands").select("*").order("name"),
+      supabase.from("vitrinas").select("*").eq("is_active", true).order("sort_order"),
     ]);
     setProducts(prods || []);
     setCategories(cats || []);
     setBrands(brs || []);
+    setVitrinas(vits || []);
     setLoading(false);
   };
 
