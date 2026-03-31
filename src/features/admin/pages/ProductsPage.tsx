@@ -309,8 +309,30 @@ const ProductsPage = () => {
         </Dialog>
       </div>
 
-      <div className="flex gap-2">
-        <Input placeholder="Buscar productos..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm bg-secondary/50 border-primary/20" />
+      <div className="flex flex-wrap gap-2">
+        <Input placeholder="Buscar productos..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-[200px] bg-secondary/50 border-primary/20" />
+        <Select value={filterVitrina} onValueChange={setFilterVitrina}>
+          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Vitrina" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="none">Sin asignar</SelectItem>
+            {vitrinas.map(v => <SelectItem key={v.id} value={v.id}>{v.code} — {v.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterBrand} onValueChange={setFilterBrand}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Marca" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Categoría" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? <p>Cargando...</p> : (
