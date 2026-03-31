@@ -42,6 +42,7 @@ import AttendancePage from "@/features/admin/pages/AttendancePage";
 import AccountingPage from "@/features/admin/pages/AccountingPage";
 import SupportPage from "@/features/admin/pages/SupportPage";
 import SalesPage from "@/features/admin/pages/SalesPage";
+import VitrinasPage from "@/features/admin/pages/VitrinasPage";
 
 import NotFound from "./pages/NotFound";
 
