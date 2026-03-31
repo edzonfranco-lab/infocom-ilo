@@ -147,10 +147,8 @@ const BrandsPage = () => {
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 pt-6">
-                  <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
-                  <Label>Activa</Label>
-                </div>
+                <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                <Label>Activa</Label>
               </div>
               <Button onClick={handleSave} className="w-full">{editing ? "Guardar Cambios" : "Crear Marca"}</Button>
             </div>
