@@ -17,7 +17,7 @@ const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Vierne
 const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const emptyForm = {
-  full_name: "", position: "Practicante", phone: "", email: "", document_number: "", user_id: "",
+  full_name: "", position: "Practicante", phone: "", email: "", document_number: "", user_id: "", institution: "",
 };
 
 const emptyScheduleForm = {
