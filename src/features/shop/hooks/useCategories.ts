@@ -4,6 +4,7 @@ import type { Category } from "@/lib/types";
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export function useCategories() {
         .order("sort_order");
 
       if (data) {
+        setAllCategories(data as Category[]);
         const parents = data.filter((c: any) => !c.parent_id).map((c: any) => ({
           ...c,
           children: data.filter((sub: any) => sub.parent_id === c.id),
@@ -26,5 +28,5 @@ export function useCategories() {
     fetch();
   }, []);
 
-  return { categories, loading };
+  return { categories, allCategories, loading };
 }

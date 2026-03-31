@@ -9,6 +9,9 @@ interface UseProductsOptions {
   featured?: boolean;
   isNew?: boolean;
   limit?: number;
+  sort?: string;
+  priceMin?: number;
+  priceMax?: number;
 }
 
 export function useProducts(options: UseProductsOptions = {}) {
@@ -18,16 +21,29 @@ export function useProducts(options: UseProductsOptions = {}) {
   useEffect(() => {
     const fetch = async () => {
       setLoading(true);
+
+      // Determine sort
+      let orderCol = "created_at";
+      let orderAsc = false;
+      switch (options.sort) {
+        case "name-asc": orderCol = "name"; orderAsc = true; break;
+        case "name-desc": orderCol = "name"; orderAsc = false; break;
+        case "price-asc": orderCol = "price"; orderAsc = true; break;
+        case "price-desc": orderCol = "price"; orderAsc = false; break;
+        case "date-desc": orderCol = "created_at"; orderAsc = false; break;
+        case "position": orderCol = "created_at"; orderAsc = false; break;
+        default: break;
+      }
+
       let query = supabase
         .from("products")
         .select("*, categories(*), brands(*)")
         .eq("is_active", true)
-        .order("created_at", { ascending: false });
+        .order(orderCol, { ascending: orderAsc });
 
       if (options.featured) query = query.eq("is_featured", true);
       if (options.isNew) query = query.eq("is_new", true);
       if (options.category) {
-        // Get category id by slug
         const { data: cat } = await supabase.from("categories").select("id").eq("slug", options.category).single();
         if (cat) query = query.eq("category_id", cat.id);
       }
@@ -36,6 +52,8 @@ export function useProducts(options: UseProductsOptions = {}) {
         if (br) query = query.eq("brand_id", br.id);
       }
       if (options.search) query = query.ilike("name", `%${options.search}%`);
+      if (options.priceMin !== undefined) query = query.gte("price", options.priceMin);
+      if (options.priceMax !== undefined) query = query.lte("price", options.priceMax);
       if (options.limit) query = query.limit(options.limit);
 
       const { data } = await query;
@@ -47,7 +65,7 @@ export function useProducts(options: UseProductsOptions = {}) {
       setLoading(false);
     };
     fetch();
-  }, [options.category, options.brand, options.search, options.featured, options.isNew, options.limit]);
+  }, [options.category, options.brand, options.search, options.featured, options.isNew, options.limit, options.sort, options.priceMin, options.priceMax]);
 
   return { products, loading };
 }
