@@ -25,6 +25,7 @@ const PAPER_SIZES: Record<string, { label: string; width: string }> = {
 export interface ReceiptTemplate {
   paperSize: string;
   fontSize: string;
+  printerType: "thermal" | "a4";
   companyName: string;
   companySubtitle: string;
   footerText: string;
