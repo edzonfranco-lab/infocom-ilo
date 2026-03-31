@@ -182,7 +182,7 @@ const AdminLayout = () => {
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <span className="font-display font-bold text-primary">INFOCOM Admin</span>
+          <span className="font-display font-bold text-primary">INFOCOM {roleLabel}</span>
         </header>
         <main className="p-4 sm:p-6 lg:p-8">
           <Outlet />
