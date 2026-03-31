@@ -444,9 +444,12 @@ ${bodyContent}
   };
 
   return (
-    <div className="flex gap-1">
-      <Button variant="outline" size="sm" className="gap-2" onClick={handlePrint}>
-        <Printer className="h-4 w-4" /> Imprimir
+    <div className="flex gap-1 items-center">
+      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handlePrint()}>
+        <Printer className="h-4 w-4" /> Boletera
+      </Button>
+      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handlePrint("a4")}>
+        <FileText className="h-4 w-4" /> A4
       </Button>
       <Dialog open={configOpen} onOpenChange={setConfigOpen}>
         <DialogTrigger asChild>
