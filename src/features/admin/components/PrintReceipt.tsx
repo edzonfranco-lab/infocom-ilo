@@ -194,17 +194,135 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = (overridePrinterType?: "thermal" | "a4") => {
     const t = template;
-    const sz = PAPER_SIZES[t.paperSize] || PAPER_SIZES["58mm"];
-    const fs = parseInt(t.fontSize) || 12;
-    const w = window.open("", "_blank", `width=500,height=700`);
+    const pType = overridePrinterType || t.printerType || "thermal";
+    const isA4 = pType === "a4";
+    const sz = isA4 ? { width: "700px" } : (THERMAL_SIZES[t.paperSize] || THERMAL_SIZES["58mm"]);
+    const fs = isA4 ? 11 : (parseInt(t.fontSize) || 12);
+    const w = window.open("", "_blank", isA4 ? `width=800,height=900` : `width=400,height=700`);
     if (!w) return;
 
     let bodyContent = "";
     const issueLabel = orderOverrides.issueLabel || t.receptionSectionIssueLabel;
     const headerHtml = buildHeaderHtml(t);
 
+    // Helper to build items table rows
+    const buildItemsRows = () => {
+      const items = order.items || [];
+      if (items.length > 0) {
+        return items.map((it: any, i: number) =>
+          `<tr><td class="tc">${i + 1}</td><td class="tc">${it.cantidad}</td><td>UNIDAD</td><td>${String(it.descripcion).toUpperCase()}</td><td class="tr">S/. ${Number(it.precio_unitario).toFixed(2)}</td><td class="tr">S/. ${Number(it.subtotal).toFixed(2)}</td></tr>`
+        ).join("");
+      }
+      return `<tr><td class="tc">1</td><td class="tc">${order.quantity || 1}</td><td>UNIDAD</td><td>${String(order.product_description || order.description || "").toUpperCase()}</td><td class="tr">S/. ${Number(order.unit_price || order.price || 0).toFixed(2)}</td><td class="tr">S/. ${Number(order.total || order.price || 0).toFixed(2)}</td></tr>`;
+    };
+
+    const buildItemsRowsSimple = () => {
+      const items = order.items || [];
+      if (items.length > 0) {
+        return items.map((it: any) =>
+          `<tr><td class="tc">${it.cantidad}</td><td>${String(it.descripcion).toUpperCase()}</td><td class="tr">S/. ${Number(it.precio_unitario).toFixed(2)}</td><td class="tr">S/. ${Number(it.subtotal).toFixed(2)}</td></tr>`
+        ).join("");
+      }
+      return `<tr><td class="tc">${order.quantity || 1}</td><td>${String(order.product_description || order.description || "").toUpperCase()}</td><td class="tr">S/. ${Number(order.unit_price || order.price || 0).toFixed(2)}</td><td class="tr">S/. ${Number(order.total || order.price || 0).toFixed(2)}</td></tr>`;
+    };
+
+    const subtotalProductos = order.subtotal_productos ?? order.total ?? 0;
+    const subtotalServicios = order.subtotal_servicios ?? 0;
+    const totalFinal = Number(order.total || order.price || 0);
+
+    if (isA4) {
+      // ─── A4 FORMAL BOLETA FORMAT ───
+      const ticketType = type === "service" ? t.serviceTitle : t.saleTitle;
+      const a4Header = t.headerMode === "logo" && t.logoUrl
+        ? `<img src="${t.logoUrl}" alt="Logo" style="max-height:60px;margin-bottom:4px" />`
+        : `<div style="font-size:20px;font-weight:900;letter-spacing:2px">${t.companyName}</div>`;
+
+      bodyContent = `
+<div class="a4-container">
+  <div class="a4-header">
+    <div class="a4-company">
+      ${a4Header}
+      <div style="font-size:10px;margin-top:2px">${t.companySubtitle.replace(/\n/g, " | ")}</div>
+    </div>
+    <div class="a4-doc-type">
+      <div class="doc-title">${ticketType}</div>
+    </div>
+  </div>
+  <div class="a4-separator"></div>
+  <div class="a4-info-grid">
+    <div class="a4-info-left">
+      <div class="a4-field"><span class="a4-label">Fecha de Emision:</span><span>${order.date || new Date().toISOString().split("T")[0]}</span></div>
+      ${order.customer_name ? `<div class="a4-field"><span class="a4-label">Cliente:</span><span>${order.customer_name}</span></div>` : ""}
+      ${order.customer_dni ? `<div class="a4-field"><span class="a4-label">D.N.I.:</span><span>${order.customer_dni}</span></div>` : ""}
+      ${order.customer_phone ? `<div class="a4-field"><span class="a4-label">Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
+    </div>
+    <div class="a4-info-right">
+      ${order.seller ? `<div class="a4-field"><span class="a4-label">Vendedor:</span><span>${String(order.seller).toUpperCase()}</span></div>` : ""}
+      ${order.responsible ? `<div class="a4-field"><span class="a4-label">Responsable:</span><span>${String(order.responsible).toUpperCase()}</span></div>` : ""}
+      ${order.payment_method ? `<div class="a4-field"><span class="a4-label">Condicion de Pago:</span><span>${String(order.payment_method).toUpperCase()}</span></div>` : ""}
+      ${order.equipo || order.device_type ? `<div class="a4-field"><span class="a4-label">Equipo:</span><span>${String(order.equipo || order.device_type).toUpperCase()}</span></div>` : ""}
+    </div>
+  </div>
+  <table class="a4-items">
+    <thead><tr><th>N°</th><th>Cant.</th><th>Unidad</th><th>DESCRIPCION</th><th>P. Unitario</th><th>Total</th></tr></thead>
+    <tbody>${buildItemsRows()}</tbody>
+  </table>
+  <div class="a4-totals">
+    ${Number(subtotalProductos) > 0 && Number(subtotalServicios) > 0 ? `
+      <div class="a4-total-row"><span>Subtotal Productos:</span><span>S/. ${Number(subtotalProductos).toFixed(2)}</span></div>
+      <div class="a4-total-row"><span>Subtotal Servicios:</span><span>S/. ${Number(subtotalServicios).toFixed(2)}</span></div>
+    ` : ""}
+    <div class="a4-total-row a4-total-final"><span>IMPORTE TOTAL S/</span><span>S/. ${totalFinal.toFixed(2)}</span></div>
+  </div>
+  ${order.amount_given && Number(order.amount_given) > 0 ? `
+  <div class="a4-payment-info">
+    <div class="a4-total-row"><span>Monto Recibido:</span><span>S/. ${Number(order.amount_given).toFixed(2)}</span></div>
+    <div class="a4-total-row"><span>Vuelto:</span><span>S/. ${(Number(order.amount_given) - totalFinal).toFixed(2)}</span></div>
+  </div>` : ""}
+  <div class="a4-footer">
+    <p>${t.footerText.replace(/\n/g, "<br>")}</p>
+  </div>
+</div>`;
+
+      const a4Html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${ticketType}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#000;padding:20px}
+  .a4-container{max-width:700px;margin:0 auto;border:1px solid #ccc;padding:24px}
+  .a4-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+  .a4-company{flex:1}
+  .a4-doc-type{border:2px solid #000;padding:10px 20px;text-align:center;min-width:200px}
+  .doc-title{font-size:16px;font-weight:900;letter-spacing:1px}
+  .a4-separator{border-top:2px solid #000;margin:8px 0 12px}
+  .a4-info-grid{display:flex;gap:20px;margin-bottom:16px}
+  .a4-info-left,.a4-info-right{flex:1}
+  .a4-field{display:flex;gap:6px;margin:4px 0;font-size:11px}
+  .a4-label{font-weight:700;min-width:120px;white-space:nowrap}
+  .a4-items{width:100%;border-collapse:collapse;margin:12px 0;font-size:11px}
+  .a4-items th{background:#f0f0f0;border:1px solid #999;padding:6px 8px;font-weight:700;text-align:left}
+  .a4-items td{border:1px solid #ccc;padding:5px 8px;vertical-align:top}
+  .a4-items .tc{text-align:center}
+  .a4-items .tr{text-align:right;white-space:nowrap}
+  .a4-totals{display:flex;flex-direction:column;align-items:flex-end;margin-top:8px;gap:4px}
+  .a4-total-row{display:flex;gap:16px;font-size:12px;min-width:280px;justify-content:space-between}
+  .a4-total-final{font-weight:900;font-size:14px;border-top:2px solid #000;padding-top:6px;margin-top:4px}
+  .a4-payment-info{display:flex;flex-direction:column;align-items:flex-end;margin-top:6px;gap:2px}
+  .a4-footer{text-align:center;margin-top:24px;font-size:10px;color:#555;border-top:1px solid #ccc;padding-top:12px}
+  @media print{body{padding:10px}.a4-container{border:none;padding:0}@page{margin:10mm}}
+</style></head><body>
+${bodyContent}
+</body></html>`;
+
+      w.document.write(a4Html);
+      w.document.close();
+      setTimeout(() => { w.print(); }, 300);
+      return;
+    }
+
+    // ─── THERMAL TICKET FORMAT ───
     if (type === "reception") {
       bodyContent = `
 ${headerHtml}
@@ -212,38 +330,26 @@ ${headerHtml}
 <div class="center big">#${order.order_number}</div>
 <div class="center receipt-title">${t.receptionTitle}</div>
 <div class="line"></div>
-<div class="row"><span>Fecha Recepcion:</span><span>${new Date(order.received_at).toLocaleString("es-PE")}</span></div>
+<div class="row"><span>Fecha:</span><span style="font-size:${Math.max(fs - 1, 8)}px">${new Date(order.received_at).toLocaleString("es-PE")}</span></div>
 <div class="line"></div>
 <h3>${t.receptionSectionClient}</h3>
 <div class="row"><span>Nombre:</span><span class="bold">${order.customer_name}</span></div>
-${order.customer_phone ? `<div class="row"><span>Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
+${order.customer_phone ? `<div class="row"><span>Tel:</span><span>${order.customer_phone}</span></div>` : ""}
 ${order.customer_email ? `<div class="row"><span>Email:</span><span>${order.customer_email}</span></div>` : ""}
 <div class="line"></div>
 <h3>${t.receptionSectionDevice}</h3>
 <div class="row"><span>Tipo:</span><span class="bold">${order.device_type}</span></div>
 ${order.device_brand ? `<div class="row"><span>Marca:</span><span>${order.device_brand}</span></div>` : ""}
 ${order.device_model ? `<div class="row"><span>Modelo:</span><span>${order.device_model}</span></div>` : ""}
-<div class="row"><span>Accesorios:</span><span>${order.accessories || "no dejo"}</span></div>
+<div class="row"><span>Acces.:</span><span>${order.accessories || "no dejo"}</span></div>
 <div class="line"></div>
 <h3>${issueLabel}</h3>
-<p style="margin:4px 0">${order.reported_issue}</p>
+<p style="margin:4px 0;word-break:break-word">${order.reported_issue}</p>
 <div class="line"></div>
-${t.showEstimatedCost && order.estimated_cost ? `<div class="row"><span>Costo Estimado:</span><span class="bold">S/. ${Number(order.estimated_cost).toFixed(2)}</span></div><div class="line"></div>` : ""}
-${t.showConditions ? `<div class="center conditions"><p>${t.receptionConditionsText}</p></div>` : ""}
-${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">${t.signatureRight}</span></div></div>` : ""}`;
+${t.showEstimatedCost && order.estimated_cost ? `<div class="row"><span>Costo Est.:</span><span class="bold">S/. ${Number(order.estimated_cost).toFixed(2)}</span></div><div class="line"></div>` : ""}
+${t.showConditions ? `<div class="conditions"><p>${t.receptionConditionsText}</p></div>` : ""}
+${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureRight}</span></div></div>` : ""}`;
     } else if (type === "sale") {
-      // Build items table rows
-      const items = order.items || [];
-      const hasItems = items.length > 0;
-      const itemsRows = hasItems
-        ? items.map((it: any) =>
-            `<tr><td class="tc">${it.cantidad}</td><td>${String(it.descripcion).toUpperCase()}</td><td class="tr">S/. ${Number(it.precio_unitario).toFixed(2)}</td><td class="tr">S/. ${Number(it.subtotal).toFixed(2)}</td></tr>`
-          ).join("")
-        : `<tr><td class="tc">${order.quantity || 1}</td><td>${String(order.product_description || "").toUpperCase()}</td><td class="tr">S/. ${Number(order.unit_price || 0).toFixed(2)}</td><td class="tr">S/. ${Number(order.total).toFixed(2)}</td></tr>`;
-
-      const subtotalProductos = order.subtotal_productos ?? order.total;
-      const subtotalServicios = order.subtotal_servicios ?? 0;
-
       bodyContent = `
 ${headerHtml}
 <div class="line"></div>
@@ -251,33 +357,23 @@ ${headerHtml}
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
 ${order.customer_name ? `<div class="row"><span>Cliente:</span><span class="bold">${order.customer_name}</span></div>` : ""}
-${order.customer_phone ? `<div class="row"><span>Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
+${order.customer_phone ? `<div class="row"><span>Tel:</span><span>${order.customer_phone}</span></div>` : ""}
 ${order.customer_dni ? `<div class="row"><span>DNI:</span><span>${order.customer_dni}</span></div>` : ""}
-${order.payment_method ? `<div class="row"><span>Metodo Pago:</span><span class="bold">${String(order.payment_method).toUpperCase()}</span></div>` : ""}
+${order.payment_method ? `<div class="row"><span>Pago:</span><span class="bold">${String(order.payment_method).toUpperCase()}</span></div>` : ""}
 <div class="row"><span>Vendedor:</span><span class="bold">${String(order.seller || "").toUpperCase()}</span></div>
 ${order.equipo ? `<div class="row"><span>Equipo:</span><span class="bold">${String(order.equipo).toUpperCase()}</span></div>` : ""}
 <div class="line"></div>
 <table class="items-table">
-<thead><tr><th>Cant.</th><th>Descripcion</th><th>P. Unit.</th><th>Total</th></tr></thead>
-<tbody>${itemsRows}</tbody>
+<thead><tr><th>Cant.</th><th>Descripcion</th><th>P.U.</th><th>Total</th></tr></thead>
+<tbody>${buildItemsRowsSimple()}</tbody>
 </table>
 <div class="line"></div>
-${Number(subtotalProductos) > 0 ? `<div class="row"><span>Subtotal Productos:</span><span>S/. ${Number(subtotalProductos).toFixed(2)}</span></div>` : ""}
-${Number(subtotalServicios) > 0 ? `<div class="row"><span>Subtotal Servicios:</span><span>S/. ${Number(subtotalServicios).toFixed(2)}</span></div>` : ""}
+${Number(subtotalProductos) > 0 && Number(subtotalServicios) > 0 ? `<div class="row"><span>Subt. Prod.:</span><span>S/. ${Number(subtotalProductos).toFixed(2)}</span></div><div class="row"><span>Subt. Serv.:</span><span>S/. ${Number(subtotalServicios).toFixed(2)}</span></div>` : ""}
 <div class="line"></div>
-<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.total).toFixed(2)}</span></div>
+<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${totalFinal.toFixed(2)}</span></div>
 ${order.amount_given && Number(order.amount_given) > 0 ? `<div class="row"><span>Recibido:</span><span>S/. ${Number(order.amount_given).toFixed(2)}</span></div>
-<div class="row"><span class="bold">Vuelto:</span><span class="bold">S/. ${(Number(order.amount_given) - Number(order.total)).toFixed(2)}</span></div>` : ""}`;
+<div class="row"><span class="bold">Vuelto:</span><span class="bold">S/. ${(Number(order.amount_given) - totalFinal).toFixed(2)}</span></div>` : ""}`;
     } else {
-      // Service ticket - also use items table if available
-      const items = order.items || [];
-      const hasItems = items.length > 0;
-      const itemsRows = hasItems
-        ? items.map((it: any) =>
-            `<tr><td class="tc">${it.cantidad}</td><td>${String(it.descripcion).toUpperCase()}</td><td class="tr">S/. ${Number(it.precio_unitario).toFixed(2)}</td><td class="tr">S/. ${Number(it.subtotal).toFixed(2)}</td></tr>`
-          ).join("")
-        : `<tr><td class="tc">1</td><td>${String(order.description || "").toUpperCase()}</td><td class="tr">S/. ${Number(order.price || 0).toFixed(2)}</td><td class="tr">S/. ${Number(order.price || 0).toFixed(2)}</td></tr>`;
-
       bodyContent = `
 ${headerHtml}
 <div class="line"></div>
@@ -285,46 +381,46 @@ ${headerHtml}
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
 ${order.customer_name ? `<div class="row"><span>Cliente:</span><span class="bold">${order.customer_name}</span></div>` : ""}
-${order.customer_phone ? `<div class="row"><span>Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
+${order.customer_phone ? `<div class="row"><span>Tel:</span><span>${order.customer_phone}</span></div>` : ""}
 ${order.customer_dni ? `<div class="row"><span>DNI:</span><span>${order.customer_dni}</span></div>` : ""}
-${order.payment_method ? `<div class="row"><span>Metodo Pago:</span><span class="bold">${String(order.payment_method).toUpperCase()}</span></div>` : ""}
-<div class="row"><span>Responsable:</span><span class="bold">${String(order.responsible || "").toUpperCase()}</span></div>
+${order.payment_method ? `<div class="row"><span>Pago:</span><span class="bold">${String(order.payment_method).toUpperCase()}</span></div>` : ""}
+<div class="row"><span>Resp.:</span><span class="bold">${String(order.responsible || "").toUpperCase()}</span></div>
 ${order.device_type ? `<div class="row"><span>Equipo:</span><span class="bold">${String(order.device_type).toUpperCase()}</span></div>` : ""}
-${order.diagnosis ? `<div class="row"><span>Diagnostico:</span><span>${order.diagnosis}</span></div>` : ""}
+${order.diagnosis ? `<div class="row"><span>Diag.:</span><span>${order.diagnosis}</span></div>` : ""}
 <div class="line"></div>
 <table class="items-table">
-<thead><tr><th>Cant.</th><th>Descripcion</th><th>P. Unit.</th><th>Total</th></tr></thead>
-<tbody>${itemsRows}</tbody>
+<thead><tr><th>Cant.</th><th>Descripcion</th><th>P.U.</th><th>Total</th></tr></thead>
+<tbody>${buildItemsRowsSimple()}</tbody>
 </table>
 <div class="line"></div>
-${Number(order.subtotal_productos || 0) > 0 ? `<div class="row"><span>Subtotal Productos:</span><span>S/. ${Number(order.subtotal_productos).toFixed(2)}</span></div>` : ""}
-${Number(order.subtotal_servicios || 0) > 0 ? `<div class="row"><span>Subtotal Servicios:</span><span>S/. ${Number(order.subtotal_servicios).toFixed(2)}</span></div>` : ""}
+${Number(order.subtotal_productos || 0) > 0 && Number(order.subtotal_servicios || 0) > 0 ? `<div class="row"><span>Subt. Prod.:</span><span>S/. ${Number(order.subtotal_productos).toFixed(2)}</span></div><div class="row"><span>Subt. Serv.:</span><span>S/. ${Number(order.subtotal_servicios).toFixed(2)}</span></div>` : ""}
 <div class="line"></div>
-<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.price || order.total).toFixed(2)}</span></div>`;
+<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${totalFinal.toFixed(2)}</span></div>`;
     }
 
     const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Ticket</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Courier New',monospace;font-size:${fs}px;font-weight:700;padding:8px;max-width:${sz.width};margin:0 auto;color:#000}
+  body{font-family:'Courier New',monospace;font-size:${fs}px;font-weight:700;padding:4px;width:${sz.width};max-width:${sz.width};margin:0 auto;color:#000;overflow:hidden;word-break:break-word}
   .center{text-align:center}
   .bold{font-weight:900}
-  .line{border-top:1px dashed #000;margin:6px 0}
-  .row{display:flex;justify-content:space-between;margin:2px 0;gap:4px}
-  .title{font-size:${fs + 4}px;font-weight:900;margin-bottom:2px}
-  .receipt-title{font-size:${fs + 2}px;font-weight:900;margin:4px 0;letter-spacing:1px}
-  .subtitle{font-size:${Math.max(fs - 2, 8)}px;margin-bottom:6px;font-weight:700}
-  h3{font-size:${fs}px;margin:4px 0 2px;text-transform:uppercase;letter-spacing:1px;font-weight:900}
-  .footer{margin-top:12px;font-size:${Math.max(fs - 3, 8)}px;text-align:center;font-weight:700}
-  .big{font-size:${fs + 6}px;font-weight:900}
-  .conditions{margin:8px 0;font-size:${Math.max(fs - 2, 8)}px;font-weight:700;text-align:center}
-  .items-table{width:100%;border-collapse:collapse;margin:4px 0;font-size:${Math.max(fs - 1, 8)}px}
-  .items-table th{border-bottom:1px solid #000;padding:2px 1px;text-align:left;font-weight:900;font-size:${Math.max(fs - 1, 8)}px}
-  .items-table td{padding:2px 1px;vertical-align:top;word-break:break-word}
+  .line{border-top:1px dashed #000;margin:4px 0}
+  .row{display:flex;justify-content:space-between;margin:1px 0;gap:2px;font-size:${fs}px;overflow:hidden}
+  .row span{overflow:hidden;text-overflow:ellipsis}
+  .title{font-size:${fs + 3}px;font-weight:900;margin-bottom:2px}
+  .receipt-title{font-size:${fs + 1}px;font-weight:900;margin:3px 0;letter-spacing:1px}
+  .subtitle{font-size:${Math.max(fs - 2, 7)}px;margin-bottom:4px;font-weight:700}
+  h3{font-size:${Math.max(fs - 1, 8)}px;margin:3px 0 1px;text-transform:uppercase;letter-spacing:1px;font-weight:900}
+  .footer{margin-top:8px;font-size:${Math.max(fs - 3, 7)}px;text-align:center;font-weight:700}
+  .big{font-size:${fs + 4}px;font-weight:900}
+  .conditions{margin:6px 0;font-size:${Math.max(fs - 3, 7)}px;font-weight:700;text-align:center}
+  .items-table{width:100%;border-collapse:collapse;margin:3px 0;font-size:${Math.max(fs - 2, 7)}px}
+  .items-table th{border-bottom:1px solid #000;padding:1px;text-align:left;font-weight:900;font-size:${Math.max(fs - 2, 7)}px}
+  .items-table td{padding:1px;vertical-align:top;word-break:break-word}
   .items-table .tc{text-align:center}
   .items-table .tr{text-align:right;white-space:nowrap}
-  @media print{body{padding:4px}@page{margin:2mm}}
+  @media print{body{padding:2px}@page{margin:1mm}}
 </style></head><body>
 ${bodyContent}
 <div class="footer"><p>${t.footerText.replace(/\n/g, "<br>")}</p></div>
