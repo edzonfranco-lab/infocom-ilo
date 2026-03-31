@@ -34,7 +34,7 @@ const BrandsPage = () => {
 
   const openEdit = (b: any) => {
     setEditing(b);
-    setForm({ name: b.name, slug: b.slug, logo_url: b.logo_url || "", sort_order: String(b.sort_order || 0), is_active: b.is_active ?? true });
+    setForm({ name: b.name, slug: b.slug, logo_url: b.logo_url || "", is_active: b.is_active ?? true });
     setDialogOpen(true);
   };
 
