@@ -2,8 +2,9 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings,
   ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign,
-  Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid
+  Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid, UserCheck, CalendarClock, Bell
 } from "lucide-react";
+import NotificationBell from "@/features/admin/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
