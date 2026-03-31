@@ -99,6 +99,7 @@ const App = () => (
                 <Route path="ventas/pos" element={<SalesPage />} />
 
                 <Route path="categorias" element={<AdminOnlyRoute><CategoriesPage /></AdminOnlyRoute>} />
+                <Route path="vitrinas" element={<AdminOnlyRoute><VitrinasPage /></AdminOnlyRoute>} />
                 <Route path="marcas" element={<AdminOnlyRoute><BrandsPage /></AdminOnlyRoute>} />
                 <Route path="banners" element={<AdminOnlyRoute><BannersPage /></AdminOnlyRoute>} />
                 <Route path="empresa" element={<AdminOnlyRoute><CompanyPage /></AdminOnlyRoute>} />
