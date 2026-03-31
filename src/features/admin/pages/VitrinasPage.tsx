@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, LayoutGrid, MapPin, Layers, Package, Search } from "lucide-react";
 import { toast } from "sonner";
 import { CURRENCY } from "@/lib/types";
+import StoreMap from "@/features/admin/components/StoreMap";
 
 const VitrinasPage = () => {
   const [vitrinas, setVitrinas] = useState<any[]>([]);
