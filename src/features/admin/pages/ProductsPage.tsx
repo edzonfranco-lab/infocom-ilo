@@ -348,12 +348,13 @@ const ProductsPage = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm line-clamp-1">{p.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm font-bold text-primary">{CURRENCY}{Number(p.price).toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground">Stock: {p.stock}</span>
-                    {p.stock < (p.min_stock || 5) && <Badge variant="destructive" className="text-[10px]">Bajo</Badge>}
-                    {!p.is_active && <Badge variant="secondary" className="text-[10px]">Inactivo</Badge>}
-                  </div>
+                   <div className="flex items-center gap-2 mt-1 flex-wrap">
+                     <span className="text-sm font-bold text-primary">{CURRENCY}{Number(p.price).toLocaleString()}</span>
+                     <span className="text-xs text-muted-foreground">Stock: {p.stock}</span>
+                     {p.stock < (p.min_stock || 5) && <Badge variant="destructive" className="text-[10px]">Bajo</Badge>}
+                     {!p.is_active && <Badge variant="secondary" className="text-[10px]">Inactivo</Badge>}
+                     {p.vitrinas && <Badge variant="outline" className="text-[10px] font-mono">{p.vitrinas.code}{p.vitrina_floor ? `-P${p.vitrina_floor}` : ""}</Badge>}
+                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-3 w-3" /></Button>
