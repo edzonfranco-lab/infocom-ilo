@@ -68,7 +68,7 @@ const CategoriesPage = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", sort_order: "0", is_active: true });
+  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", is_active: true });
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
 
@@ -79,18 +79,19 @@ const CategoriesPage = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
-  const resetForm = () => { setForm({ name: "", slug: "", icon: "", parent_id: "", sort_order: "0", is_active: true }); setEditing(null); };
+  const resetForm = () => { setForm({ name: "", slug: "", icon: "", parent_id: "", is_active: true }); setEditing(null); };
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
   const openEdit = (c: any) => {
     setEditing(c);
-    setForm({ name: c.name, slug: c.slug, icon: c.icon || "", parent_id: c.parent_id || "", sort_order: String(c.sort_order || 0), is_active: c.is_active });
+    setForm({ name: c.name, slug: c.slug, icon: c.icon || "", parent_id: c.parent_id || "", is_active: c.is_active });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    const payload = { name: form.name, slug: form.slug || generateSlug(form.name), icon: form.icon || null, parent_id: form.parent_id || null, sort_order: Number(form.sort_order), is_active: form.is_active };
+    const payload: any = { name: form.name, slug: form.slug || generateSlug(form.name), icon: form.icon || null, parent_id: form.parent_id || null, is_active: form.is_active };
+    if (!editing) payload.sort_order = categories.length;
     if (editing) {
       const { error } = await supabase.from("categories").update(payload as any).eq("id", editing.id);
       if (error) { toast.error(error.message); return; }
@@ -175,7 +176,7 @@ const CategoriesPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>Orden</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></div>
+              
               <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Activa</Label></div>
               <Button onClick={handleSave} className="w-full">{editing ? "Guardar" : "Crear"}</Button>
             </div>

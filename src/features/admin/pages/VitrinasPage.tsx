@@ -20,7 +20,7 @@ const VitrinasPage = () => {
   const [selectedVitrina, setSelectedVitrina] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState({
-    name: "", code: "", description: "", location: "", floors: "1", is_active: true, sort_order: "0"
+    name: "", code: "", description: "", location: "", floors: "1", is_active: true
   });
 
   const fetchAll = async () => {
@@ -35,7 +35,7 @@ const VitrinasPage = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", code: "", description: "", location: "", floors: "1", is_active: true, sort_order: "0" });
+    setForm({ name: "", code: "", description: "", location: "", floors: "1", is_active: true });
     setEditing(null);
   };
 
@@ -43,18 +43,19 @@ const VitrinasPage = () => {
     setEditing(v);
     setForm({
       name: v.name, code: v.code, description: v.description || "", location: v.location || "",
-      floors: String(v.floors), is_active: v.is_active, sort_order: String(v.sort_order || 0)
+      floors: String(v.floors), is_active: v.is_active
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!form.name || !form.code) { toast.error("Nombre y código son obligatorios"); return; }
-    const payload = {
+    const payload: any = {
       name: form.name, code: form.code.toUpperCase(), description: form.description || null,
       location: form.location || null, floors: Number(form.floors) || 1,
-      is_active: form.is_active, sort_order: Number(form.sort_order)
+      is_active: form.is_active,
     };
+    if (!editing) payload.sort_order = vitrinas.length;
     if (editing) {
       const { error } = await supabase.from("vitrinas").update(payload as any).eq("id", editing.id);
       if (error) { toast.error(error.message); return; }
@@ -124,14 +125,10 @@ const VitrinasPage = () => {
                 <Label>Descripción</Label>
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>N° Pisos</Label>
                   <Input type="number" min="1" max="20" value={form.floors} onChange={(e) => setForm({ ...form, floors: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Orden</Label>
-                  <Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} />
                 </div>
                 <div className="flex items-center gap-2 pt-6">
                   <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />

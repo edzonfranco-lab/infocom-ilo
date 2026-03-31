@@ -46,7 +46,7 @@ const allNavItems: NavItem[] = [
     to: "/admin/personal", icon: Users, label: "Personal", roles: ["admin"],
     children: [
       { to: "/admin/personal", icon: Users, label: "Gestión", end: true, roles: ["admin"] },
-      { to: "/admin/asistencias", icon: CalendarDays, label: "Asistencias", roles: ["admin"] },
+      { to: "/admin/asistencias", icon: CalendarDays, label: "Asistencias", roles: ["admin", "moderator"] },
     ],
   },
   { to: "/admin/roles", icon: Shield, label: "Roles", roles: ["admin"] },
@@ -141,13 +141,15 @@ const AdminLayout = () => {
     );
   };
 
+  const roleLabel = roles.includes("admin" as any) ? "ADMIN" : "PERSONAL";
+
   const sidebar = (
     <div className="h-full flex flex-col bg-card border-r border-primary/10">
       <div className="p-4 border-b border-primary/10">
         <Link to="/" className="flex items-center gap-3">
           <img src={logoDark} alt="INFOCOM" className="h-8 object-contain" />
           <div>
-            <span className="font-display font-bold text-sm text-primary">ADMIN</span>
+            <span className="font-display font-bold text-sm text-primary">{roleLabel}</span>
           </div>
         </Link>
       </div>
@@ -180,7 +182,7 @@ const AdminLayout = () => {
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <span className="font-display font-bold text-primary">INFOCOM Admin</span>
+          <span className="font-display font-bold text-primary">INFOCOM {roleLabel}</span>
         </header>
         <main className="p-4 sm:p-6 lg:p-8">
           <Outlet />

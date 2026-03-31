@@ -15,7 +15,7 @@ const BrandsPage = () => {
   const [brands, setBrands] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", logo_url: "", sort_order: "0", is_active: true });
+  const [form, setForm] = useState({ name: "", slug: "", logo_url: "", is_active: true });
   const [uploading, setUploading] = useState(false);
 
   const fetchAll = async () => {
@@ -26,7 +26,7 @@ const BrandsPage = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", slug: "", logo_url: "", sort_order: String(brands.length), is_active: true });
+    setForm({ name: "", slug: "", logo_url: "", is_active: true });
     setEditing(null);
   };
 
@@ -34,13 +34,12 @@ const BrandsPage = () => {
 
   const openEdit = (b: any) => {
     setEditing(b);
-    setForm({ name: b.name, slug: b.slug, logo_url: b.logo_url || "", sort_order: String(b.sort_order || 0), is_active: b.is_active ?? true });
+    setForm({ name: b.name, slug: b.slug, logo_url: b.logo_url || "", is_active: b.is_active ?? true });
     setDialogOpen(true);
   };
 
   const openNew = () => {
     resetForm();
-    setForm(prev => ({ ...prev, sort_order: String(brands.length) }));
     setDialogOpen(true);
   };
 
@@ -69,9 +68,9 @@ const BrandsPage = () => {
       name: form.name,
       slug: form.slug || generateSlug(form.name),
       logo_url: form.logo_url || null,
-      sort_order: Number(form.sort_order),
       is_active: form.is_active,
     };
+    if (!editing) payload.sort_order = brands.length;
     if (editing) {
       await supabase.from("brands").update(payload).eq("id", editing.id);
       toast.success("Marca actualizada");
@@ -147,15 +146,9 @@ const BrandsPage = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Orden</Label>
-                  <Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} />
-                </div>
-                <div className="flex items-center gap-2 pt-6">
-                  <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
-                  <Label>Activa</Label>
-                </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+                <Label>Activa</Label>
               </div>
               <Button onClick={handleSave} className="w-full">{editing ? "Guardar Cambios" : "Crear Marca"}</Button>
             </div>

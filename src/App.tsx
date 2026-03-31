@@ -105,7 +105,7 @@ const App = () => (
                 <Route path="empresa" element={<AdminOnlyRoute><CompanyPage /></AdminOnlyRoute>} />
                 <Route path="roles" element={<AdminOnlyRoute><RolesPage /></AdminOnlyRoute>} />
                 <Route path="personal" element={<AdminOnlyRoute><StaffPage /></AdminOnlyRoute>} />
-                <Route path="asistencias" element={<AdminOnlyRoute><AttendancePage /></AdminOnlyRoute>} />
+                <Route path="asistencias" element={<AttendancePage />} />
                 <Route path="contabilidad" element={<AdminOnlyRoute><AccountingPage /></AdminOnlyRoute>} />
                 <Route path="configuracion" element={<AdminOnlyRoute><SettingsPage /></AdminOnlyRoute>} />
                 <Route path="pagos" element={<AdminOnlyRoute><PaymentAccountsPage /></AdminOnlyRoute>} />
