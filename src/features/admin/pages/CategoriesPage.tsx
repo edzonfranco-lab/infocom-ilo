@@ -176,7 +176,7 @@ const CategoriesPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>Orden</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></div>
+              
               <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Activa</Label></div>
               <Button onClick={handleSave} className="w-full">{editing ? "Guardar" : "Crear"}</Button>
             </div>

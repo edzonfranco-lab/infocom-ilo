@@ -146,11 +146,7 @@ const BrandsPage = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Orden</Label>
-                  <Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} />
-                </div>
+              <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2 pt-6">
                   <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
                   <Label>Activa</Label>
