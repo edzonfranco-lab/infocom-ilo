@@ -218,7 +218,14 @@ const ProductsPage = () => {
     fetchAll();
   };
 
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = products.filter(p => {
+    if (!p.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterVitrina && p.vitrina_id !== filterVitrina) return false;
+    if (filterVitrina === "none" && p.vitrina_id) return false;
+    if (filterBrand && p.brand_id !== filterBrand) return false;
+    if (filterCategory && p.category_id !== filterCategory) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
