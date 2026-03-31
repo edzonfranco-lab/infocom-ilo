@@ -144,7 +144,7 @@ const CategoriesPage = () => {
                       onChange={(e) => setIconSearch(e.target.value)} 
                       className="mb-2"
                     />
-                    <div className="grid grid-cols-5 gap-1 max-h-[240px] overflow-y-auto">
+                    <div className="grid grid-cols-5 gap-1 max-h-[240px] overflow-y-auto pr-1" style={{ overscrollBehavior: 'contain' }}>
                       {filteredIcons.map((opt) => {
                         const Icon = opt.icon;
                         return (

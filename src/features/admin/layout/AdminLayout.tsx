@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings,
   ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign,
-  Wrench, ChevronDown, ShoppingCart, Store
+  Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -26,6 +26,7 @@ const allNavItems: NavItem[] = [
     to: "/admin/productos", icon: Package, label: "Productos", roles: ["admin", "moderator"],
     children: [
       { to: "/admin/productos", icon: Package, label: "Inventario", end: true, roles: ["admin", "moderator"] },
+      { to: "/admin/vitrinas", icon: LayoutGrid, label: "Vitrinas", roles: ["admin"] },
       { to: "/admin/categorias", icon: FolderTree, label: "Categorías", roles: ["admin"] },
       { to: "/admin/marcas", icon: Tags, label: "Marcas", roles: ["admin"] },
     ],

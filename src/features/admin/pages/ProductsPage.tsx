@@ -131,10 +131,14 @@ const ProductsPage = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
+  const [vitrinas, setVitrinas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [filterVitrina, setFilterVitrina] = useState("");
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
 
   // Form
   const [form, setForm] = useState({
@@ -142,24 +146,27 @@ const ProductsPage = () => {
     price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5",
     category_id: "", brand_id: "", images: [] as string[],
     is_active: true, is_featured: false, is_new: false, discount_percent: "0",
+    vitrina_id: "", vitrina_floor: "",
   });
 
   const fetchAll = async () => {
-    const [{ data: prods }, { data: cats }, { data: brs }] = await Promise.all([
-      supabase.from("products").select("*, categories(*), brands(*)").order("created_at", { ascending: false }),
+    const [{ data: prods }, { data: cats }, { data: brs }, { data: vits }] = await Promise.all([
+      supabase.from("products").select("*, categories(*), brands(*), vitrinas(*)").order("created_at", { ascending: false }),
       supabase.from("categories").select("*").order("name"),
       supabase.from("brands").select("*").order("name"),
+      supabase.from("vitrinas").select("*").eq("is_active", true).order("sort_order"),
     ]);
     setProducts(prods || []);
     setCategories(cats || []);
     setBrands(brs || []);
+    setVitrinas(vits || []);
     setLoading(false);
   };
 
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", slug: "", description: "", short_description: "", sku: "", price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5", category_id: "", brand_id: "", images: [], is_active: true, is_featured: false, is_new: false, discount_percent: "0" });
+    setForm({ name: "", slug: "", description: "", short_description: "", sku: "", price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5", category_id: "", brand_id: "", images: [], is_active: true, is_featured: false, is_new: false, discount_percent: "0", vitrina_id: "", vitrina_floor: "" });
     setEditing(null);
   };
 
@@ -171,6 +178,7 @@ const ProductsPage = () => {
       stock: String(p.stock), min_stock: String(p.min_stock || 5), category_id: p.category_id || "", brand_id: p.brand_id || "",
       images: p.images || [],
       is_active: p.is_active, is_featured: p.is_featured, is_new: p.is_new, discount_percent: String(p.discount_percent || 0),
+      vitrina_id: p.vitrina_id || "", vitrina_floor: p.vitrina_floor ? String(p.vitrina_floor) : "",
     });
     setDialogOpen(true);
   };
@@ -186,6 +194,7 @@ const ProductsPage = () => {
       category_id: form.category_id || null, brand_id: form.brand_id || null,
       images: form.images,
       is_active: form.is_active, is_featured: form.is_featured, is_new: form.is_new, discount_percent: Number(form.discount_percent),
+      vitrina_id: form.vitrina_id || null, vitrina_floor: form.vitrina_floor ? Number(form.vitrina_floor) : null,
     };
 
     if (editing) {
@@ -209,7 +218,16 @@ const ProductsPage = () => {
     fetchAll();
   };
 
-  const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = products.filter(p => {
+    if (!p.name.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterVitrina && filterVitrina !== "all") {
+      if (filterVitrina === "none" && p.vitrina_id) return false;
+      if (filterVitrina !== "none" && p.vitrina_id !== filterVitrina) return false;
+    }
+    if (filterBrand && filterBrand !== "all" && p.brand_id !== filterBrand) return false;
+    if (filterCategory && filterCategory !== "all" && p.category_id !== filterCategory) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -248,6 +266,30 @@ const ProductsPage = () => {
                     <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                {/* Vitrina assignment */}
+                <div className="space-y-2">
+                  <Label>Vitrina</Label>
+                  <Select value={form.vitrina_id} onValueChange={(v) => setForm({ ...form, vitrina_id: v === "none" ? "" : v, vitrina_floor: "" })}>
+                    <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {vitrinas.map(v => <SelectItem key={v.id} value={v.id}>{v.code} — {v.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.vitrina_id && (
+                  <div className="space-y-2">
+                    <Label>Piso</Label>
+                    <Select value={form.vitrina_floor} onValueChange={(v) => setForm({ ...form, vitrina_floor: v })}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar piso" /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: vitrinas.find(v => v.id === form.vitrina_id)?.floors || 1 }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>Piso {i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <div className="space-y-2"><Label>Descripción corta</Label><Input value={form.short_description} onChange={(e) => setForm({ ...form, short_description: e.target.value })} /></div>
               <div className="space-y-2"><Label>Descripción</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
@@ -269,8 +311,30 @@ const ProductsPage = () => {
         </Dialog>
       </div>
 
-      <div className="flex gap-2">
-        <Input placeholder="Buscar productos..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm bg-secondary/50 border-primary/20" />
+      <div className="flex flex-wrap gap-2">
+        <Input placeholder="Buscar productos..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-[200px] bg-secondary/50 border-primary/20" />
+        <Select value={filterVitrina} onValueChange={setFilterVitrina}>
+          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Vitrina" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="none">Sin asignar</SelectItem>
+            {vitrinas.map(v => <SelectItem key={v.id} value={v.id}>{v.code} — {v.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterBrand} onValueChange={setFilterBrand}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Marca" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Categoría" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? <p>Cargando...</p> : (
@@ -286,12 +350,13 @@ const ProductsPage = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm line-clamp-1">{p.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm font-bold text-primary">{CURRENCY}{Number(p.price).toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground">Stock: {p.stock}</span>
-                    {p.stock < (p.min_stock || 5) && <Badge variant="destructive" className="text-[10px]">Bajo</Badge>}
-                    {!p.is_active && <Badge variant="secondary" className="text-[10px]">Inactivo</Badge>}
-                  </div>
+                   <div className="flex items-center gap-2 mt-1 flex-wrap">
+                     <span className="text-sm font-bold text-primary">{CURRENCY}{Number(p.price).toLocaleString()}</span>
+                     <span className="text-xs text-muted-foreground">Stock: {p.stock}</span>
+                     {p.stock < (p.min_stock || 5) && <Badge variant="destructive" className="text-[10px]">Bajo</Badge>}
+                     {!p.is_active && <Badge variant="secondary" className="text-[10px]">Inactivo</Badge>}
+                     {p.vitrinas && <Badge variant="outline" className="text-[10px] font-mono">{p.vitrinas.code}{p.vitrina_floor ? `-P${p.vitrina_floor}` : ""}</Badge>}
+                   </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(p)}><Pencil className="h-3 w-3" /></Button>

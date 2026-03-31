@@ -42,6 +42,7 @@ import AttendancePage from "@/features/admin/pages/AttendancePage";
 import AccountingPage from "@/features/admin/pages/AccountingPage";
 import SupportPage from "@/features/admin/pages/SupportPage";
 import SalesPage from "@/features/admin/pages/SalesPage";
+import VitrinasPage from "@/features/admin/pages/VitrinasPage";
 
 import NotFound from "./pages/NotFound";
 
@@ -98,6 +99,7 @@ const App = () => (
                 <Route path="ventas/pos" element={<SalesPage />} />
 
                 <Route path="categorias" element={<AdminOnlyRoute><CategoriesPage /></AdminOnlyRoute>} />
+                <Route path="vitrinas" element={<AdminOnlyRoute><VitrinasPage /></AdminOnlyRoute>} />
                 <Route path="marcas" element={<AdminOnlyRoute><BrandsPage /></AdminOnlyRoute>} />
                 <Route path="banners" element={<AdminOnlyRoute><BannersPage /></AdminOnlyRoute>} />
                 <Route path="empresa" element={<AdminOnlyRoute><CompanyPage /></AdminOnlyRoute>} />
