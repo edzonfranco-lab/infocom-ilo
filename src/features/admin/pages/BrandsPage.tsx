@@ -15,7 +15,7 @@ const BrandsPage = () => {
   const [brands, setBrands] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", logo_url: "", sort_order: "0", is_active: true });
+  const [form, setForm] = useState({ name: "", slug: "", logo_url: "", is_active: true });
   const [uploading, setUploading] = useState(false);
 
   const fetchAll = async () => {
