@@ -264,6 +264,30 @@ const ProductsPage = () => {
                     <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+                {/* Vitrina assignment */}
+                <div className="space-y-2">
+                  <Label>Vitrina</Label>
+                  <Select value={form.vitrina_id} onValueChange={(v) => setForm({ ...form, vitrina_id: v === "none" ? "" : v, vitrina_floor: "" })}>
+                    <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin asignar</SelectItem>
+                      {vitrinas.map(v => <SelectItem key={v.id} value={v.id}>{v.code} — {v.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.vitrina_id && (
+                  <div className="space-y-2">
+                    <Label>Piso</Label>
+                    <Select value={form.vitrina_floor} onValueChange={(v) => setForm({ ...form, vitrina_floor: v })}>
+                      <SelectTrigger><SelectValue placeholder="Seleccionar piso" /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: vitrinas.find(v => v.id === form.vitrina_id)?.floors || 1 }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>Piso {i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               <div className="space-y-2"><Label>Descripción corta</Label><Input value={form.short_description} onChange={(e) => setForm({ ...form, short_description: e.target.value })} /></div>
               <div className="space-y-2"><Label>Descripción</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} /></div>
