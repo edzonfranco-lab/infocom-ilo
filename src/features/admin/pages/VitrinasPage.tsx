@@ -50,11 +50,12 @@ const VitrinasPage = () => {
 
   const handleSave = async () => {
     if (!form.name || !form.code) { toast.error("Nombre y código son obligatorios"); return; }
-    const payload = {
+    const payload: any = {
       name: form.name, code: form.code.toUpperCase(), description: form.description || null,
       location: form.location || null, floors: Number(form.floors) || 1,
-      is_active: form.is_active, sort_order: Number(form.sort_order)
+      is_active: form.is_active,
     };
+    if (!editing) payload.sort_order = vitrinas.length;
     if (editing) {
       const { error } = await supabase.from("vitrinas").update(payload as any).eq("id", editing.id);
       if (error) { toast.error(error.message); return; }
