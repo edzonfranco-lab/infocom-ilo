@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings,
   ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign,
-  Wrench, ChevronDown, ShoppingCart, Store
+  Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
