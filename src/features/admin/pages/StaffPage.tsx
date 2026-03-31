@@ -178,6 +178,9 @@ const StaffPage = () => {
                 <div><Label>DNI / Documento</Label><Input value={form.document_number} onChange={e => setForm({ ...form, document_number: e.target.value })} /></div>
               </div>
               <div><Label>Email</Label><Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
+              {(form.position === "Practicante") && (
+                <div><Label>Institución / Entidad de origen</Label><Input value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} placeholder="SENATI, TECSUP, Universidad..." /></div>
+              )}
               <div>
                 <Label>ID de Usuario (opcional — vincular cuenta)</Label>
                 <Input value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })} placeholder="UUID del usuario registrado" className="font-mono text-xs" />
