@@ -11,10 +11,14 @@ import { Printer, Settings2, FileText, Upload, Loader2, ImageIcon, Type } from "
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const THERMAL_SIZES: Record<string, { label: string; width: string }> = {
+  "50mm": { label: "50mm", width: "164px" },
+  "58mm": { label: "58mm", width: "200px" },
+  "80mm": { label: "80mm", width: "290px" },
+};
+
 const PAPER_SIZES: Record<string, { label: string; width: string }> = {
-  "50mm": { label: "Ticket 50mm", width: "180px" },
-  "58mm": { label: "Ticket 58mm", width: "210px" },
-  "80mm": { label: "Ticket 80mm", width: "300px" },
+  ...THERMAL_SIZES,
   A4: { label: "A4 (210mm)", width: "700px" },
 };
 
