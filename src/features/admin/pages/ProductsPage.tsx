@@ -166,7 +166,7 @@ const ProductsPage = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", slug: "", description: "", short_description: "", sku: "", price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5", category_id: "", brand_id: "", images: [], is_active: true, is_featured: false, is_new: false, discount_percent: "0" });
+    setForm({ name: "", slug: "", description: "", short_description: "", sku: "", price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5", category_id: "", brand_id: "", images: [], is_active: true, is_featured: false, is_new: false, discount_percent: "0", vitrina_id: "", vitrina_floor: "" });
     setEditing(null);
   };
 
