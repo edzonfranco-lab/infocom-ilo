@@ -21,7 +21,7 @@ const emptyForm = {
 };
 
 const emptyScheduleForm = {
-  day_of_week: "1", shift_name: "Turno 1", start_time: "09:00", end_time: "18:00",
+  days: [] as number[], shift_name: "Turno Completo", start_time: "09:00", end_time: "18:00",
 };
 
 const StaffPage = () => {
