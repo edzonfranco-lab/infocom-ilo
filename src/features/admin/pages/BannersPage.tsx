@@ -25,7 +25,12 @@ const BannersPage = () => {
     setBanners(data || []);
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  const fetchCategories = async () => {
+    const { data } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order");
+    setCategories(data || []);
+  };
+
+  useEffect(() => { fetchAll(); fetchCategories(); }, []);
   const resetForm = () => { setForm({ title: "", subtitle: "", image_desktop: "", image_mobile: "", link_url: "", cta_text: "", sort_order: "0", is_active: true }); setEditing(null); };
 
   const openEdit = (b: any) => {
