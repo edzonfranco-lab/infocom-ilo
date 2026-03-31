@@ -125,12 +125,11 @@ const VitrinasPage = () => {
                 <Label>Descripción</Label>
                 <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} />
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>N° Pisos</Label>
                   <Input type="number" min="1" max="20" value={form.floors} onChange={(e) => setForm({ ...form, floors: e.target.value })} />
                 </div>
-                <div className="flex items-center gap-2 pt-6">
                 <div className="flex items-center gap-2 pt-6">
                   <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
                   <Label>Activa</Label>
