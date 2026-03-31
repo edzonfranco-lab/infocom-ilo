@@ -35,7 +35,7 @@ const VitrinasPage = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", code: "", description: "", location: "", floors: "1", is_active: true, sort_order: "0" });
+    setForm({ name: "", code: "", description: "", location: "", floors: "1", is_active: true });
     setEditing(null);
   };
 
