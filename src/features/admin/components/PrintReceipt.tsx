@@ -226,43 +226,75 @@ ${t.showEstimatedCost && order.estimated_cost ? `<div class="row"><span>Costo Es
 ${t.showConditions ? `<div class="center conditions"><p>${t.receptionConditionsText}</p></div>` : ""}
 ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 6px;padding-top:3px"><span style="font-size:${Math.max(fs - 3, 8)}px">${t.signatureRight}</span></div></div>` : ""}`;
     } else if (type === "sale") {
+      // Build items table rows
+      const items = order.items || [];
+      const hasItems = items.length > 0;
+      const itemsRows = hasItems
+        ? items.map((it: any) =>
+            `<tr><td class="tc">${it.cantidad}</td><td>${String(it.descripcion).toUpperCase()}</td><td class="tr">S/. ${Number(it.precio_unitario).toFixed(2)}</td><td class="tr">S/. ${Number(it.subtotal).toFixed(2)}</td></tr>`
+          ).join("")
+        : `<tr><td class="tc">${order.quantity || 1}</td><td>${String(order.product_description || "").toUpperCase()}</td><td class="tr">S/. ${Number(order.unit_price || 0).toFixed(2)}</td><td class="tr">S/. ${Number(order.total).toFixed(2)}</td></tr>`;
+
+      const subtotalProductos = order.subtotal_productos ?? order.total;
+      const subtotalServicios = order.subtotal_servicios ?? 0;
+
       bodyContent = `
 ${headerHtml}
 <div class="line"></div>
-<div class="center big">${t.saleTitle}</div>
+<div class="center receipt-title">${t.saleTitle}</div>
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
 ${order.customer_name ? `<div class="row"><span>Cliente:</span><span class="bold">${order.customer_name}</span></div>` : ""}
 ${order.customer_phone ? `<div class="row"><span>Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
 ${order.customer_dni ? `<div class="row"><span>DNI:</span><span>${order.customer_dni}</span></div>` : ""}
-${order.payment_method ? `<div class="row"><span>Metodo Pago:</span><span class="bold">${order.payment_method}</span></div>` : ""}
-<div class="row"><span>Vendedor:</span><span class="bold">${order.seller}</span></div>
+${order.payment_method ? `<div class="row"><span>Metodo Pago:</span><span class="bold">${String(order.payment_method).toUpperCase()}</span></div>` : ""}
+<div class="row"><span>Vendedor:</span><span class="bold">${String(order.seller || "").toUpperCase()}</span></div>
+${order.equipo ? `<div class="row"><span>Equipo:</span><span class="bold">${String(order.equipo).toUpperCase()}</span></div>` : ""}
 <div class="line"></div>
-<div class="row"><span>Producto:</span><span class="bold">${order.product_description}</span></div>
-<div class="row"><span>Cantidad:</span><span>${order.quantity}</span></div>
-<div class="row"><span>P. Unitario:</span><span>S/. ${Number(order.unit_price).toFixed(2)}</span></div>
+<table class="items-table">
+<thead><tr><th>Cant.</th><th>Descripcion</th><th>P. Unit.</th><th>Total</th></tr></thead>
+<tbody>${itemsRows}</tbody>
+</table>
+<div class="line"></div>
+${Number(subtotalProductos) > 0 ? `<div class="row"><span>Subtotal Productos:</span><span>S/. ${Number(subtotalProductos).toFixed(2)}</span></div>` : ""}
+${Number(subtotalServicios) > 0 ? `<div class="row"><span>Subtotal Servicios:</span><span>S/. ${Number(subtotalServicios).toFixed(2)}</span></div>` : ""}
 <div class="line"></div>
 <div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.total).toFixed(2)}</span></div>
-${order.amount_given ? `<div class="row"><span>Recibido:</span><span>S/. ${Number(order.amount_given).toFixed(2)}</span></div>
+${order.amount_given && Number(order.amount_given) > 0 ? `<div class="row"><span>Recibido:</span><span>S/. ${Number(order.amount_given).toFixed(2)}</span></div>
 <div class="row"><span class="bold">Vuelto:</span><span class="bold">S/. ${(Number(order.amount_given) - Number(order.total)).toFixed(2)}</span></div>` : ""}`;
     } else {
+      // Service ticket - also use items table if available
+      const items = order.items || [];
+      const hasItems = items.length > 0;
+      const itemsRows = hasItems
+        ? items.map((it: any) =>
+            `<tr><td class="tc">${it.cantidad}</td><td>${String(it.descripcion).toUpperCase()}</td><td class="tr">S/. ${Number(it.precio_unitario).toFixed(2)}</td><td class="tr">S/. ${Number(it.subtotal).toFixed(2)}</td></tr>`
+          ).join("")
+        : `<tr><td class="tc">1</td><td>${String(order.description || "").toUpperCase()}</td><td class="tr">S/. ${Number(order.price || 0).toFixed(2)}</td><td class="tr">S/. ${Number(order.price || 0).toFixed(2)}</td></tr>`;
+
       bodyContent = `
 ${headerHtml}
 <div class="line"></div>
-<div class="center big">${t.serviceTitle}</div>
+<div class="center receipt-title">${t.serviceTitle}</div>
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
 ${order.customer_name ? `<div class="row"><span>Cliente:</span><span class="bold">${order.customer_name}</span></div>` : ""}
 ${order.customer_phone ? `<div class="row"><span>Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
 ${order.customer_dni ? `<div class="row"><span>DNI:</span><span>${order.customer_dni}</span></div>` : ""}
-${order.payment_method ? `<div class="row"><span>Metodo Pago:</span><span class="bold">${order.payment_method}</span></div>` : ""}
-<div class="row"><span>Responsable:</span><span class="bold">${order.responsible}</span></div>
-<div class="line"></div>
-<div class="row"><span>Servicio:</span><span class="bold">${order.description}</span></div>
-${order.device_type ? `<div class="row"><span>Equipo:</span><span>${order.device_type}</span></div>` : ""}
+${order.payment_method ? `<div class="row"><span>Metodo Pago:</span><span class="bold">${String(order.payment_method).toUpperCase()}</span></div>` : ""}
+<div class="row"><span>Responsable:</span><span class="bold">${String(order.responsible || "").toUpperCase()}</span></div>
+${order.device_type ? `<div class="row"><span>Equipo:</span><span class="bold">${String(order.device_type).toUpperCase()}</span></div>` : ""}
 ${order.diagnosis ? `<div class="row"><span>Diagnostico:</span><span>${order.diagnosis}</span></div>` : ""}
 <div class="line"></div>
-<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.price).toFixed(2)}</span></div>`;
+<table class="items-table">
+<thead><tr><th>Cant.</th><th>Descripcion</th><th>P. Unit.</th><th>Total</th></tr></thead>
+<tbody>${itemsRows}</tbody>
+</table>
+<div class="line"></div>
+${Number(order.subtotal_productos || 0) > 0 ? `<div class="row"><span>Subtotal Productos:</span><span>S/. ${Number(order.subtotal_productos).toFixed(2)}</span></div>` : ""}
+${Number(order.subtotal_servicios || 0) > 0 ? `<div class="row"><span>Subtotal Servicios:</span><span>S/. ${Number(order.subtotal_servicios).toFixed(2)}</span></div>` : ""}
+<div class="line"></div>
+<div class="row"><span class="bold">TOTAL:</span><span class="bold big">S/. ${Number(order.price || order.total).toFixed(2)}</span></div>`;
     }
 
     const html = `<!DOCTYPE html>

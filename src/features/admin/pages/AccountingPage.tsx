@@ -807,12 +807,15 @@ const AccountingPage = () => {
                 <div className="pt-2 border-t border-border">
                   <PrintReceipt
                     order={(() => {
-                      // Extract DNI and payment method from notas (POS format: "BOLETA | DNI: 12345678 | ... | Pago: Efectivo")
                       const notas = viewingTx.notas || "";
                       const dniMatch = notas.match(/DNI:\s*(\d+)/);
                       const pagoMatch = notas.match(/Pago:\s*([^|]+)/);
+                      const montoMatch = notas.match(/Recibido:\s*S\/\.\s*([\d.]+)/);
+                      const equipoMatch = notas.match(/Equipo:\s*([^|]+)/);
                       const customerDni = dniMatch ? dniMatch[1] : "";
                       const paymentMethod = pagoMatch ? pagoMatch[1].trim() : "";
+                      const amountGiven = montoMatch ? montoMatch[1].trim() : "";
+                      const equipoInfo = equipoMatch ? equipoMatch[1].trim() : "";
 
                       return {
                         id: viewingTx.id,
@@ -821,17 +824,31 @@ const AccountingPage = () => {
                         customer_phone: viewingTx.cliente_telefono || "",
                         customer_dni: customerDni,
                         payment_method: paymentMethod,
+                        amount_given: amountGiven,
                         seller: viewingTx.emitido_por || "Admin",
-                        product_description: viewingTx.items!.map(it => `${it.cantidad}x ${it.descripcion}`).join(", "),
-                        quantity: viewingTx.items!.reduce((a, it) => a + it.cantidad, 0),
-                        unit_price: viewingTx.total / Math.max(viewingTx.items!.reduce((a, it) => a + it.cantidad, 0), 1),
+                        equipo: equipoInfo,
+                        items: viewingTx.items!.map(it => ({
+                          descripcion: it.descripcion,
+                          cantidad: it.cantidad,
+                          precio_unitario: it.precio_unitario,
+                          subtotal: it.subtotal,
+                          item_type: it.item_type,
+                          responsable: it.responsable,
+                          tipo_equipo: it.tipo_equipo,
+                          diagnostico: it.diagnostico,
+                        })),
+                        subtotal_productos: viewingTx.subtotal_productos,
+                        subtotal_servicios: viewingTx.subtotal_servicios,
                         total: viewingTx.total,
-                        // Service fields
+                        // Legacy fields for service-only
                         description: viewingTx.items!.filter(it => it.item_type === "servicio").map(it => it.descripcion).join(", "),
                         responsible: viewingTx.items!.find(it => it.responsable)?.responsable || viewingTx.emitido_por || "",
                         device_type: viewingTx.items!.find(it => it.tipo_equipo)?.tipo_equipo || "",
                         diagnosis: viewingTx.items!.find(it => it.diagnostico)?.diagnostico || "",
                         price: viewingTx.total,
+                        product_description: viewingTx.items!.map(it => `${it.cantidad}x ${it.descripcion}`).join(", "),
+                        quantity: viewingTx.items!.reduce((a, it) => a + it.cantidad, 0),
+                        unit_price: viewingTx.total,
                       };
                     })()}
                     type={viewingTx.tipo_general === "servicio" ? "service" : "sale"}
