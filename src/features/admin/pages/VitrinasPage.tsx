@@ -43,7 +43,7 @@ const VitrinasPage = () => {
     setEditing(v);
     setForm({
       name: v.name, code: v.code, description: v.description || "", location: v.location || "",
-      floors: String(v.floors), is_active: v.is_active, sort_order: String(v.sort_order || 0)
+      floors: String(v.floors), is_active: v.is_active
     });
     setDialogOpen(true);
   };
