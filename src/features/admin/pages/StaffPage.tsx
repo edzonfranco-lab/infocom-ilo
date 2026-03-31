@@ -90,22 +90,25 @@ const StaffPage = () => {
 
   const saveScheduleMutation = useMutation({
     mutationFn: async () => {
-      if (!scheduleStaffId) return;
-      const { error } = await supabase.from("staff_schedules").insert({
+      if (!scheduleStaffId || scheduleForm.days.length === 0) {
+        throw new Error("Selecciona al menos un día");
+      }
+      const rows = scheduleForm.days.map(day => ({
         staff_id: scheduleStaffId,
-        day_of_week: Number(scheduleForm.day_of_week),
+        day_of_week: day,
         shift_name: scheduleForm.shift_name,
         start_time: scheduleForm.start_time,
         end_time: scheduleForm.end_time,
-      } as any);
+      }));
+      const { error } = await supabase.from("staff_schedules").insert(rows as any);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff_schedules"] });
-      toast.success("Horario asignado");
+      toast.success("Horarios asignados");
       setScheduleForm(emptyScheduleForm);
     },
-    onError: (e: any) => toast.error(e.message?.includes("unique") ? "Ya existe ese turno para ese día" : "Error al guardar horario"),
+    onError: (e: any) => toast.error(e.message?.includes("unique") ? "Ya existe ese turno para algún día seleccionado" : e.message || "Error al guardar horario"),
   });
 
   const deleteScheduleMutation = useMutation({
