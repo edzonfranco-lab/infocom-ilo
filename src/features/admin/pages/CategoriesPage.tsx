@@ -238,7 +238,16 @@ const CategoriesPage = () => {
                     <CatIcon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">{c.parent_id ? "↳ " : ""}{c.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{c.parent_id ? "↳ " : ""}{c.name}</p>
+                      {c.catalog_url && (
+                        <a href={c.catalog_url} target="_blank" rel="noopener noreferrer" title="Ver catálogo">
+                          <Badge variant="outline" className="text-[10px] gap-1 cursor-pointer hover:bg-primary/10">
+                            <FileText className="h-3 w-3" /> PDF
+                          </Badge>
+                        </a>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">/{c.slug} • Orden: {c.sort_order} • Ícono: {c.icon || "—"}</p>
                   </div>
                 </div>
