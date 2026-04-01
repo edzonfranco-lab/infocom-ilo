@@ -12,11 +12,14 @@ interface Column {
 }
 
 interface DataImportExportProps {
-  columns: Column[];
+  columns: Column[]; // Import columns
+  exportColumns?: Column[]; // Separate export columns (falls back to columns)
   data: any[];
   filenamePrefix: string;
   onImport: (rows: Record<string, string>[]) => Promise<void>;
   templateDescription?: string;
+  /** If provided, builds a detailed export with sub-rows */
+  detailedExportFn?: () => { headers: string[]; rows: string[][] };
 }
 
 const parseCSV = (text: string): string[][] => {
@@ -53,47 +56,94 @@ const escapeCSV = (val: string) => {
   return val;
 };
 
-const exportCSV = (data: any[], columns: Column[], filename: string) => {
-  const header = columns.map(c => escapeCSV(c.label)).join(",");
-  const lines = data.map(r =>
-    columns.map(c => escapeCSV(String(r[c.key] ?? ""))).join(",")
-  );
-  const content = header + "\n" + lines.join("\n");
-  const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
+const downloadBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename + ".csv";
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
 
-const exportExcel = (data: any[], columns: Column[], filename: string) => {
-  // Use tab-separated values with .xls extension - most compatible approach
-  const header = columns.map(c => c.label).join("\t");
-  const lines = data.map(r =>
-    columns.map(c => String(r[c.key] ?? "").replace(/\t/g, " ").replace(/\n/g, " ")).join("\t")
-  );
-  const content = header + "\n" + lines.join("\n");
-  const blob = new Blob(["\uFEFF" + content], { type: "application/vnd.ms-excel;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename + ".xls";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+const buildCSVContent = (headers: string[], rows: string[][]) => {
+  const headerLine = headers.map(h => escapeCSV(h)).join(",");
+  const dataLines = rows.map(r => r.map(c => escapeCSV(c)).join(","));
+  return "\uFEFF" + headerLine + "\n" + dataLines.join("\n");
 };
 
-const DataImportExport = ({ columns, data, filenamePrefix, onImport, templateDescription }: DataImportExportProps) => {
+const buildExcelXML = (headers: string[], rows: string[][], sheetName = "Datos") => {
+  const escXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  const isNumeric = (val: string) => val !== "" && !isNaN(Number(val));
+
+  const headerCells = headers.map(h => `<Cell ss:StyleID="header"><Data ss:Type="String">${escXml(h)}</Data></Cell>`).join("");
+  const dataRows = rows.map(r => {
+    const cells = r.map(c => {
+      if (isNumeric(c)) {
+        return `<Cell ss:StyleID="number"><Data ss:Type="Number">${c}</Data></Cell>`;
+      }
+      return `<Cell ss:StyleID="data"><Data ss:Type="String">${escXml(c)}</Data></Cell>`;
+    }).join("");
+    return `<Row>${cells}</Row>`;
+  }).join("\n");
+
+  const colWidths = headers.map((h, i) => {
+    let maxLen = h.length;
+    rows.forEach(r => { if (r[i] && r[i].length > maxLen) maxLen = r[i].length; });
+    const w = Math.min(Math.max(maxLen * 8, 60), 300);
+    return `<Column ss:AutoFitWidth="0" ss:Width="${w}"/>`;
+  }).join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Styles>
+  <Style ss:ID="Default"><Font ss:FontName="Arial" ss:Size="10"/></Style>
+  <Style ss:ID="header">
+    <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+    <Interior ss:Color="#2563EB" ss:Pattern="Solid"/>
+    <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+    <Borders>
+      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1E40AF"/>
+    </Borders>
+  </Style>
+  <Style ss:ID="data">
+    <Font ss:FontName="Arial" ss:Size="10"/>
+    <Alignment ss:Vertical="Center" ss:WrapText="1"/>
+    <Borders>
+      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E5E7EB"/>
+    </Borders>
+  </Style>
+  <Style ss:ID="number">
+    <Font ss:FontName="Arial" ss:Size="10"/>
+    <NumberFormat ss:Format="#,##0.00"/>
+    <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+    <Borders>
+      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E5E7EB"/>
+    </Borders>
+  </Style>
+</Styles>
+<Worksheet ss:Name="${escXml(sheetName)}">
+  <Table>
+    ${colWidths}
+    <Row ss:Height="25">${headerCells}</Row>
+    ${dataRows}
+  </Table>
+</Worksheet>
+</Workbook>`;
+};
+
+const DataImportExport = ({ columns, exportColumns, data, filenamePrefix, onImport, templateDescription, detailedExportFn }: DataImportExportProps) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [exportFormat, setExportFormat] = useState("csv");
+  const [exportFormat, setExportFormat] = useState("excel");
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState<Record<string, string>[] | null>(null);
+
+  const eCols = exportColumns || columns;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -102,7 +152,7 @@ const DataImportExport = ({ columns, data, filenamePrefix, onImport, templateDes
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       const rows = parseCSV(text);
-      if (rows.length < 2) { toast.error("El archivo esta vacio o no tiene datos"); return; }
+      if (rows.length < 2) { toast.error("El archivo está vacío o no tiene datos"); return; }
       const headers = rows[0].map(h => h.toLowerCase().trim());
       const mapped: Record<string, string>[] = [];
       for (let i = 1; i < rows.length; i++) {
@@ -136,23 +186,34 @@ const DataImportExport = ({ columns, data, filenamePrefix, onImport, templateDes
     if (data.length === 0) { toast.error("No hay datos para exportar"); return; }
     const ts = new Date().toISOString().split("T")[0];
     const fname = `${filenamePrefix}_${ts}`;
-    if (exportFormat === "csv") exportCSV(data, columns, fname);
-    else if (exportFormat === "excel") exportExcel(data, columns, fname);
-    toast.success("Archivo exportado");
+
+    let headers: string[];
+    let rows: string[][];
+
+    if (detailedExportFn) {
+      const result = detailedExportFn();
+      headers = result.headers;
+      rows = result.rows;
+    } else {
+      headers = eCols.map(c => c.label);
+      rows = data.map(r => eCols.map(c => String(r[c.key] ?? "")));
+    }
+
+    if (exportFormat === "csv") {
+      const content = buildCSVContent(headers, rows);
+      downloadBlob(new Blob([content], { type: "text/csv;charset=utf-8;" }), fname + ".csv");
+    } else {
+      const xml = buildExcelXML(headers, rows, filenamePrefix.split("_")[0] || "Datos");
+      downloadBlob(new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" }), fname + ".xls");
+    }
+    toast.success("Archivo exportado correctamente");
   };
 
   const downloadTemplate = () => {
     const header = columns.map(c => c.label).join(",");
     const example = columns.map(() => `"ejemplo"`).join(",");
     const blob = new Blob(["\uFEFF" + header + "\n" + example], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `plantilla_${filenamePrefix}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `plantilla_${filenamePrefix}.csv`);
   };
 
   return (
@@ -162,8 +223,8 @@ const DataImportExport = ({ columns, data, filenamePrefix, onImport, templateDes
         <Select value={exportFormat} onValueChange={setExportFormat}>
           <SelectTrigger className="h-8 w-[100px] text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="csv">CSV</SelectItem>
-            <SelectItem value="excel">Excel</SelectItem>
+            <SelectItem value="csv">📄 CSV</SelectItem>
+            <SelectItem value="excel">📊 Excel</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={handleExport}>
