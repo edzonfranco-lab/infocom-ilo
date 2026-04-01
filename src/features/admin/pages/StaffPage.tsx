@@ -124,9 +124,14 @@ const StaffPage = () => {
     },
   });
 
-  const filtered = staff.filter((s: any) =>
-    !search || s.full_name?.toLowerCase().includes(search.toLowerCase()) || s.position?.toLowerCase().includes(search.toLowerCase())
-  );
+  const positions = [...new Set(staff.map((s: any) => s.position))].sort();
+
+  const filtered = staff.filter((s: any) => {
+    const matchSearch = !search || s.full_name?.toLowerCase().includes(search.toLowerCase()) || s.document_number?.includes(search) || s.phone?.includes(search);
+    const matchPosition = filterPosition === "all" || s.position === filterPosition;
+    const matchStatus = filterStatus === "all" || (filterStatus === "active" ? s.is_active : !s.is_active);
+    return matchSearch && matchPosition && matchStatus;
+  });
 
   const activeCount = staff.filter((s: any) => s.is_active).length;
 
