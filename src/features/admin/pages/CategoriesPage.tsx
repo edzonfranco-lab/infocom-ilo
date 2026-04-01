@@ -126,7 +126,7 @@ const CategoriesPage = () => {
     }
   };
 
-
+  const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar esta categoría?")) return;
     await supabase.from("categories").delete().eq("id", id);
     toast.success("Categoría eliminada"); fetchAll();
