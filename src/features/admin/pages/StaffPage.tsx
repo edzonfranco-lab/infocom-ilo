@@ -199,8 +199,9 @@ const StaffPage = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card className="border-green-500/20"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-green-400">{activeCount}</p><p className="text-xs text-muted-foreground">Activos</p></CardContent></Card>
+        <Card className="border-destructive/20"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-destructive">{staff.length - activeCount}</p><p className="text-xs text-muted-foreground">Inactivos</p></CardContent></Card>
         <Card className="border-primary/20"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-primary">{staff.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
       </div>
 
