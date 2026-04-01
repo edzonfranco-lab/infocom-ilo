@@ -88,7 +88,7 @@ const CategoriesPage = () => {
 
   const openEdit = (c: any) => {
     setEditing(c);
-    setForm({ name: c.name, slug: c.slug, icon: c.icon || "", parent_id: c.parent_id || "", is_active: c.is_active });
+    setForm({ name: c.name, slug: c.slug, icon: c.icon || "", parent_id: c.parent_id || "", is_active: c.is_active, catalog_url: c.catalog_url || "" });
     setDialogOpen(true);
   };
 
