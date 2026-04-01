@@ -47,7 +47,15 @@ import CustomersPage from "@/features/admin/pages/CustomersPage";
 import AppointmentsPage from "@/features/admin/pages/AppointmentsPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: 1,
+    },
+  },
+});
 
 const SeasonalWrapper = ({ children }: { children: React.ReactNode }) => {
   const { seasonalTheme } = useTheme();
