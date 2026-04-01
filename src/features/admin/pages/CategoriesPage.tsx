@@ -93,7 +93,7 @@ const CategoriesPage = () => {
   };
 
   const handleSave = async () => {
-    const payload: any = { name: form.name, slug: form.slug || generateSlug(form.name), icon: form.icon || null, parent_id: form.parent_id || null, is_active: form.is_active };
+    const payload: any = { name: form.name, slug: form.slug || generateSlug(form.name), icon: form.icon || null, parent_id: form.parent_id || null, is_active: form.is_active, catalog_url: form.catalog_url || null };
     if (!editing) payload.sort_order = categories.length;
     if (editing) {
       const { error } = await supabase.from("categories").update(payload as any).eq("id", editing.id);
