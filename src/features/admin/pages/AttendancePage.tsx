@@ -308,245 +308,366 @@ const AttendancePage = () => {
         </Card>
       )}
 
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-2xl font-display font-bold flex items-center gap-2">
-          <CalendarDays className="h-6 w-6 text-primary" /> Control de Asistencias
-        </h1>
-        <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && (
-            <Button variant="outline" size="sm" className="gap-2" onClick={exportCSV}>
-              <Download className="h-4 w-4" /> CSV
-            </Button>
-          )}
-          <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
-          <span className="font-semibold text-sm min-w-[160px] text-center">{MONTHS[month]} {year}</span>
-          <Button variant="outline" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap items-center">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={filterStaff} onValueChange={setFilterStaff}>
-            <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue placeholder="Filtrar personal" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todo el personal</SelectItem>
-              {staff.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-2">
-          {Object.entries(STATUS_LABELS).map(([k, v]) => (
-            <Badge key={k} variant="outline" className={`${v.color} text-xs`}>{v.label} = {v.full}</Badge>
-          ))}
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="grid">📅 Cuadrícula</TabsTrigger>
-          <TabsTrigger value="hours">⏱️ Horas</TabsTrigger>
-          <TabsTrigger value="summary">📊 Resumen</TabsTrigger>
-        </TabsList>
-
-        {/* Grid View */}
-        <TabsContent value="grid">
-          {filteredStaff.length === 0 ? (
-            <Card className="border-dashed"><CardContent className="py-12 text-center text-muted-foreground"><CalendarDays className="h-12 w-12 mx-auto mb-3 opacity-30" /><p>Registra personal primero</p></CardContent></Card>
-          ) : (
-            <div className="overflow-x-auto border border-border rounded-lg">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-muted/50">
-                    <th className="sticky left-0 bg-muted/50 z-10 px-3 py-2 text-left font-semibold min-w-[150px]">Personal</th>
-                    {days.map(d => (
-                      <th key={d} className="px-1 py-1 text-center min-w-[32px]">
-                        <div className="text-muted-foreground">{getDayOfWeek(d)}</div>
-                        <div>{d}</div>
-                      </th>
-                    ))}
-                    <th className="px-2 py-2 text-center">A</th>
-                    <th className="px-2 py-2 text-center">F</th>
-                    <th className="px-2 py-2 text-center">T</th>
-                    <th className="px-2 py-2 text-center">J</th>
-                    <th className="px-2 py-2 text-center">%</th>
-                    <th className="px-2 py-2 text-center">Extra</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStaff.map((s: any) => {
-                    const stats = getStats(s.id);
-                    return (
-                      <tr key={s.id} className="border-t border-border hover:bg-muted/30">
-                        <td className="sticky left-0 bg-card z-10 px-3 py-2 font-medium truncate max-w-[150px]">{s.full_name}</td>
-                        {days.map(d => {
-                          const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-                          const rec = recordMap[s.id]?.[date];
-                          const st = rec ? STATUS_LABELS[rec.status] : null;
-                          const isWeekend = [0, 6].includes(new Date(year, month, d).getDay());
-                          return (
-                            <td key={d} className={`px-1 py-1 text-center ${isAdmin ? "cursor-pointer hover:bg-primary/10" : ""} transition-colors ${isWeekend ? "bg-muted/30" : ""}`}
-                              onClick={() => cycleStatus(s.id, d)}>
-                              {st ? <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-[10px] font-bold ${st.color}`}>{st.label}</span> : <span className="text-muted-foreground/30">·</span>}
-                            </td>
-                          );
-                        })}
-                        <td className="px-2 py-2 text-center font-bold text-green-400">{stats.a || ""}</td>
-                        <td className="px-2 py-2 text-center font-bold text-red-400">{stats.f || ""}</td>
-                        <td className="px-2 py-2 text-center font-bold text-yellow-400">{stats.t || ""}</td>
-                        <td className="px-2 py-2 text-center font-bold text-blue-400">{stats.j || ""}</td>
-                        <td className={`px-2 py-2 text-center font-bold ${stats.pct >= 80 ? "text-green-400" : stats.pct >= 50 ? "text-yellow-400" : "text-red-400"}`}>
-                          {stats.pct > 0 ? `${stats.pct}%` : ""}
-                        </td>
-                        <td className="px-2 py-2 text-center font-bold text-orange-400">
-                          {stats.overtime > 0 ? `${stats.overtime}h` : ""}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+      {/* ─── Personal view (moderators): read-only summary ──── */}
+      {!isAdmin && myStaff && (() => {
+        const myStats = getStats(myStaff.id);
+        const mySchedules = scheduleMap[myStaff.id] || [];
+        return (
+          <>
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <h1 className="text-2xl font-display font-bold flex items-center gap-2">
+                <CalendarDays className="h-6 w-6 text-primary" /> Mi Asistencia
+              </h1>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
+                <span className="font-semibold text-sm min-w-[160px] text-center">{MONTHS[month]} {year}</span>
+                <Button variant="outline" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
+              </div>
             </div>
-          )}
-        </TabsContent>
 
-        {/* Hours View */}
-        <TabsContent value="hours">
-          <div className="space-y-4">
-            {filteredStaff.map((s: any) => {
-              const stats = getStats(s.id);
-              const weeks = getWeeklyStats(s.id);
-              const staffSchedules = scheduleMap[s.id] || [];
-              return (
-                <Card key={s.id} className="border-primary/10">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center justify-between flex-wrap gap-2">
-                      <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" />{s.full_name}</span>
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="text-xs">{stats.totalHours}h trabajadas</Badge>
-                        <Badge variant="outline" className="text-xs bg-muted">{stats.scheduledHours}h programadas</Badge>
-                        {stats.overtime > 0 && (
-                          <Badge variant="outline" className="text-xs bg-orange-500/20 text-orange-400">
-                            <AlertTriangle className="h-3 w-3 mr-1" />{stats.overtime}h extras
-                          </Badge>
-                        )}
-                      </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {/* Schedule info */}
-                    {staffSchedules.length > 0 && (
-                      <div className="bg-secondary/30 rounded-lg p-2">
-                        <p className="text-[10px] font-semibold text-muted-foreground mb-1">📋 Horario Asignado:</p>
-                        <div className="flex gap-2 flex-wrap">
-                          {staffSchedules.map((sc: any) => (
-                            <Badge key={sc.id} variant="outline" className="text-[10px]">
-                              {DAY_NAMES[sc.day_of_week]?.slice(0, 3)}: {sc.start_time?.slice(0,5)}-{sc.end_time?.slice(0,5)} ({sc.shift_name})
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+            {/* My stats cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <Card className="border-success/20"><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-success">{myStats.a}</p><p className="text-[10px] text-muted-foreground">Asistencias</p></CardContent></Card>
+              <Card className="border-destructive/20"><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-destructive">{myStats.f}</p><p className="text-[10px] text-muted-foreground">Faltas</p></CardContent></Card>
+              <Card className="border-warning/20"><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-warning">{myStats.t}</p><p className="text-[10px] text-muted-foreground">Tardanzas</p></CardContent></Card>
+              <Card className="border-info/20"><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-info">{myStats.j}</p><p className="text-[10px] text-muted-foreground">Justificadas</p></CardContent></Card>
+              <Card className="border-primary/20"><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-primary">{myStats.totalHours}h</p><p className="text-[10px] text-muted-foreground">Horas Trabajadas</p></CardContent></Card>
+              <Card className={`border-2 ${myStats.pct >= 80 ? "border-success/30" : myStats.pct >= 50 ? "border-warning/30" : "border-destructive/30"}`}>
+                <CardContent className="p-3 text-center">
+                  <p className={`text-2xl font-bold ${myStats.pct >= 80 ? "text-success" : myStats.pct >= 50 ? "text-warning" : "text-destructive"}`}>{myStats.pct}%</p>
+                  <p className="text-[10px] text-muted-foreground">Puntualidad</p>
+                </CardContent>
+              </Card>
+            </div>
 
-                    {/* Weekly breakdown */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                      {weeks.map(w => (
-                        <div key={w.week} className="bg-secondary/30 rounded-lg p-2 text-center">
-                          <p className="text-[10px] text-muted-foreground">Semana {w.week}</p>
-                          <p className="text-sm font-bold text-primary">{w.worked}h</p>
-                          <p className="text-[10px] text-muted-foreground">{w.scheduled}h prog.</p>
-                          {w.overtime > 0 && <p className="text-[10px] font-bold text-orange-400">+{w.overtime}h extra</p>}
-                          <p className="text-[10px] text-muted-foreground">{w.days} días</p>
+            {myStats.overtime > 0 && (
+              <Card className="border-orange-500/20 bg-orange-500/5">
+                <CardContent className="p-3 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-orange-400" />
+                  <span className="text-sm font-medium">Horas extras acumuladas: <strong className="text-orange-400">{myStats.overtime}h</strong></span>
+                  <span className="text-xs text-muted-foreground ml-2">(Programadas: {myStats.scheduledHours}h)</span>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* My schedule */}
+            {mySchedules.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /> Mi Horario Asignado</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                    {mySchedules
+                      .sort((a: any, b: any) => a.day_of_week - b.day_of_week)
+                      .map((sc: any) => (
+                        <div key={sc.id} className="bg-secondary/30 rounded-lg p-3 text-center">
+                          <p className="text-xs font-semibold text-primary">{DAY_NAMES[sc.day_of_week]}</p>
+                          <p className="text-sm font-mono mt-1">{sc.start_time?.slice(0, 5)} - {sc.end_time?.slice(0, 5)}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{sc.shift_name}</p>
                         </div>
                       ))}
-                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-                    {/* Daily hours detail */}
-                    {isAdmin && (
-                      <div className="overflow-x-auto">
-                        <div className="flex gap-1">
-                          {days.map(d => {
-                            const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-                            const rec = recordMap[s.id]?.[date];
-                            const isWeekend = [0, 6].includes(new Date(year, month, d).getDay());
-                            return (
-                              <div key={d} className={`flex flex-col items-center min-w-[50px] p-1 rounded text-[10px] ${isWeekend ? "bg-muted/30" : ""}`}>
-                                <span className="text-muted-foreground">{getDayOfWeek(d)} {d}</span>
-                                {rec?.status === "A" || rec?.status === "T" ? (
-                                  <>
-                                    <Input
-                                      type="time"
-                                      value={rec?.check_in_time || ""}
-                                      onChange={e => updateTime(s.id, d, "check_in", e.target.value)}
-                                      className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20"
-                                    />
-                                    <Input
-                                      type="time"
-                                      value={rec?.check_out_time || ""}
-                                      onChange={e => updateTime(s.id, d, "check_out", e.target.value)}
-                                      className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20"
-                                    />
-                                  </>
-                                ) : (
-                                  <span className="text-muted-foreground/30 py-2">—</span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {/* My daily log (read-only) */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary" /> Registro Diario — {MONTHS[month]} {year}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto border border-border rounded-lg">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="px-3 py-2 text-left">Día</th>
+                        <th className="px-3 py-2 text-center">Estado</th>
+                        <th className="px-3 py-2 text-center">Entrada</th>
+                        <th className="px-3 py-2 text-center">Salida</th>
+                        <th className="px-3 py-2 text-center">Horas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {days.map(d => {
+                        const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                        const rec = recordMap[myStaff.id]?.[date];
+                        const dayName = DAY_NAMES[new Date(year, month, d).getDay()];
+                        const isWeekend = [0, 6].includes(new Date(year, month, d).getDay());
+                        const isFuture = new Date(year, month, d) > new Date();
+                        if (isFuture && !rec) return null;
+                        const st = rec ? STATUS_LABELS[rec.status] : null;
+                        const hours = getActualHours(rec);
+                        return (
+                          <tr key={d} className={`border-t border-border/50 ${isWeekend ? "bg-muted/20" : ""}`}>
+                            <td className="px-3 py-2 font-medium">
+                              <span className="text-muted-foreground mr-1">{dayName.slice(0, 3)}</span> {d}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {st ? (
+                                <Badge variant="outline" className={`${st.color} text-[10px]`}>{st.full}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground/50">—</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-center font-mono">{rec?.check_in_time?.slice(0, 5) || "—"}</td>
+                            <td className="px-3 py-2 text-center font-mono">{rec?.check_out_time?.slice(0, 5) || "—"}</td>
+                            <td className="px-3 py-2 text-center font-mono font-semibold text-primary">
+                              {hours > 0 ? `${Math.round(hours * 10) / 10}h` : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-3 italic">
+                  📌 Si notas algún error en tu asistencia, comunícate con tu supervisor o administrador para corregirlo.
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        );
+      })()}
+
+      {/* ─── Admin view: full control ──────────────────────── */}
+      {isAdmin && (
+        <>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <h1 className="text-2xl font-display font-bold flex items-center gap-2">
+              <CalendarDays className="h-6 w-6 text-primary" /> Control de Asistencias
+            </h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" className="gap-2" onClick={exportCSV}>
+                <Download className="h-4 w-4" /> CSV
+              </Button>
+              <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
+              <span className="font-semibold text-sm min-w-[160px] text-center">{MONTHS[month]} {year}</span>
+              <Button variant="outline" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
+            </div>
           </div>
-        </TabsContent>
 
-        {/* Summary View */}
-        <TabsContent value="summary">
-          <div className="rounded-lg border border-border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/50">
-                  <th className="px-4 py-3 text-left font-semibold">Personal</th>
-                  <th className="px-3 py-3 text-center">Cargo</th>
-                  <th className="px-3 py-3 text-center text-green-400">A</th>
-                  <th className="px-3 py-3 text-center text-red-400">F</th>
-                  <th className="px-3 py-3 text-center text-yellow-400">T</th>
-                  <th className="px-3 py-3 text-center text-blue-400">J</th>
-                  <th className="px-3 py-3 text-center">%</th>
-                  <th className="px-3 py-3 text-center">Trabajadas</th>
-                  <th className="px-3 py-3 text-center">Programadas</th>
-                  <th className="px-3 py-3 text-center text-orange-400">Extras</th>
-                </tr>
-              </thead>
-              <tbody>
+          {/* Filters */}
+          <div className="flex gap-3 flex-wrap items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={filterStaff} onValueChange={setFilterStaff}>
+                <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue placeholder="Filtrar personal" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo el personal</SelectItem>
+                  {staff.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                <Badge key={k} variant="outline" className={`${v.color} text-xs`}>{v.label} = {v.full}</Badge>
+              ))}
+            </div>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="grid">📅 Cuadrícula</TabsTrigger>
+              <TabsTrigger value="hours">⏱️ Horas</TabsTrigger>
+              <TabsTrigger value="summary">📊 Resumen</TabsTrigger>
+            </TabsList>
+
+            {/* Grid View */}
+            <TabsContent value="grid">
+              {filteredStaff.length === 0 ? (
+                <Card className="border-dashed"><CardContent className="py-12 text-center text-muted-foreground"><CalendarDays className="h-12 w-12 mx-auto mb-3 opacity-30" /><p>Registra personal primero</p></CardContent></Card>
+              ) : (
+                <div className="overflow-x-auto border border-border rounded-lg">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="sticky left-0 bg-muted/50 z-10 px-3 py-2 text-left font-semibold min-w-[150px]">Personal</th>
+                        {days.map(d => (
+                          <th key={d} className="px-1 py-1 text-center min-w-[32px]">
+                            <div className="text-muted-foreground">{getDayOfWeek(d)}</div>
+                            <div>{d}</div>
+                          </th>
+                        ))}
+                        <th className="px-2 py-2 text-center">A</th>
+                        <th className="px-2 py-2 text-center">F</th>
+                        <th className="px-2 py-2 text-center">T</th>
+                        <th className="px-2 py-2 text-center">J</th>
+                        <th className="px-2 py-2 text-center">%</th>
+                        <th className="px-2 py-2 text-center">Extra</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredStaff.map((s: any) => {
+                        const stats = getStats(s.id);
+                        return (
+                          <tr key={s.id} className="border-t border-border hover:bg-muted/30">
+                            <td className="sticky left-0 bg-card z-10 px-3 py-2 font-medium truncate max-w-[150px]">{s.full_name}</td>
+                            {days.map(d => {
+                              const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                              const rec = recordMap[s.id]?.[date];
+                              const st = rec ? STATUS_LABELS[rec.status] : null;
+                              const isWeekend = [0, 6].includes(new Date(year, month, d).getDay());
+                              return (
+                                <td key={d} className={`px-1 py-1 text-center cursor-pointer hover:bg-primary/10 transition-colors ${isWeekend ? "bg-muted/30" : ""}`}
+                                  onClick={() => cycleStatus(s.id, d)}>
+                                  {st ? <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-[10px] font-bold ${st.color}`}>{st.label}</span> : <span className="text-muted-foreground/30">·</span>}
+                                </td>
+                              );
+                            })}
+                            <td className="px-2 py-2 text-center font-bold text-success">{stats.a || ""}</td>
+                            <td className="px-2 py-2 text-center font-bold text-destructive">{stats.f || ""}</td>
+                            <td className="px-2 py-2 text-center font-bold text-warning">{stats.t || ""}</td>
+                            <td className="px-2 py-2 text-center font-bold text-info">{stats.j || ""}</td>
+                            <td className={`px-2 py-2 text-center font-bold ${stats.pct >= 80 ? "text-success" : stats.pct >= 50 ? "text-warning" : "text-destructive"}`}>
+                              {stats.pct > 0 ? `${stats.pct}%` : ""}
+                            </td>
+                            <td className="px-2 py-2 text-center font-bold text-orange-400">
+                              {stats.overtime > 0 ? `${stats.overtime}h` : ""}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Hours View */}
+            <TabsContent value="hours">
+              <div className="space-y-4">
                 {filteredStaff.map((s: any) => {
                   const stats = getStats(s.id);
+                  const weeks = getWeeklyStats(s.id);
+                  const staffSchedules = scheduleMap[s.id] || [];
                   return (
-                    <tr key={s.id} className="border-t border-border hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{s.full_name}</td>
-                      <td className="px-3 py-3 text-center text-xs text-muted-foreground">{s.position}</td>
-                      <td className="px-3 py-3 text-center font-bold text-green-400">{stats.a}</td>
-                      <td className="px-3 py-3 text-center font-bold text-red-400">{stats.f}</td>
-                      <td className="px-3 py-3 text-center font-bold text-yellow-400">{stats.t}</td>
-                      <td className="px-3 py-3 text-center font-bold text-blue-400">{stats.j}</td>
-                      <td className={`px-3 py-3 text-center font-bold ${stats.pct >= 80 ? "text-green-400" : stats.pct >= 50 ? "text-yellow-400" : "text-red-400"}`}>
-                        {stats.pct}%
-                      </td>
-                      <td className="px-3 py-3 text-center font-bold text-primary">{stats.totalHours}h</td>
-                      <td className="px-3 py-3 text-center text-muted-foreground">{stats.scheduledHours}h</td>
-                      <td className="px-3 py-3 text-center font-bold text-orange-400">{stats.overtime > 0 ? `${stats.overtime}h` : "—"}</td>
-                    </tr>
+                    <Card key={s.id} className="border-primary/10">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center justify-between flex-wrap gap-2">
+                          <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" />{s.full_name}</span>
+                          <div className="flex gap-2">
+                            <Badge variant="outline" className="text-xs">{stats.totalHours}h trabajadas</Badge>
+                            <Badge variant="outline" className="text-xs bg-muted">{stats.scheduledHours}h programadas</Badge>
+                            {stats.overtime > 0 && (
+                              <Badge variant="outline" className="text-xs bg-orange-500/20 text-orange-400">
+                                <AlertTriangle className="h-3 w-3 mr-1" />{stats.overtime}h extras
+                              </Badge>
+                            )}
+                          </div>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {staffSchedules.length > 0 && (
+                          <div className="bg-secondary/30 rounded-lg p-2">
+                            <p className="text-[10px] font-semibold text-muted-foreground mb-1">📋 Horario Asignado:</p>
+                            <div className="flex gap-2 flex-wrap">
+                              {staffSchedules.map((sc: any) => (
+                                <Badge key={sc.id} variant="outline" className="text-[10px]">
+                                  {DAY_NAMES[sc.day_of_week]?.slice(0, 3)}: {sc.start_time?.slice(0,5)}-{sc.end_time?.slice(0,5)} ({sc.shift_name})
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                          {weeks.map(w => (
+                            <div key={w.week} className="bg-secondary/30 rounded-lg p-2 text-center">
+                              <p className="text-[10px] text-muted-foreground">Semana {w.week}</p>
+                              <p className="text-sm font-bold text-primary">{w.worked}h</p>
+                              <p className="text-[10px] text-muted-foreground">{w.scheduled}h prog.</p>
+                              {w.overtime > 0 && <p className="text-[10px] font-bold text-orange-400">+{w.overtime}h extra</p>}
+                              <p className="text-[10px] text-muted-foreground">{w.days} días</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <div className="flex gap-1">
+                            {days.map(d => {
+                              const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                              const rec = recordMap[s.id]?.[date];
+                              const isWeekend = [0, 6].includes(new Date(year, month, d).getDay());
+                              return (
+                                <div key={d} className={`flex flex-col items-center min-w-[50px] p-1 rounded text-[10px] ${isWeekend ? "bg-muted/30" : ""}`}>
+                                  <span className="text-muted-foreground">{getDayOfWeek(d)} {d}</span>
+                                  {rec?.status === "A" || rec?.status === "T" ? (
+                                    <>
+                                      <Input
+                                        type="time"
+                                        value={rec?.check_in_time || ""}
+                                        onChange={e => updateTime(s.id, d, "check_in", e.target.value)}
+                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20"
+                                      />
+                                      <Input
+                                        type="time"
+                                        value={rec?.check_out_time || ""}
+                                        onChange={e => updateTime(s.id, d, "check_out", e.target.value)}
+                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20"
+                                      />
+                                    </>
+                                  ) : (
+                                    <span className="text-muted-foreground/30 py-2">—</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
-        </TabsContent>
-      </Tabs>
+              </div>
+            </TabsContent>
+
+            {/* Summary View */}
+            <TabsContent value="summary">
+              <div className="rounded-lg border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="px-4 py-3 text-left font-semibold">Personal</th>
+                      <th className="px-3 py-3 text-center">Cargo</th>
+                      <th className="px-3 py-3 text-center text-success">A</th>
+                      <th className="px-3 py-3 text-center text-destructive">F</th>
+                      <th className="px-3 py-3 text-center text-warning">T</th>
+                      <th className="px-3 py-3 text-center text-info">J</th>
+                      <th className="px-3 py-3 text-center">%</th>
+                      <th className="px-3 py-3 text-center">Trabajadas</th>
+                      <th className="px-3 py-3 text-center">Programadas</th>
+                      <th className="px-3 py-3 text-center text-orange-400">Extras</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStaff.map((s: any) => {
+                      const stats = getStats(s.id);
+                      return (
+                        <tr key={s.id} className="border-t border-border hover:bg-muted/30">
+                          <td className="px-4 py-3 font-medium">{s.full_name}</td>
+                          <td className="px-3 py-3 text-center text-xs text-muted-foreground">{s.position}</td>
+                          <td className="px-3 py-3 text-center font-bold text-success">{stats.a}</td>
+                          <td className="px-3 py-3 text-center font-bold text-destructive">{stats.f}</td>
+                          <td className="px-3 py-3 text-center font-bold text-warning">{stats.t}</td>
+                          <td className="px-3 py-3 text-center font-bold text-info">{stats.j}</td>
+                          <td className={`px-3 py-3 text-center font-bold ${stats.pct >= 80 ? "text-success" : stats.pct >= 50 ? "text-warning" : "text-destructive"}`}>
+                            {stats.pct}%
+                          </td>
+                          <td className="px-3 py-3 text-center font-bold text-primary">{stats.totalHours}h</td>
+                          <td className="px-3 py-3 text-center text-muted-foreground">{stats.scheduledHours}h</td>
+                          <td className="px-3 py-3 text-center font-bold text-orange-400">{stats.overtime > 0 ? `${stats.overtime}h` : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   );
 };
