@@ -385,7 +385,7 @@ const AccountingPage = () => {
     { key: "notas", label: "Notas" },
   ];
 
-  const buildDetailedExport = (): { headers: string[]; rows: string[][] } => {
+  const buildDetailedExport = async (): Promise<{ headers: string[]; rows: string[][] }> => {
     const headers = [
       "Fecha", "Tipo Transacción", "Estado", "Cliente", "Teléfono",
       "Tipo Item", "Descripción", "Cant.", "P. Unitario", "Subtotal",
@@ -395,26 +395,61 @@ const AccountingPage = () => {
     ];
     const rows: string[][] = [];
 
-    // We need to load items for each transaction - use cached data if available
-    // For now, build summary rows per transaction
+    // Fetch all items for filtered transactions
+    const txIds = filtered.map(t => t.id);
+    const { data: allItems } = await supabase
+      .from("transaction_items")
+      .select("*")
+      .in("transaction_id", txIds);
+    const itemsByTx = new Map<string, any[]>();
+    (allItems || []).forEach((it: any) => {
+      const list = itemsByTx.get(it.transaction_id) || [];
+      list.push(it);
+      itemsByTx.set(it.transaction_id, list);
+    });
+
     filtered.forEach(tx => {
       const fecha = new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE");
       const tipo = tx.tipo_general === "venta" ? "Venta" : tx.tipo_general === "servicio" ? "Servicio" : "Mixto";
       const estado = tx.estado === "emitido" ? "Emitido" : tx.estado === "anulado" ? "Anulado" : "Borrador";
-      rows.push([
-        fecha, tipo, estado,
-        tx.cliente_nombre || "", tx.cliente_telefono || "",
-        "", "", "", "", "",
-        "", "", "",
-        String(Number(tx.subtotal_productos || 0).toFixed(2)),
-        String(Number(tx.subtotal_servicios || 0).toFixed(2)),
-        String(Number(tx.total || 0).toFixed(2)),
-        tx.emitido_por || "",
-        tx.notas || "",
-      ]);
+      const txItems = itemsByTx.get(tx.id) || [];
+
+      if (txItems.length === 0) {
+        rows.push([
+          fecha, tipo, estado, tx.cliente_nombre || "", tx.cliente_telefono || "",
+          "", "", "", "", "", "", "", "",
+          String(Number(tx.subtotal_productos || 0).toFixed(2)),
+          String(Number(tx.subtotal_servicios || 0).toFixed(2)),
+          String(Number(tx.total || 0).toFixed(2)),
+          tx.emitido_por || "", tx.notas || "",
+        ]);
+      } else {
+        txItems.forEach((item: any, idx: number) => {
+          rows.push([
+            idx === 0 ? fecha : "",
+            idx === 0 ? tipo : "",
+            idx === 0 ? estado : "",
+            idx === 0 ? (tx.cliente_nombre || "") : "",
+            idx === 0 ? (tx.cliente_telefono || "") : "",
+            item.item_type === "producto" ? "Producto" : "Servicio",
+            item.descripcion || "",
+            String(item.cantidad || 1),
+            String(Number(item.precio_unitario || 0).toFixed(2)),
+            String(Number(item.subtotal || 0).toFixed(2)),
+            item.responsable || "",
+            item.tipo_equipo || "",
+            item.diagnostico || "",
+            idx === 0 ? String(Number(tx.subtotal_productos || 0).toFixed(2)) : "",
+            idx === 0 ? String(Number(tx.subtotal_servicios || 0).toFixed(2)) : "",
+            idx === 0 ? String(Number(tx.total || 0).toFixed(2)) : "",
+            idx === 0 ? (tx.emitido_por || "") : "",
+            idx === 0 ? (tx.notas || "") : "",
+          ]);
+        });
+      }
     });
 
-    // Add summary row
+    // Summary row
     const totalProd = filtered.filter(t => t.estado === "emitido").reduce((a, t) => a + Number(t.subtotal_productos || 0), 0);
     const totalServ = filtered.filter(t => t.estado === "emitido").reduce((a, t) => a + Number(t.subtotal_servicios || 0), 0);
     const totalAll = filtered.filter(t => t.estado === "emitido").reduce((a, t) => a + Number(t.total || 0), 0);
