@@ -55,6 +55,19 @@ const StaffPage = () => {
     },
   });
 
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["profiles_for_staff_link"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, phone")
+        .not("user_id", "is", null)
+        .order("full_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (f: typeof emptyForm) => {
       const payload: any = {
@@ -126,6 +139,14 @@ const StaffPage = () => {
 
   const positions = [...new Set(staff.map((s: any) => s.position))].sort();
 
+  const linkedUserIds = new Set(
+    staff
+      .filter((s: any) => s.user_id && s.id !== editingId)
+      .map((s: any) => s.user_id)
+  );
+
+  const availableProfiles = profiles.filter((p: any) => !linkedUserIds.has(p.user_id) || p.user_id === form.user_id);
+
   const filtered = staff.filter((s: any) => {
     const matchSearch = !search || s.full_name?.toLowerCase().includes(search.toLowerCase()) || s.document_number?.includes(search) || s.phone?.includes(search);
     const matchPosition = filterPosition === "all" || s.position === filterPosition;
@@ -189,9 +210,24 @@ const StaffPage = () => {
                 <div><Label>Institución / Entidad de origen</Label><Input value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} placeholder="SENATI, TECSUP, Universidad..." /></div>
               )}
               <div>
-                <Label>ID de Usuario (opcional — vincular cuenta)</Label>
-                <Input value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })} placeholder="UUID del usuario registrado" className="font-mono text-xs" />
-                <p className="text-xs text-muted-foreground mt-1">Si tiene cuenta en el sistema, ingresa su UUID para vincularla</p>
+                <Label>Cuenta del Sistema (opcional)</Label>
+                <Select
+                  value={form.user_id || "none"}
+                  onValueChange={(v) => setForm({ ...form, user_id: v === "none" ? "" : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar usuario registrado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin vincular</SelectItem>
+                    {availableProfiles.map((p: any) => (
+                      <SelectItem key={p.user_id} value={p.user_id}>
+                        {p.full_name || "Sin nombre"} {p.phone ? `• ${p.phone}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Vincula la cuenta para que el personal pueda marcar y ver su asistencia</p>
               </div>
               <Button type="submit" className="w-full" disabled={saveMutation.isPending}>{editingId ? "Guardar Cambios" : "Registrar"}</Button>
             </form>
@@ -257,6 +293,7 @@ const StaffPage = () => {
                               {s.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{s.phone}</span>}
                               {s.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{s.email}</span>}
                               {s.document_number && <span className="flex items-center gap-1"><IdCard className="h-3 w-3" />{s.document_number}</span>}
+                              {s.user_id && <Badge variant="secondary" className="text-[10px]">Cuenta vinculada</Badge>}
                             </div>
                           </div>
                         </div>
