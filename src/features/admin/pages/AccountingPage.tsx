@@ -86,6 +86,7 @@ const AccountingPage = () => {
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
   const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios">("todos");
+  const [searchClient, setSearchClient] = useState("");
 
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
