@@ -23,7 +23,7 @@ const DAY_NAMES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","S
 
 const AttendancePage = () => {
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
@@ -257,16 +257,62 @@ const AttendancePage = () => {
     }
   };
 
+  // Find current user's staff record and today's status
+  const myStaff = staff.find((s: any) => s.user_id === user?.id);
+  const today = new Date().toISOString().split("T")[0];
+  const myRecord = myStaff ? recordMap[myStaff.id]?.[today] : null;
+  const myCheckedIn = !!myRecord?.check_in_time;
+  const myCheckedOut = !!myRecord?.check_out_time;
+
   return (
     <div className="space-y-6">
+      {/* Self check-in card for all staff */}
+      {myStaff && (
+        <Card className={`border-2 ${myCheckedIn && !myCheckedOut ? "border-primary/50 bg-primary/5" : myCheckedOut ? "border-success/50 bg-success/5" : "border-warning/50 bg-warning/5"}`}>
+          <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`h-12 w-12 rounded-full flex items-center justify-center ${myCheckedIn && !myCheckedOut ? "bg-primary/20" : myCheckedOut ? "bg-success/20" : "bg-warning/20"}`}>
+                {myCheckedOut ? <Clock className="h-6 w-6 text-success" /> : myCheckedIn ? <UserCheck className="h-6 w-6 text-primary" /> : <AlertTriangle className="h-6 w-6 text-warning" />}
+              </div>
+              <div>
+                <p className="font-semibold">{myStaff.full_name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {myCheckedOut
+                    ? `✅ Jornada completada — Entrada: ${myRecord?.check_in_time} | Salida: ${myRecord?.check_out_time}`
+                    : myCheckedIn
+                    ? `🟢 En turno desde las ${myRecord?.check_in_time} — Presiona para marcar salida`
+                    : "⚠️ Aún no has marcado tu entrada hoy"}
+                </p>
+              </div>
+            </div>
+            <Button
+              size="lg"
+              className="gap-2 min-w-[200px]"
+              variant={myCheckedOut ? "outline" : "default"}
+              onClick={selfCheckIn}
+              disabled={myCheckedOut}
+            >
+              <UserCheck className="h-5 w-5" />
+              {myCheckedOut ? "Asistencia Completada" : myCheckedIn ? "Marcar Salida" : "Marcar Entrada"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!myStaff && !isAdmin && (
+        <Card className="border-warning/50 bg-warning/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+            <p className="text-sm">Tu cuenta no está vinculada a un registro de personal. Solicita al administrador que te vincule para poder marcar asistencia.</p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-4">
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <CalendarDays className="h-6 w-6 text-primary" /> Control de Asistencias
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="default" size="sm" className="gap-2" onClick={selfCheckIn}>
-            <UserCheck className="h-4 w-4" /> Registrar Mi Asistencia
-          </Button>
           {isAdmin && (
             <Button variant="outline" size="sm" className="gap-2" onClick={exportCSV}>
               <Download className="h-4 w-4" /> CSV
