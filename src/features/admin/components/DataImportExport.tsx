@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Upload, Download, FileText } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 interface Column {
   key: string;
@@ -71,69 +72,6 @@ const buildCSVContent = (headers: string[], rows: string[][]) => {
   const headerLine = headers.map(h => escapeCSV(h)).join(",");
   const dataLines = rows.map(r => r.map(c => escapeCSV(c)).join(","));
   return "\uFEFF" + headerLine + "\n" + dataLines.join("\n");
-};
-
-const buildExcelXML = (headers: string[], rows: string[][], sheetName = "Datos") => {
-  const escXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-  const isNumeric = (val: string) => val !== "" && !isNaN(Number(val));
-
-  const headerCells = headers.map(h => `<Cell ss:StyleID="header"><Data ss:Type="String">${escXml(h)}</Data></Cell>`).join("");
-  const dataRows = rows.map(r => {
-    const cells = r.map(c => {
-      if (isNumeric(c)) {
-        return `<Cell ss:StyleID="number"><Data ss:Type="Number">${c}</Data></Cell>`;
-      }
-      return `<Cell ss:StyleID="data"><Data ss:Type="String">${escXml(c)}</Data></Cell>`;
-    }).join("");
-    return `<Row>${cells}</Row>`;
-  }).join("\n");
-
-  const colWidths = headers.map((h, i) => {
-    let maxLen = h.length;
-    rows.forEach(r => { if (r[i] && r[i].length > maxLen) maxLen = r[i].length; });
-    const w = Math.min(Math.max(maxLen * 8, 60), 300);
-    return `<Column ss:AutoFitWidth="0" ss:Width="${w}"/>`;
-  }).join("");
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-<Styles>
-  <Style ss:ID="Default"><Font ss:FontName="Arial" ss:Size="10"/></Style>
-  <Style ss:ID="header">
-    <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
-    <Interior ss:Color="#2563EB" ss:Pattern="Solid"/>
-    <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
-    <Borders>
-      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1E40AF"/>
-    </Borders>
-  </Style>
-  <Style ss:ID="data">
-    <Font ss:FontName="Arial" ss:Size="10"/>
-    <Alignment ss:Vertical="Center" ss:WrapText="1"/>
-    <Borders>
-      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E5E7EB"/>
-    </Borders>
-  </Style>
-  <Style ss:ID="number">
-    <Font ss:FontName="Arial" ss:Size="10"/>
-    <NumberFormat ss:Format="#,##0.00"/>
-    <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-    <Borders>
-      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E5E7EB"/>
-    </Borders>
-  </Style>
-</Styles>
-<Worksheet ss:Name="${escXml(sheetName)}">
-  <Table>
-    ${colWidths}
-    <Row ss:Height="25">${headerCells}</Row>
-    ${dataRows}
-  </Table>
-</Worksheet>
-</Workbook>`;
 };
 
 const DataImportExport = ({ columns, exportColumns, data, filenamePrefix, onImport, templateDescription, detailedExportFn }: DataImportExportProps) => {
@@ -203,8 +141,24 @@ const DataImportExport = ({ columns, exportColumns, data, filenamePrefix, onImpo
       const content = buildCSVContent(headers, rows);
       downloadBlob(new Blob([content], { type: "text/csv;charset=utf-8;" }), fname + ".csv");
     } else {
-      const xml = buildExcelXML(headers, rows, filenamePrefix.split("_")[0] || "Datos");
-      downloadBlob(new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" }), fname + ".xls");
+      const sheetData = [headers, ...rows];
+      const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+      worksheet["!cols"] = headers.map((header, i) => {
+        let maxLen = header.length;
+        rows.forEach((row) => {
+          const cell = String(row[i] ?? "");
+          if (cell.length > maxLen) maxLen = cell.length;
+        });
+        return { wch: Math.min(Math.max(maxLen + 2, 12), 45) };
+      });
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, filenamePrefix.split("_")[0] || "Datos");
+      const xlsxContent = XLSX.write(workbook, { type: "array", bookType: "xlsx", compression: true });
+      downloadBlob(
+        new Blob([xlsxContent], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+        fname + ".xlsx"
+      );
     }
     toast.success("Archivo exportado correctamente");
   };
@@ -224,7 +178,7 @@ const DataImportExport = ({ columns, exportColumns, data, filenamePrefix, onImpo
           <SelectTrigger className="h-8 w-[100px] text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="csv">📄 CSV</SelectItem>
-            <SelectItem value="excel">📊 Excel</SelectItem>
+            <SelectItem value="excel">📊 Excel (.xlsx)</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={handleExport}>
