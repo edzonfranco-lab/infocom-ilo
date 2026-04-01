@@ -460,7 +460,7 @@ const AccountingPage = () => {
     const totalAll = filtered.filter(t => t.estado === "emitido").reduce((a, t) => a + Number(t.total || 0), 0);
     rows.push([]);
     rows.push([
-      "", "", "", "", "", "", "", "", "", "",
+      "", "", "", "", "", "", "", "", "", "", "",
       "", "", "",
       String(totalProd.toFixed(2)),
       String(totalServ.toFixed(2)),
