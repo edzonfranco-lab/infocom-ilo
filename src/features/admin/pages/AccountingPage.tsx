@@ -516,6 +516,12 @@ const AccountingPage = () => {
         {/* Shared content for all tabs */}
         <div className="mt-4 space-y-4">
           <div className="flex justify-between items-center flex-wrap gap-2">
+            <Input
+              placeholder="Buscar por cliente..."
+              value={searchClient}
+              onChange={(e) => setSearchClient(e.target.value)}
+              className="max-w-[200px] h-8 text-xs bg-secondary/50 border-primary/20"
+            />
             <DataImportExport
               columns={IMPORT_COLUMNS}
               exportColumns={exportColumns}
