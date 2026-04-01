@@ -266,8 +266,8 @@ const AttendancePage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Self check-in card for all staff */}
-      {myStaff && (
+      {/* Self check-in card for staff users (not admin) */}
+      {!isAdmin && myStaff && (
         <Card className={`border-2 ${myCheckedIn && !myCheckedOut ? "border-primary/50 bg-primary/5" : myCheckedOut ? "border-success/50 bg-success/5" : "border-warning/50 bg-warning/5"}`}>
           <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -299,7 +299,7 @@ const AttendancePage = () => {
         </Card>
       )}
 
-      {!myStaff && !isAdmin && (
+      {!isAdmin && !myStaff && (
         <Card className="border-warning/50 bg-warning/5">
           <CardContent className="p-4 flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
