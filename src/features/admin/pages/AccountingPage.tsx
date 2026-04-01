@@ -387,7 +387,7 @@ const AccountingPage = () => {
 
   const buildDetailedExport = async (): Promise<{ headers: string[]; rows: string[][] }> => {
     const headers = [
-      "Fecha", "Tipo Transacción", "Estado", "Cliente", "Teléfono",
+      "Código", "Fecha", "Tipo Transacción", "Estado", "Cliente", "Teléfono",
       "Tipo Item", "Descripción", "Cant.", "P. Unitario", "Subtotal",
       "Responsable", "Tipo Equipo", "Diagnóstico",
       "Total Productos", "Total Servicios", "TOTAL",
@@ -395,8 +395,11 @@ const AccountingPage = () => {
     ];
     const rows: string[][] = [];
 
+    // Sort by created_at for consistent code ordering
+    const sorted = [...filtered].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
     // Fetch all items for filtered transactions
-    const txIds = filtered.map(t => t.id);
+    const txIds = sorted.map(t => t.id);
     const { data: allItems } = await supabase
       .from("transaction_items")
       .select("*")
@@ -408,7 +411,8 @@ const AccountingPage = () => {
       itemsByTx.set(it.transaction_id, list);
     });
 
-    filtered.forEach(tx => {
+    sorted.forEach((tx, txIdx) => {
+      const code = `TX-${String(txIdx + 1).padStart(4, "0")}`;
       const fecha = new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE");
       const tipo = tx.tipo_general === "venta" ? "Venta" : tx.tipo_general === "servicio" ? "Servicio" : "Mixto";
       const estado = tx.estado === "emitido" ? "Emitido" : tx.estado === "anulado" ? "Anulado" : "Borrador";
@@ -416,7 +420,7 @@ const AccountingPage = () => {
 
       if (txItems.length === 0) {
         rows.push([
-          fecha, tipo, estado, tx.cliente_nombre || "", tx.cliente_telefono || "",
+          code, fecha, tipo, estado, tx.cliente_nombre || "", tx.cliente_telefono || "",
           "", "", "", "", "", "", "", "",
           String(Number(tx.subtotal_productos || 0).toFixed(2)),
           String(Number(tx.subtotal_servicios || 0).toFixed(2)),
@@ -426,6 +430,7 @@ const AccountingPage = () => {
       } else {
         txItems.forEach((item: any, idx: number) => {
           rows.push([
+            idx === 0 ? code : "",
             idx === 0 ? fecha : "",
             idx === 0 ? tipo : "",
             idx === 0 ? estado : "",
@@ -455,7 +460,7 @@ const AccountingPage = () => {
     const totalAll = filtered.filter(t => t.estado === "emitido").reduce((a, t) => a + Number(t.total || 0), 0);
     rows.push([]);
     rows.push([
-      "", "", "", "", "", "", "", "", "", "",
+      "", "", "", "", "", "", "", "", "", "", "",
       "", "", "",
       String(totalProd.toFixed(2)),
       String(totalServ.toFixed(2)),
