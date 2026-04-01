@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Pencil, Trash2,
+import { Badge } from "@/components/ui/badge";
+import { Plus, Pencil, Trash2, FileUp, FileText, ExternalLink, X, Loader2,
   Laptop, Monitor, Keyboard, Projector, Printer, Package, Camera,
   Cpu, HardDrive, Headphones, Mouse, Wifi, Shield, Server,
   Smartphone, Tablet, Watch, Usb, Cable, Plug, Battery,
