@@ -23,7 +23,7 @@ const DAY_NAMES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","S
 
 const AttendancePage = () => {
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
