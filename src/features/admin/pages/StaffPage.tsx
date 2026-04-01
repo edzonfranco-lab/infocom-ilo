@@ -34,6 +34,8 @@ const StaffPage = () => {
   const [scheduleStaffId, setScheduleStaffId] = useState<string | null>(null);
   const [scheduleForm, setScheduleForm] = useState(emptyScheduleForm);
   const [activeTab, setActiveTab] = useState("staff");
+  const [filterPosition, setFilterPosition] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ["staff_members"],
@@ -122,9 +124,14 @@ const StaffPage = () => {
     },
   });
 
-  const filtered = staff.filter((s: any) =>
-    !search || s.full_name?.toLowerCase().includes(search.toLowerCase()) || s.position?.toLowerCase().includes(search.toLowerCase())
-  );
+  const positions = [...new Set(staff.map((s: any) => s.position))].sort();
+
+  const filtered = staff.filter((s: any) => {
+    const matchSearch = !search || s.full_name?.toLowerCase().includes(search.toLowerCase()) || s.document_number?.includes(search) || s.phone?.includes(search);
+    const matchPosition = filterPosition === "all" || s.position === filterPosition;
+    const matchStatus = filterStatus === "all" || (filterStatus === "active" ? s.is_active : !s.is_active);
+    return matchSearch && matchPosition && matchStatus;
+  });
 
   const activeCount = staff.filter((s: any) => s.is_active).length;
 
@@ -192,14 +199,32 @@ const StaffPage = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card className="border-green-500/20"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-green-400">{activeCount}</p><p className="text-xs text-muted-foreground">Activos</p></CardContent></Card>
+        <Card className="border-destructive/20"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-destructive">{staff.length - activeCount}</p><p className="text-xs text-muted-foreground">Inactivos</p></CardContent></Card>
         <Card className="border-primary/20"><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-primary">{staff.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar personal..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar por nombre, DNI o teléfono..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <Select value={filterPosition} onValueChange={setFilterPosition}>
+          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Cargo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los cargos</SelectItem>
+            {positions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-full sm:w-[150px]"><SelectValue placeholder="Estado" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">✅ Activos</SelectItem>
+            <SelectItem value="inactive">❌ Inactivos</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
