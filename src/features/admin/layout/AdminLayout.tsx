@@ -51,7 +51,7 @@ const allNavItems: NavItem[] = [
   { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago", roles: ["admin"] },
   { to: "/admin/empresa", icon: Building2, label: "Empresa", roles: ["admin"] },
   {
-    to: "/admin/personal", icon: Users, label: "Personal", roles: ["admin"],
+    to: "/admin/personal", icon: Users, label: "Personal", roles: ["admin", "moderator"],
     children: [
       { to: "/admin/personal", icon: Users, label: "Gestión", end: true, roles: ["admin"] },
       { to: "/admin/asistencias", icon: CalendarDays, label: "Asistencias", roles: ["admin", "moderator"] },
