@@ -370,6 +370,7 @@ const AccountingPage = () => {
     { key: "fecha", label: "Fecha" },
     { key: "tipo_general", label: "Tipo" },
     { key: "cliente_nombre", label: "Cliente" },
+    { key: "cliente_telefono", label: "Teléfono" },
     { key: "estado", label: "Estado" },
     { key: "subtotal_productos", label: "Subtotal Productos" },
     { key: "subtotal_servicios", label: "Subtotal Servicios" },
@@ -377,6 +378,52 @@ const AccountingPage = () => {
     { key: "emitido_por", label: "Emitido Por" },
     { key: "notas", label: "Notas" },
   ];
+
+  const buildDetailedExport = (): { headers: string[]; rows: string[][] } => {
+    const headers = [
+      "Fecha", "Tipo Transacción", "Estado", "Cliente", "Teléfono",
+      "Tipo Item", "Descripción", "Cant.", "P. Unitario", "Subtotal",
+      "Responsable", "Tipo Equipo", "Diagnóstico",
+      "Total Productos", "Total Servicios", "TOTAL",
+      "Emitido Por", "Notas"
+    ];
+    const rows: string[][] = [];
+
+    // We need to load items for each transaction - use cached data if available
+    // For now, build summary rows per transaction
+    filtered.forEach(tx => {
+      const fecha = new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE");
+      const tipo = tx.tipo_general === "venta" ? "Venta" : tx.tipo_general === "servicio" ? "Servicio" : "Mixto";
+      const estado = tx.estado === "emitido" ? "Emitido" : tx.estado === "anulado" ? "Anulado" : "Borrador";
+      rows.push([
+        fecha, tipo, estado,
+        tx.cliente_nombre || "", tx.cliente_telefono || "",
+        "", "", "", "", "",
+        "", "", "",
+        String(Number(tx.subtotal_productos || 0).toFixed(2)),
+        String(Number(tx.subtotal_servicios || 0).toFixed(2)),
+        String(Number(tx.total || 0).toFixed(2)),
+        tx.emitido_por || "",
+        tx.notas || "",
+      ]);
+    });
+
+    // Add summary row
+    const totalProd = filtered.filter(t => t.estado === "emitido").reduce((a, t) => a + Number(t.subtotal_productos || 0), 0);
+    const totalServ = filtered.filter(t => t.estado === "emitido").reduce((a, t) => a + Number(t.subtotal_servicios || 0), 0);
+    const totalAll = filtered.filter(t => t.estado === "emitido").reduce((a, t) => a + Number(t.total || 0), 0);
+    rows.push([]);
+    rows.push([
+      "", "", "", "", "", "", "", "", "", "",
+      "", "", "",
+      String(totalProd.toFixed(2)),
+      String(totalServ.toFixed(2)),
+      String(totalAll.toFixed(2)),
+      "TOTALES (Emitidos)", ""
+    ]);
+
+    return { headers, rows };
+  };
 
   return (
     <div className="space-y-6">
@@ -430,11 +477,12 @@ const AccountingPage = () => {
           <div className="flex justify-between items-center flex-wrap gap-2">
             <DataImportExport
               columns={IMPORT_COLUMNS}
+              exportColumns={exportColumns}
               data={filtered}
               filenamePrefix={`contabilidad_${MONTHS[month]}_${year}`}
               templateDescription="Cada fila es un item. Tipo: 'producto' o 'servicio'."
+              detailedExportFn={buildDetailedExport}
               onImport={async (rows) => {
-                // Create a single transaction from imported items
                 const { data: tx, error } = await supabase.from("transactions").insert({
                   fecha: new Date().toISOString().split("T")[0],
                   notas: "Importado desde CSV",
