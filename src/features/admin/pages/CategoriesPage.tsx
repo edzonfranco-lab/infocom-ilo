@@ -69,9 +69,11 @@ const CategoriesPage = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", is_active: true });
+  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", is_active: true, catalog_url: "" });
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const pdfRef = useRef<HTMLInputElement>(null);
 
   const fetchAll = async () => {
     const { data } = await supabase.from("categories").select("*").order("sort_order");
