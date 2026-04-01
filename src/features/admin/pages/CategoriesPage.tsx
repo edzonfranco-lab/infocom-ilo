@@ -106,8 +106,27 @@ const CategoriesPage = () => {
     }
     setDialogOpen(false); resetForm(); fetchAll();
   };
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") { toast.error("Solo se permiten archivos PDF"); return; }
+    setUploadingPdf(true);
+    try {
+      const path = `${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+      const { error } = await supabase.storage.from("category-catalogs").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("category-catalogs").getPublicUrl(path);
+      setForm({ ...form, catalog_url: data.publicUrl });
+      toast.success("Catálogo PDF subido");
+    } catch (err: any) {
+      toast.error("Error al subir: " + err.message);
+    } finally {
+      setUploadingPdf(false);
+      if (pdfRef.current) pdfRef.current.value = "";
+    }
+  };
 
-  const handleDelete = async (id: string) => {
+
     if (!confirm("¿Eliminar esta categoría?")) return;
     await supabase.from("categories").delete().eq("id", id);
     toast.success("Categoría eliminada"); fetchAll();
