@@ -477,11 +477,12 @@ const AccountingPage = () => {
           <div className="flex justify-between items-center flex-wrap gap-2">
             <DataImportExport
               columns={IMPORT_COLUMNS}
+              exportColumns={exportColumns}
               data={filtered}
               filenamePrefix={`contabilidad_${MONTHS[month]}_${year}`}
               templateDescription="Cada fila es un item. Tipo: 'producto' o 'servicio'."
+              detailedExportFn={buildDetailedExport}
               onImport={async (rows) => {
-                // Create a single transaction from imported items
                 const { data: tx, error } = await supabase.from("transactions").insert({
                   fecha: new Date().toISOString().split("T")[0],
                   notas: "Importado desde CSV",
