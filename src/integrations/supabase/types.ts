@@ -270,6 +270,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          catalog_url: string | null
           created_at: string
           icon: string | null
           id: string
@@ -282,6 +283,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          catalog_url?: string | null
           created_at?: string
           icon?: string | null
           id?: string
@@ -294,6 +296,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          catalog_url?: string | null
           created_at?: string
           icon?: string | null
           id?: string
