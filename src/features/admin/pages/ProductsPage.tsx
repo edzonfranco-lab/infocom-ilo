@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Search, Package, Upload, X, Loader2, GripVertical } from "lucide-react";
 import { CURRENCY } from "@/lib/types";
 import { toast } from "sonner";
+import DataImportExport from "@/features/admin/components/DataImportExport";
 
 const BUCKET = "product-images";
 
