@@ -14,6 +14,7 @@ import { ClipboardList, Plus, Search, Clock, CheckCircle, Wrench, Package, Alert
 import PrintReceipt from "@/features/admin/components/PrintReceipt";
 import DataImportExport from "@/features/admin/components/DataImportExport";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { notifyAllStaff } from "@/lib/notifications";
 
 const RECEPTION_COLUMNS = [
   { key: "customer_name", label: "Cliente" }, { key: "customer_phone", label: "Telefono" },
