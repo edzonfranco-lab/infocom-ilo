@@ -112,6 +112,15 @@ const ReceptionPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service_orders"] });
       toast.success(editingId ? "Orden actualizada" : "Orden registrada");
+      if (!editingId) {
+        notifyAllStaff({
+          title: "Nueva recepción técnica",
+          message: `${form.customer_name} — ${form.device_type} ${form.device_brand} ${form.device_model}`.trim(),
+          type: "service",
+          link: "/admin/recepcion",
+          excludeUserId: user?.id,
+        });
+      }
       setForm(emptyForm);
       setEditingId(null);
       setDialogOpen(false);

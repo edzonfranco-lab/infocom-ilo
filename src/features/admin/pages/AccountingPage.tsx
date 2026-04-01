@@ -216,6 +216,17 @@ const AccountingPage = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
       toast.success(editingId ? "Transaccion actualizada" : "Transaccion guardada");
+      if (!editingId) {
+        const hasService = items.some(i => i.item_type === "servicio");
+        const tipo = hasService ? "servicio" : "venta";
+        notifyAllStaff({
+          title: `Nueva ${tipo === "servicio" ? "orden de servicio" : "venta"} registrada`,
+          message: `${form.cliente_nombre || "Sin cliente"} — S/. ${itemTotals.total.toFixed(2)}`,
+          type: tipo === "servicio" ? "service" : "sale",
+          link: "/admin/contabilidad",
+          excludeUserId: user?.id,
+        });
+      }
       closeForm();
     },
     onError: (e: any) => toast.error(e.message || "Error al guardar"),
