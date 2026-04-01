@@ -14,6 +14,7 @@ import { ClipboardList, Plus, Search, Clock, CheckCircle, Wrench, Package, Alert
 import PrintReceipt from "@/features/admin/components/PrintReceipt";
 import DataImportExport from "@/features/admin/components/DataImportExport";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { notifyAllStaff } from "@/lib/notifications";
 
 const RECEPTION_COLUMNS = [
   { key: "customer_name", label: "Cliente" }, { key: "customer_phone", label: "Telefono" },
@@ -111,6 +112,15 @@ const ReceptionPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["service_orders"] });
       toast.success(editingId ? "Orden actualizada" : "Orden registrada");
+      if (!editingId) {
+        notifyAllStaff({
+          title: "Nueva recepción técnica",
+          message: `${form.customer_name} — ${form.device_type} ${form.device_brand} ${form.device_model}`.trim(),
+          type: "service",
+          link: "/admin/recepcion",
+          excludeUserId: user?.id,
+        });
+      }
       setForm(emptyForm);
       setEditingId(null);
       setDialogOpen(false);
