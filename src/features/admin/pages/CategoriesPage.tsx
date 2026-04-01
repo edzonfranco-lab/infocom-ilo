@@ -82,7 +82,7 @@ const CategoriesPage = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
-  const resetForm = () => { setForm({ name: "", slug: "", icon: "", parent_id: "", is_active: true }); setEditing(null); };
+  const resetForm = () => { setForm({ name: "", slug: "", icon: "", parent_id: "", is_active: true, catalog_url: "" }); setEditing(null); };
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
