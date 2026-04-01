@@ -199,6 +199,28 @@ const CategoriesPage = () => {
                 </Select>
               </div>
               
+              {/* Catálogo PDF */}
+              <div className="space-y-2">
+                <Label>Catálogo PDF</Label>
+                <input ref={pdfRef} type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} />
+                {form.catalog_url ? (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30 border border-border">
+                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                    <a href={form.catalog_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline truncate flex-1">
+                      Ver catálogo
+                    </a>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setForm({ ...form, catalog_url: "" })}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" className="w-full gap-2 text-xs" onClick={() => pdfRef.current?.click()} disabled={uploadingPdf}>
+                    {uploadingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileUp className="h-3 w-3" />}
+                    {uploadingPdf ? "Subiendo..." : "Subir catálogo PDF"}
+                  </Button>
+                )}
+              </div>
+
               <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Activa</Label></div>
               <Button onClick={handleSave} className="w-full">{editing ? "Guardar" : "Crear"}</Button>
             </div>
