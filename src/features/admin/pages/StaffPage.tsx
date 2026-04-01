@@ -34,6 +34,8 @@ const StaffPage = () => {
   const [scheduleStaffId, setScheduleStaffId] = useState<string | null>(null);
   const [scheduleForm, setScheduleForm] = useState(emptyScheduleForm);
   const [activeTab, setActiveTab] = useState("staff");
+  const [filterPosition, setFilterPosition] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ["staff_members"],
