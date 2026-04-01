@@ -127,10 +127,15 @@ const AccountingPage = () => {
 
   // ─── Filtered views ───────────────────────────────────────────
   const filtered = useMemo(() => {
-    if (activeTab === "ventas") return transactions.filter(t => Number(t.subtotal_productos || 0) > 0);
-    if (activeTab === "servicios") return transactions.filter(t => Number(t.subtotal_servicios || 0) > 0);
-    return transactions;
-  }, [transactions, activeTab]);
+    let list = transactions;
+    if (activeTab === "ventas") list = list.filter(t => Number(t.subtotal_productos || 0) > 0);
+    if (activeTab === "servicios") list = list.filter(t => Number(t.subtotal_servicios || 0) > 0);
+    if (searchClient.trim()) {
+      const q = searchClient.toLowerCase();
+      list = list.filter(t => t.cliente_nombre?.toLowerCase().includes(q));
+    }
+    return list;
+  }, [transactions, activeTab, searchClient]);
 
   // ─── Metrics (only emitido) ───────────────────────────────────
   const emitidos = transactions.filter(t => t.estado === "emitido");
