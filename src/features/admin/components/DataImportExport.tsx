@@ -19,8 +19,8 @@ interface DataImportExportProps {
   filenamePrefix: string;
   onImport: (rows: Record<string, string>[]) => Promise<void>;
   templateDescription?: string;
-  /** If provided, builds a detailed export with sub-rows */
-  detailedExportFn?: () => { headers: string[]; rows: string[][] };
+  /** If provided, builds a detailed export with sub-rows (can be async) */
+  detailedExportFn?: () => { headers: string[]; rows: string[][] } | Promise<{ headers: string[]; rows: string[][] }>;
 }
 
 const parseCSV = (text: string): string[][] => {
@@ -120,7 +120,7 @@ const DataImportExport = ({ columns, exportColumns, data, filenamePrefix, onImpo
     setImporting(false);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (data.length === 0) { toast.error("No hay datos para exportar"); return; }
     const ts = new Date().toISOString().split("T")[0];
     const fname = `${filenamePrefix}_${ts}`;
@@ -129,7 +129,7 @@ const DataImportExport = ({ columns, exportColumns, data, filenamePrefix, onImpo
     let rows: string[][];
 
     if (detailedExportFn) {
-      const result = detailedExportFn();
+      const result = await detailedExportFn();
       headers = result.headers;
       rows = result.rows;
     } else {

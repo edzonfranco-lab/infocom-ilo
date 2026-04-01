@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Pencil, Trash2,
+import { Badge } from "@/components/ui/badge";
+import { Plus, Pencil, Trash2, FileUp, FileText, ExternalLink, X, Loader2,
   Laptop, Monitor, Keyboard, Projector, Printer, Package, Camera,
   Cpu, HardDrive, Headphones, Mouse, Wifi, Shield, Server,
   Smartphone, Tablet, Watch, Usb, Cable, Plug, Battery,
@@ -68,9 +69,11 @@ const CategoriesPage = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", is_active: true });
+  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", is_active: true, catalog_url: "" });
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const pdfRef = useRef<HTMLInputElement>(null);
 
   const fetchAll = async () => {
     const { data } = await supabase.from("categories").select("*").order("sort_order");
@@ -79,18 +82,18 @@ const CategoriesPage = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
-  const resetForm = () => { setForm({ name: "", slug: "", icon: "", parent_id: "", is_active: true }); setEditing(null); };
+  const resetForm = () => { setForm({ name: "", slug: "", icon: "", parent_id: "", is_active: true, catalog_url: "" }); setEditing(null); };
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
   const openEdit = (c: any) => {
     setEditing(c);
-    setForm({ name: c.name, slug: c.slug, icon: c.icon || "", parent_id: c.parent_id || "", is_active: c.is_active });
+    setForm({ name: c.name, slug: c.slug, icon: c.icon || "", parent_id: c.parent_id || "", is_active: c.is_active, catalog_url: c.catalog_url || "" });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
-    const payload: any = { name: form.name, slug: form.slug || generateSlug(form.name), icon: form.icon || null, parent_id: form.parent_id || null, is_active: form.is_active };
+    const payload: any = { name: form.name, slug: form.slug || generateSlug(form.name), icon: form.icon || null, parent_id: form.parent_id || null, is_active: form.is_active, catalog_url: form.catalog_url || null };
     if (!editing) payload.sort_order = categories.length;
     if (editing) {
       const { error } = await supabase.from("categories").update(payload as any).eq("id", editing.id);
@@ -102,6 +105,25 @@ const CategoriesPage = () => {
       toast.success("Categoría creada");
     }
     setDialogOpen(false); resetForm(); fetchAll();
+  };
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") { toast.error("Solo se permiten archivos PDF"); return; }
+    setUploadingPdf(true);
+    try {
+      const path = `${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+      const { error } = await supabase.storage.from("category-catalogs").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("category-catalogs").getPublicUrl(path);
+      setForm({ ...form, catalog_url: data.publicUrl });
+      toast.success("Catálogo PDF subido");
+    } catch (err: any) {
+      toast.error("Error al subir: " + err.message);
+    } finally {
+      setUploadingPdf(false);
+      if (pdfRef.current) pdfRef.current.value = "";
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -177,6 +199,28 @@ const CategoriesPage = () => {
                 </Select>
               </div>
               
+              {/* Catálogo PDF */}
+              <div className="space-y-2">
+                <Label>Catálogo PDF</Label>
+                <input ref={pdfRef} type="file" accept=".pdf" className="hidden" onChange={handlePdfUpload} />
+                {form.catalog_url ? (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30 border border-border">
+                    <FileText className="h-4 w-4 text-primary shrink-0" />
+                    <a href={form.catalog_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline truncate flex-1">
+                      Ver catálogo
+                    </a>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => setForm({ ...form, catalog_url: "" })}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" className="w-full gap-2 text-xs" onClick={() => pdfRef.current?.click()} disabled={uploadingPdf}>
+                    {uploadingPdf ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileUp className="h-3 w-3" />}
+                    {uploadingPdf ? "Subiendo..." : "Subir catálogo PDF"}
+                  </Button>
+                )}
+              </div>
+
               <div className="flex items-center gap-2"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>Activa</Label></div>
               <Button onClick={handleSave} className="w-full">{editing ? "Guardar" : "Crear"}</Button>
             </div>
@@ -194,7 +238,16 @@ const CategoriesPage = () => {
                     <CatIcon className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">{c.parent_id ? "↳ " : ""}{c.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{c.parent_id ? "↳ " : ""}{c.name}</p>
+                      {c.catalog_url && (
+                        <a href={c.catalog_url} target="_blank" rel="noopener noreferrer" title="Ver catálogo">
+                          <Badge variant="outline" className="text-[10px] gap-1 cursor-pointer hover:bg-primary/10">
+                            <FileText className="h-3 w-3" /> PDF
+                          </Badge>
+                        </a>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">/{c.slug} • Orden: {c.sort_order} • Ícono: {c.icon || "—"}</p>
                   </div>
                 </div>

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Search, Package, Upload, X, Loader2, GripVertical } from "lucide-react";
 import { CURRENCY } from "@/lib/types";
 import { toast } from "sonner";
+import DataImportExport from "@/features/admin/components/DataImportExport";
 
 const BUCKET = "product-images";
 
@@ -311,7 +312,7 @@ const ProductsPage = () => {
         </Dialog>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         <Input placeholder="Buscar productos..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-[200px] bg-secondary/50 border-primary/20" />
         <Select value={filterVitrina} onValueChange={setFilterVitrina}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Vitrina" /></SelectTrigger>
@@ -335,6 +336,50 @@ const ProductsPage = () => {
             {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
           </SelectContent>
         </Select>
+        <DataImportExport
+          columns={[
+            { key: "name", label: "Nombre" },
+            { key: "sku", label: "SKU" },
+            { key: "price", label: "Precio" },
+            { key: "stock", label: "Stock" },
+          ]}
+          exportColumns={[
+            { key: "name", label: "Nombre" },
+            { key: "sku", label: "SKU" },
+            { key: "category_name", label: "Categoría" },
+            { key: "brand_name", label: "Marca" },
+            { key: "price", label: "Precio" },
+            { key: "cost_price", label: "Precio Costo" },
+            { key: "stock", label: "Stock" },
+            { key: "min_stock", label: "Stock Mín." },
+            { key: "vitrina_code", label: "Vitrina" },
+            { key: "vitrina_floor", label: "Piso" },
+            { key: "is_active", label: "Activo" },
+          ]}
+          data={filtered.map(p => ({
+            ...p,
+            category_name: p.categories?.name || "",
+            brand_name: p.brands?.name || "",
+            vitrina_code: p.vitrinas?.code || "",
+            vitrina_floor: p.vitrina_floor || "",
+            is_active: p.is_active ? "Sí" : "No",
+          }))}
+          filenamePrefix="inventario_productos"
+          onImport={async (rows) => {
+            for (const r of rows) {
+              const slug = r.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "producto";
+              await supabase.from("products").insert({
+                name: r.name || "Sin nombre",
+                slug,
+                sku: r.sku || null,
+                price: parseFloat(r.price) || 0,
+                stock: parseInt(r.stock) || 0,
+              } as any);
+            }
+            fetchAll();
+          }}
+          templateDescription="Nombre, SKU, Precio y Stock son los campos principales para importar."
+        />
       </div>
 
       {loading ? <p>Cargando...</p> : (
