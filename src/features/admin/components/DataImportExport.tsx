@@ -19,8 +19,8 @@ interface DataImportExportProps {
   filenamePrefix: string;
   onImport: (rows: Record<string, string>[]) => Promise<void>;
   templateDescription?: string;
-  /** If provided, builds a detailed export with sub-rows */
-  detailedExportFn?: () => { headers: string[]; rows: string[][] };
+  /** If provided, builds a detailed export with sub-rows (can be async) */
+  detailedExportFn?: () => { headers: string[]; rows: string[][] } | Promise<{ headers: string[]; rows: string[][] }>;
 }
 
 const parseCSV = (text: string): string[][] => {
