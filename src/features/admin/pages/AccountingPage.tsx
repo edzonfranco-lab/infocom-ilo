@@ -128,6 +128,45 @@ const AccountingPage = () => {
     },
   });
 
+  // Products from inventory
+  const { data: products = [] } = useQuery({
+    queryKey: ["products_for_accounting"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("products").select("id, name, price, stock, sku").eq("is_active", true).order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Staff members for dropdowns
+  const { data: staffMembers = [] } = useQuery({
+    queryKey: ["staff_for_accounting"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("staff_members").select("id, full_name, position").eq("is_active", true).order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Service types (categories that represent services)
+  const SERVICE_TYPES = [
+    "Mantenimiento preventivo",
+    "Mantenimiento correctivo", 
+    "Formateo e instalación de S.O.",
+    "Reparación de hardware",
+    "Reparación de impresora",
+    "Cambio de pantalla",
+    "Cambio de teclado",
+    "Cambio de batería",
+    "Limpieza interna",
+    "Instalación de software",
+    "Recuperación de datos",
+    "Diagnóstico técnico",
+    "Configuración de red",
+    "Ensamblaje de PC",
+    "Otro servicio",
+  ];
+
   // ─── Filtered views ───────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = transactions;
