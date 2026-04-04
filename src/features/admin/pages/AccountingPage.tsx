@@ -104,7 +104,7 @@ const AccountingPage = () => {
     cliente_nombre: "",
     cliente_telefono: "",
     notas: "",
-    emitido_por: "",
+    emitido_por: "Personal de Infocom",
   });
   const [items, setItems] = useState<TransactionItem[]>([]);
 
