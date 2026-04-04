@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Users, Plus, Search, UserCheck, UserX, Briefcase, Phone, Mail, IdCard, Clock, Trash2, CalendarClock } from "lucide-react";
+import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -36,6 +37,29 @@ const StaffPage = () => {
   const [activeTab, setActiveTab] = useState("staff");
   const [filterPosition, setFilterPosition] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+
+  const restoreDraft = useCallback((draft: { editingId: string | null; form: typeof emptyForm }) => {
+    if (!draft?.form) return;
+    setForm({ ...emptyForm, ...draft.form });
+    setEditingId(draft.editingId ?? null);
+    setDialogOpen(true);
+    toast.info("Se restauró tu borrador de personal");
+  }, []);
+
+  const { clearDraft } = usePersistentDraft({
+    storageKey: "admin:staff:draft",
+    enabled: dialogOpen,
+    value: { form, editingId },
+    isEmpty: (draft) => !draft.editingId && JSON.stringify(draft.form) === JSON.stringify(emptyForm),
+    onRestore: restoreDraft,
+  });
+
+  const openNew = () => {
+    clearDraft();
+    setForm(emptyForm);
+    setEditingId(null);
+    setDialogOpen(true);
+  };
 
   const { data: staff = [], isLoading } = useQuery({
     queryKey: ["staff_members"],
@@ -87,6 +111,7 @@ const StaffPage = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff_members"] });
       toast.success(editingId ? "Personal actualizado" : "Personal registrado");
+      clearDraft();
       setForm(emptyForm); setEditingId(null); setDialogOpen(false);
     },
     onError: () => toast.error("Error al guardar"),
@@ -179,9 +204,9 @@ const StaffPage = () => {
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <Users className="h-6 w-6 text-primary" /> Gestión de Personal
         </h1>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditingId(null); setForm(emptyForm); } }}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="h-4 w-4" /> Agregar Personal</Button>
+            <Button className="gap-2" onClick={openNew}><Plus className="h-4 w-4" /> Agregar Personal</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editingId ? "Editar" : "Registrar"} Personal</DialogTitle></DialogHeader>

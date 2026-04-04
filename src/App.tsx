@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider, useTheme } from "@/features/theme/ThemeProvider";
 import SeasonalParticles from "@/features/theme/SeasonalParticles";
 import ProtectedRoute from "@/features/auth/components/ProtectedRoute";
+import { AuthProvider } from "@/features/auth/hooks/useAuth";
 
 // Shop pages
 import HomePage from "@/features/shop/pages/HomePage";
@@ -76,58 +77,60 @@ const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => (
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <SeasonalWrapper>
-          <BrowserRouter>
-            <Routes>
-              {/* Shop */}
-              <Route path="/" element={<HomePage />} />
-              <Route path="/catalogo" element={<CatalogPage />} />
-              <Route path="/producto/:slug" element={<ProductDetailPage />} />
-              <Route path="/nosotros" element={<AboutPage />} />
-              <Route path="/contacto" element={<ContactPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/cuenta" element={<AccountPage />} />
+    <AuthProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <SeasonalWrapper>
+            <BrowserRouter>
+              <Routes>
+                {/* Shop */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/catalogo" element={<CatalogPage />} />
+                <Route path="/producto/:slug" element={<ProductDetailPage />} />
+                <Route path="/nosotros" element={<AboutPage />} />
+                <Route path="/contacto" element={<ContactPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/cuenta" element={<AccountPage />} />
 
-              {/* Auth */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/registro" element={<RegisterPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+                {/* Auth */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/registro" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-              {/* Admin */}
-              <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin", "moderator"]}><AdminLayout /></ProtectedRoute>}>
-                <Route index element={<DashboardPage />} />
-                <Route path="recepcion" element={<ReceptionPage />} />
-                <Route path="productos" element={<ProductsPage />} />
-                <Route path="pedidos" element={<OrdersPage />} />
-                <Route path="soporte" element={<SupportPage />} />
-                <Route path="ventas/pos" element={<SalesPage />} />
+                {/* Admin */}
+                <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin", "moderator"]}><AdminLayout /></ProtectedRoute>}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="recepcion" element={<ReceptionPage />} />
+                  <Route path="productos" element={<ProductsPage />} />
+                  <Route path="pedidos" element={<OrdersPage />} />
+                  <Route path="soporte" element={<SupportPage />} />
+                  <Route path="ventas/pos" element={<SalesPage />} />
 
-                <Route path="categorias" element={<AdminOnlyRoute><CategoriesPage /></AdminOnlyRoute>} />
-                <Route path="vitrinas" element={<AdminOnlyRoute><VitrinasPage /></AdminOnlyRoute>} />
-                <Route path="marcas" element={<AdminOnlyRoute><BrandsPage /></AdminOnlyRoute>} />
-                <Route path="banners" element={<AdminOnlyRoute><BannersPage /></AdminOnlyRoute>} />
-                <Route path="empresa" element={<AdminOnlyRoute><CompanyPage /></AdminOnlyRoute>} />
-                <Route path="roles" element={<AdminOnlyRoute><RolesPage /></AdminOnlyRoute>} />
-                <Route path="personal" element={<AdminOnlyRoute><StaffPage /></AdminOnlyRoute>} />
-                <Route path="asistencias" element={<AttendancePage />} />
-                <Route path="contabilidad" element={<AdminOnlyRoute><AccountingPage /></AdminOnlyRoute>} />
-                <Route path="clientes" element={<CustomersPage />} />
-                <Route path="agenda" element={<AppointmentsPage />} />
-                <Route path="configuracion" element={<AdminOnlyRoute><SettingsPage /></AdminOnlyRoute>} />
-                <Route path="pagos" element={<AdminOnlyRoute><PaymentAccountsPage /></AdminOnlyRoute>} />
-              </Route>
+                  <Route path="categorias" element={<AdminOnlyRoute><CategoriesPage /></AdminOnlyRoute>} />
+                  <Route path="vitrinas" element={<AdminOnlyRoute><VitrinasPage /></AdminOnlyRoute>} />
+                  <Route path="marcas" element={<AdminOnlyRoute><BrandsPage /></AdminOnlyRoute>} />
+                  <Route path="banners" element={<AdminOnlyRoute><BannersPage /></AdminOnlyRoute>} />
+                  <Route path="empresa" element={<AdminOnlyRoute><CompanyPage /></AdminOnlyRoute>} />
+                  <Route path="roles" element={<AdminOnlyRoute><RolesPage /></AdminOnlyRoute>} />
+                  <Route path="personal" element={<AdminOnlyRoute><StaffPage /></AdminOnlyRoute>} />
+                  <Route path="asistencias" element={<AttendancePage />} />
+                  <Route path="contabilidad" element={<AdminOnlyRoute><AccountingPage /></AdminOnlyRoute>} />
+                  <Route path="clientes" element={<CustomersPage />} />
+                  <Route path="agenda" element={<AppointmentsPage />} />
+                  <Route path="configuracion" element={<AdminOnlyRoute><SettingsPage /></AdminOnlyRoute>} />
+                  <Route path="pagos" element={<AdminOnlyRoute><PaymentAccountsPage /></AdminOnlyRoute>} />
+                </Route>
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </SeasonalWrapper>
-      </TooltipProvider>
-    </ThemeProvider>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </SeasonalWrapper>
+        </TooltipProvider>
+      </ThemeProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

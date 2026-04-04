@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import PrintReceipt from "@/features/admin/components/PrintReceipt";
 import DataImportExport from "@/features/admin/components/DataImportExport";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { notifyAllStaff } from "@/lib/notifications";
+import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const RECEPTION_COLUMNS = [
   { key: "customer_name", label: "Cliente" }, { key: "customer_phone", label: "Telefono" },
@@ -56,6 +57,29 @@ const ReceptionPage = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const restoreDraft = useCallback((draft: { editingId: string | null; form: typeof emptyForm }) => {
+    if (!draft?.form) return;
+    setForm({ ...emptyForm, ...draft.form });
+    setEditingId(draft.editingId ?? null);
+    setDialogOpen(true);
+    toast.info("Se restauró tu borrador de recepción técnica");
+  }, []);
+
+  const { clearDraft } = usePersistentDraft({
+    storageKey: "admin:reception:draft",
+    enabled: dialogOpen,
+    value: { form, editingId },
+    isEmpty: (draft) => !draft.editingId && JSON.stringify(draft.form) === JSON.stringify(emptyForm),
+    onRestore: restoreDraft,
+  });
+
+  const openNew = () => {
+    clearDraft();
+    setEditingId(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
 
   // Fetch staff to show received_by name
   const { data: staffMap = {} } = useQuery({
@@ -121,6 +145,7 @@ const ReceptionPage = () => {
           excludeUserId: user?.id,
         });
       }
+      clearDraft();
       setForm(emptyForm);
       setEditingId(null);
       setDialogOpen(false);
@@ -196,9 +221,9 @@ const ReceptionPage = () => {
         <h1 className="text-2xl font-display font-bold flex items-center gap-2">
           <ClipboardList className="h-6 w-6 text-primary" /> Recepción Técnica
         </h1>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o && document.activeElement?.tagName !== "BODY") return; setDialogOpen(o); if (!o) { setEditingId(null); setForm(emptyForm); } }} modal={false}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen} modal={false}>
           <DialogTrigger asChild>
-            <Button className="gap-2"><Plus className="h-4 w-4" /> Nueva Orden</Button>
+            <Button className="gap-2" onClick={openNew}><Plus className="h-4 w-4" /> Nueva Orden</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
