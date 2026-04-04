@@ -859,15 +859,6 @@ const AccountingPage = () => {
                           )}
                         </React.Fragment>
                       ))}
-                                    <Label className="text-[10px] text-muted-foreground">Diagnóstico</Label>
-                                    <Input value={item.diagnostico || ""} onChange={e => updateItem(idx, { diagnostico: e.target.value })} placeholder="FALLA FISICA..." className="h-7 text-xs" />
-                                  </div>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </React.Fragment>
-                      ))}
                     </TableBody>
                   </Table>
                 </div>
