@@ -752,12 +752,59 @@ const AccountingPage = () => {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Input
-                                value={item.descripcion}
-                                onChange={e => updateItem(idx, { descripcion: e.target.value })}
-                                placeholder={item.item_type === "producto" ? "PC RYZEN 7..." : "MANTENIMIENTO..."}
-                                className="h-8 text-xs"
-                              />
+                              {item.item_type === "producto" ? (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" className="h-8 text-xs w-full justify-between font-normal">
+                                      {item.descripcion || "Seleccionar producto..."}
+                                      <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-[300px] p-0" align="start">
+                                    <Command>
+                                      <CommandInput placeholder="Buscar producto..." className="h-8 text-xs" />
+                                      <CommandList>
+                                        <CommandEmpty>No encontrado</CommandEmpty>
+                                        <CommandGroup heading="Inventario">
+                                          {products.map((p: any) => (
+                                            <CommandItem key={p.id} value={p.name} onSelect={() => {
+                                              updateItem(idx, { descripcion: p.name, precio_unitario: Number(p.price), referencia_id: p.id });
+                                            }}>
+                                              <Check className={`h-3 w-3 mr-2 ${item.referencia_id === p.id ? "opacity-100" : "opacity-0"}`} />
+                                              <div className="flex-1">
+                                                <span className="text-xs font-medium">{p.name}</span>
+                                                {p.sku && <span className="text-[10px] text-muted-foreground ml-2">SKU: {p.sku}</span>}
+                                              </div>
+                                              <span className="text-xs font-bold text-primary">S/.{Number(p.price).toFixed(2)}</span>
+                                              <span className="text-[10px] text-muted-foreground ml-1">({p.stock} uds)</span>
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                        <CommandGroup heading="Personalizado">
+                                          <CommandItem onSelect={() => updateItem(idx, { referencia_id: null })}>
+                                            <Package className="h-3 w-3 mr-2" /> Escribir manualmente
+                                          </CommandItem>
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                <Select value={item.descripcion} onValueChange={v => updateItem(idx, { descripcion: v })}>
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipo de servicio..." /></SelectTrigger>
+                                  <SelectContent>
+                                    {SERVICE_TYPES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              {item.item_type === "producto" && !item.referencia_id && (
+                                <Input
+                                  value={item.descripcion}
+                                  onChange={e => updateItem(idx, { descripcion: e.target.value })}
+                                  placeholder="Escribir nombre del producto..."
+                                  className="h-7 text-xs mt-1"
+                                />
+                              )}
                             </TableCell>
                             <TableCell>
                               <Input
@@ -791,13 +838,27 @@ const AccountingPage = () => {
                                 <div className="grid grid-cols-3 gap-2 py-1">
                                   <div>
                                     <Label className="text-[10px] text-muted-foreground">Responsable</Label>
-                                    <Input value={item.responsable || ""} onChange={e => updateItem(idx, { responsable: e.target.value })} placeholder="JERSON, EDZON..." className="h-7 text-xs" />
+                                    <Select value={item.responsable || ""} onValueChange={v => updateItem(idx, { responsable: v })}>
+                                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                                      <SelectContent>
+                                        {staffMembers.map((s: any) => <SelectItem key={s.id} value={s.full_name}>{s.full_name}</SelectItem>)}
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                   <div>
                                     <Label className="text-[10px] text-muted-foreground">Tipo de Equipo</Label>
                                     <Input value={item.tipo_equipo || ""} onChange={e => updateItem(idx, { tipo_equipo: e.target.value })} placeholder="LAPTOP, IMPRESORA..." className="h-7 text-xs" />
                                   </div>
                                   <div>
+                                    <Label className="text-[10px] text-muted-foreground">Diagnóstico</Label>
+                                    <Input value={item.diagnostico || ""} onChange={e => updateItem(idx, { diagnostico: e.target.value })} placeholder="FALLA FISICA..." className="h-7 text-xs" />
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      ))}
                                     <Label className="text-[10px] text-muted-foreground">Diagnóstico</Label>
                                     <Input value={item.diagnostico || ""} onChange={e => updateItem(idx, { diagnostico: e.target.value })} placeholder="FALLA FISICA..." className="h-7 text-xs" />
                                   </div>
