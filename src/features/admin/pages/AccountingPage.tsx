@@ -683,7 +683,7 @@ const AccountingPage = () => {
       </Tabs>
 
       {/* ─── NEW/EDIT TRANSACTION DIALOG ─── */}
-      <Dialog open={formOpen} onOpenChange={(o) => { if (!o && document.activeElement?.tagName !== "BODY") return; if (!o) closeForm(); else setFormOpen(true); }} modal={false}>
+      <Dialog open={formOpen} onOpenChange={(o) => { if (!o) closeForm(); else setFormOpen(true); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -695,7 +695,16 @@ const AccountingPage = () => {
             {/* Basic info */}
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Fecha *</Label><Input type="date" required value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} /></div>
-              <div><Label>Emitido Por</Label><Input value={form.emitido_por} onChange={e => setForm({ ...form, emitido_por: e.target.value })} placeholder="EDZON, JERSON..." /></div>
+              <div>
+                <Label>Atendido Por</Label>
+                <Select value={form.emitido_por} onValueChange={v => setForm({ ...form, emitido_por: v })}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar personal" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Personal de Infocom">Personal de Infocom</SelectItem>
+                    {staffMembers.map((s: any) => <SelectItem key={s.id} value={s.full_name}>{s.full_name} — {s.position}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Cliente</Label><Input value={form.cliente_nombre} onChange={e => setForm({ ...form, cliente_nombre: e.target.value })} placeholder="Nombre del cliente" /></div>
