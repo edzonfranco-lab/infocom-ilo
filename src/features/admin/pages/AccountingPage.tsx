@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,10 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
-  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List
+  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
@@ -102,7 +104,7 @@ const AccountingPage = () => {
     cliente_nombre: "",
     cliente_telefono: "",
     notas: "",
-    emitido_por: "",
+    emitido_por: "Personal de Infocom",
   });
   const [items, setItems] = useState<TransactionItem[]>([]);
 
@@ -125,6 +127,45 @@ const AccountingPage = () => {
       return data as Transaction[];
     },
   });
+
+  // Products from inventory
+  const { data: products = [] } = useQuery({
+    queryKey: ["products_for_accounting"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("products").select("id, name, price, stock, sku").eq("is_active", true).order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Staff members for dropdowns
+  const { data: staffMembers = [] } = useQuery({
+    queryKey: ["staff_for_accounting"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("staff_members").select("id, full_name, position").eq("is_active", true).order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Service types (categories that represent services)
+  const SERVICE_TYPES = [
+    "Mantenimiento preventivo",
+    "Mantenimiento correctivo", 
+    "Formateo e instalación de S.O.",
+    "Reparación de hardware",
+    "Reparación de impresora",
+    "Cambio de pantalla",
+    "Cambio de teclado",
+    "Cambio de batería",
+    "Limpieza interna",
+    "Instalación de software",
+    "Recuperación de datos",
+    "Diagnóstico técnico",
+    "Configuración de red",
+    "Ensamblaje de PC",
+    "Otro servicio",
+  ];
 
   // ─── Filtered views ───────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -294,7 +335,7 @@ const AccountingPage = () => {
   const closeForm = () => {
     setFormOpen(false);
     setEditingId(null);
-    setForm({ fecha: new Date().toISOString().split("T")[0], cliente_nombre: "", cliente_telefono: "", notas: "", emitido_por: "" });
+    setForm({ fecha: new Date().toISOString().split("T")[0], cliente_nombre: "", cliente_telefono: "", notas: "", emitido_por: "Personal de Infocom" });
     setItems([]);
   };
 
@@ -642,7 +683,7 @@ const AccountingPage = () => {
       </Tabs>
 
       {/* ─── NEW/EDIT TRANSACTION DIALOG ─── */}
-      <Dialog open={formOpen} onOpenChange={(o) => { if (!o && document.activeElement?.tagName !== "BODY") return; if (!o) closeForm(); else setFormOpen(true); }} modal={false}>
+      <Dialog open={formOpen} onOpenChange={(o) => { if (!o) closeForm(); else setFormOpen(true); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -654,7 +695,16 @@ const AccountingPage = () => {
             {/* Basic info */}
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Fecha *</Label><Input type="date" required value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} /></div>
-              <div><Label>Emitido Por</Label><Input value={form.emitido_por} onChange={e => setForm({ ...form, emitido_por: e.target.value })} placeholder="EDZON, JERSON..." /></div>
+              <div>
+                <Label>Atendido Por</Label>
+                <Select value={form.emitido_por} onValueChange={v => setForm({ ...form, emitido_por: v })}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar personal" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Personal de Infocom">Personal de Infocom</SelectItem>
+                    {staffMembers.map((s: any) => <SelectItem key={s.id} value={s.full_name}>{s.full_name} — {s.position}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Cliente</Label><Input value={form.cliente_nombre} onChange={e => setForm({ ...form, cliente_nombre: e.target.value })} placeholder="Nombre del cliente" /></div>
@@ -702,12 +752,59 @@ const AccountingPage = () => {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Input
-                                value={item.descripcion}
-                                onChange={e => updateItem(idx, { descripcion: e.target.value })}
-                                placeholder={item.item_type === "producto" ? "PC RYZEN 7..." : "MANTENIMIENTO..."}
-                                className="h-8 text-xs"
-                              />
+                              {item.item_type === "producto" ? (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" className="h-8 text-xs w-full justify-between font-normal">
+                                      {item.descripcion || "Seleccionar producto..."}
+                                      <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-[300px] p-0" align="start">
+                                    <Command>
+                                      <CommandInput placeholder="Buscar producto..." className="h-8 text-xs" />
+                                      <CommandList>
+                                        <CommandEmpty>No encontrado</CommandEmpty>
+                                        <CommandGroup heading="Inventario">
+                                          {products.map((p: any) => (
+                                            <CommandItem key={p.id} value={p.name} onSelect={() => {
+                                              updateItem(idx, { descripcion: p.name, precio_unitario: Number(p.price), referencia_id: p.id });
+                                            }}>
+                                              <Check className={`h-3 w-3 mr-2 ${item.referencia_id === p.id ? "opacity-100" : "opacity-0"}`} />
+                                              <div className="flex-1">
+                                                <span className="text-xs font-medium">{p.name}</span>
+                                                {p.sku && <span className="text-[10px] text-muted-foreground ml-2">SKU: {p.sku}</span>}
+                                              </div>
+                                              <span className="text-xs font-bold text-primary">S/.{Number(p.price).toFixed(2)}</span>
+                                              <span className="text-[10px] text-muted-foreground ml-1">({p.stock} uds)</span>
+                                            </CommandItem>
+                                          ))}
+                                        </CommandGroup>
+                                        <CommandGroup heading="Personalizado">
+                                          <CommandItem onSelect={() => updateItem(idx, { referencia_id: null })}>
+                                            <Package className="h-3 w-3 mr-2" /> Escribir manualmente
+                                          </CommandItem>
+                                        </CommandGroup>
+                                      </CommandList>
+                                    </Command>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                <Select value={item.descripcion} onValueChange={v => updateItem(idx, { descripcion: v })}>
+                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipo de servicio..." /></SelectTrigger>
+                                  <SelectContent>
+                                    {SERVICE_TYPES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              {item.item_type === "producto" && !item.referencia_id && (
+                                <Input
+                                  value={item.descripcion}
+                                  onChange={e => updateItem(idx, { descripcion: e.target.value })}
+                                  placeholder="Escribir nombre del producto..."
+                                  className="h-7 text-xs mt-1"
+                                />
+                              )}
                             </TableCell>
                             <TableCell>
                               <Input
@@ -741,7 +838,12 @@ const AccountingPage = () => {
                                 <div className="grid grid-cols-3 gap-2 py-1">
                                   <div>
                                     <Label className="text-[10px] text-muted-foreground">Responsable</Label>
-                                    <Input value={item.responsable || ""} onChange={e => updateItem(idx, { responsable: e.target.value })} placeholder="JERSON, EDZON..." className="h-7 text-xs" />
+                                    <Select value={item.responsable || ""} onValueChange={v => updateItem(idx, { responsable: v })}>
+                                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                                      <SelectContent>
+                                        {staffMembers.map((s: any) => <SelectItem key={s.id} value={s.full_name}>{s.full_name}</SelectItem>)}
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                   <div>
                                     <Label className="text-[10px] text-muted-foreground">Tipo de Equipo</Label>

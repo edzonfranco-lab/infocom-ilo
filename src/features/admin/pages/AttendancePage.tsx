@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight, Download, Clock, UserCheck, Filter, AlertTriangle } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Clock, UserCheck, Filter, AlertTriangle, UserPlus } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -447,6 +447,62 @@ const AttendancePage = () => {
               <Button variant="outline" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>
+
+          {/* Admin quick check-in for any staff */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <UserPlus className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-sm">Marcar Asistencia Rápida</h3>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                {staff.map((s: any) => {
+                  const todayDate = new Date().toISOString().split("T")[0];
+                  const rec = recordMap[s.id]?.[todayDate];
+                  const hasIn = !!rec?.check_in_time;
+                  const hasOut = !!rec?.check_out_time;
+                  const nowTime = `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`;
+                  
+                  return (
+                    <div key={s.id} className={`rounded-lg p-3 text-center border transition-colors ${hasOut ? "bg-success/10 border-success/30" : hasIn ? "bg-primary/10 border-primary/30" : "bg-secondary/30 border-border"}`}>
+                      <p className="text-xs font-semibold truncate">{s.full_name}</p>
+                      <p className="text-[10px] text-muted-foreground">{s.position}</p>
+                      {hasIn && <p className="text-[10px] font-mono mt-1">🕐 {rec?.check_in_time?.slice(0,5)}{hasOut ? ` → ${rec?.check_out_time?.slice(0,5)}` : ""}</p>}
+                      <Button
+                        size="sm"
+                        variant={hasOut ? "outline" : hasIn ? "secondary" : "default"}
+                        className="mt-2 h-7 text-[10px] w-full"
+                        disabled={hasOut}
+                        onClick={() => {
+                          const dayOfWeek = new Date().getDay();
+                          const todaySchedules = getScheduleForDay(s.id, dayOfWeek);
+                          if (hasIn && !hasOut) {
+                            toggleMutation.mutate({ staffId: s.id, date: todayDate, status: "A", check_out: nowTime });
+                            toast.success(`Salida de ${s.full_name}: ${nowTime}`);
+                          } else if (!hasIn) {
+                            let isLate = false;
+                            if (todaySchedules.length > 0) {
+                              const earliest = todaySchedules.reduce((min: string, sc: any) => sc.start_time < min ? sc.start_time : min, todaySchedules[0].start_time);
+                              isLate = nowTime > earliest;
+                            }
+                            toggleMutation.mutate({ staffId: s.id, date: todayDate, status: isLate ? "T" : "A", check_in: nowTime });
+                            toast.success(`Entrada de ${s.full_name}: ${nowTime}${isLate ? " (Tardanza)" : ""}`);
+                          }
+                        }}
+                      >
+                        {hasOut ? "✅ Completo" : hasIn ? "Marcar Salida" : "Marcar Entrada"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-3 p-2 bg-secondary/30 rounded-lg">
+                <p className="text-[10px] text-muted-foreground text-center">
+                  🏢 Horario de la empresa: <strong>9:00 AM - 1:00 PM</strong> y <strong>3:00 PM - 8:00 PM</strong> · Haz clic en cada personal para registrar entrada/salida
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Filters */}
           <div className="flex gap-3 flex-wrap items-center">
