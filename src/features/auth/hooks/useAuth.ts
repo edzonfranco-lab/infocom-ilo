@@ -1,9 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { createContext, useState, useEffect, useCallback, useContext, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import type { AppRole } from "@/lib/types";
 
-export function useAuth() {
+interface AuthContextValue {
+  isAdmin: boolean;
+  loading: boolean;
+  roles: AppRole[];
+  session: Session | null;
+  signOut: () => Promise<void>;
+  user: User | null;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -14,12 +25,18 @@ export function useAuth() {
     if (!silent) setRolesLoading(true);
 
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId);
 
+      if (error) throw error;
+
       setRoles((data || []).map((r: any) => r.role as AppRole));
+    } catch {
+      if (!silent) {
+        setRoles([]);
+      }
     } finally {
       if (!silent) setRolesLoading(false);
     }
@@ -57,28 +74,6 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, [fetchRoles]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const refreshRolesSilently = () => {
-      void fetchRoles(user.id, true);
-    };
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") refreshRolesSilently();
-    };
-
-    const interval = window.setInterval(refreshRolesSilently, 30000);
-    window.addEventListener("focus", refreshRolesSilently);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    return () => {
-      window.clearInterval(interval);
-      window.removeEventListener("focus", refreshRolesSilently);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, [user?.id, fetchRoles]);
-
   const isAdmin = roles.includes("admin");
 
   const signOut = useCallback(async () => {
@@ -88,5 +83,24 @@ export function useAuth() {
   // loading is true until both auth AND roles are resolved
   const isLoading = loading || rolesLoading;
 
-  return { user, session, loading: isLoading, roles, isAdmin, signOut };
+  const value = useMemo<AuthContextValue>(() => ({
+    user,
+    session,
+    loading: isLoading,
+    roles,
+    isAdmin,
+    signOut,
+  }), [user, session, isLoading, roles, isAdmin, signOut]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+
+  return context;
 }

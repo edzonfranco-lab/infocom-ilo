@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,13 +10,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Tags, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { usePersistentDraft } from "@/hooks/use-persistent-draft";
+
+const emptyBrandForm = { name: "", slug: "", logo_url: "", is_active: true };
 
 const BrandsPage = () => {
   const [brands, setBrands] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", logo_url: "", is_active: true });
+  const [form, setForm] = useState(emptyBrandForm);
   const [uploading, setUploading] = useState(false);
+
+  const restoreDraft = useCallback((draft: { editing: any; form: typeof emptyBrandForm }) => {
+    if (!draft?.form) return;
+    setForm({ ...emptyBrandForm, ...draft.form });
+    setEditing(draft.editing ?? null);
+    setDialogOpen(true);
+    toast.info("Se restauró tu borrador de marca");
+  }, []);
+
+  const { clearDraft } = usePersistentDraft({
+    storageKey: "admin:brands:draft",
+    enabled: dialogOpen,
+    value: { form, editing },
+    isEmpty: (draft) => !draft.editing && JSON.stringify(draft.form) === JSON.stringify(emptyBrandForm),
+    onRestore: restoreDraft,
+  });
 
   const fetchAll = async () => {
     const { data } = await supabase.from("brands").select("*").order("sort_order");
@@ -26,7 +45,7 @@ const BrandsPage = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", slug: "", logo_url: "", is_active: true });
+    setForm(emptyBrandForm);
     setEditing(null);
   };
 
@@ -39,6 +58,7 @@ const BrandsPage = () => {
   };
 
   const openNew = () => {
+    clearDraft();
     resetForm();
     setDialogOpen(true);
   };
@@ -78,6 +98,7 @@ const BrandsPage = () => {
       await supabase.from("brands").insert(payload);
       toast.success("Marca creada");
     }
+    clearDraft();
     setDialogOpen(false); resetForm(); fetchAll();
   };
 
@@ -101,7 +122,7 @@ const BrandsPage = () => {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Gestiona las marcas del carrusel</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2" onClick={openNew}><Plus className="h-4 w-4" /> Nueva Marca</Button>
           </DialogTrigger>

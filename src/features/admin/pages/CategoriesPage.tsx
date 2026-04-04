@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { Plus, Pencil, Trash2, FileUp, FileText, ExternalLink, X, Loader2,
   Globe, Lock, Microchip, Radio, Disc, MonitorSpeaker
 } from "lucide-react";
 import { toast } from "sonner";
+import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const ICON_OPTIONS: { key: string; label: string; icon: any }[] = [
   { key: "laptop", label: "Laptop", icon: Laptop },
@@ -65,15 +66,33 @@ const getIconComponent = (key: string) => {
   return found?.icon || Package;
 };
 
+const emptyCategoryForm = { name: "", slug: "", icon: "", parent_id: "", is_active: true, catalog_url: "" };
+
 const CategoriesPage = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", slug: "", icon: "", parent_id: "", is_active: true, catalog_url: "" });
+  const [form, setForm] = useState(emptyCategoryForm);
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
   const [iconSearch, setIconSearch] = useState("");
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const pdfRef = useRef<HTMLInputElement>(null);
+
+  const restoreDraft = useCallback((draft: { editing: any; form: typeof emptyCategoryForm }) => {
+    if (!draft?.form) return;
+    setForm({ ...emptyCategoryForm, ...draft.form });
+    setEditing(draft.editing ?? null);
+    setDialogOpen(true);
+    toast.info("Se restauró tu borrador de categoría");
+  }, []);
+
+  const { clearDraft } = usePersistentDraft({
+    storageKey: "admin:categories:draft",
+    enabled: dialogOpen,
+    value: { form, editing },
+    isEmpty: (draft) => !draft.editing && JSON.stringify(draft.form) === JSON.stringify(emptyCategoryForm),
+    onRestore: restoreDraft,
+  });
 
   const fetchAll = async () => {
     const { data } = await supabase.from("categories").select("*").order("sort_order");
@@ -82,7 +101,13 @@ const CategoriesPage = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
-  const resetForm = () => { setForm({ name: "", slug: "", icon: "", parent_id: "", is_active: true, catalog_url: "" }); setEditing(null); };
+  const resetForm = () => { setForm(emptyCategoryForm); setEditing(null); };
+
+  const openNew = () => {
+    clearDraft();
+    resetForm();
+    setDialogOpen(true);
+  };
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
@@ -104,6 +129,7 @@ const CategoriesPage = () => {
       if (error) { toast.error(error.message); return; }
       toast.success("Categoría creada");
     }
+    clearDraft();
     setDialogOpen(false); resetForm(); fetchAll();
   };
   const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,8 +169,8 @@ const CategoriesPage = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-display font-bold">Categorías ({categories.length})</h1>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
-          <DialogTrigger asChild><Button className="glow-green-sm gap-2"><Plus className="h-4 w-4" /> Nueva</Button></DialogTrigger>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild><Button className="glow-green-sm gap-2" onClick={openNew}><Plus className="h-4 w-4" /> Nueva</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Editar" : "Nueva"} Categoría</DialogTitle></DialogHeader>
             <div className="space-y-4">

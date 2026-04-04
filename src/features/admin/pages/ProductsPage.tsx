@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,16 @@ import { Plus, Pencil, Trash2, Search, Package, Upload, X, Loader2, GripVertical
 import { CURRENCY } from "@/lib/types";
 import { toast } from "sonner";
 import DataImportExport from "@/features/admin/components/DataImportExport";
+import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const BUCKET = "product-images";
+const emptyProductForm = {
+  name: "", slug: "", description: "", short_description: "", sku: "",
+  price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5",
+  category_id: "", brand_id: "", images: [] as string[],
+  is_active: true, is_featured: false, is_new: false, discount_percent: "0",
+  vitrina_id: "", vitrina_floor: "",
+};
 
 const ProductImageUploader = ({ images, onChange }: { images: string[]; onChange: (imgs: string[]) => void }) => {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -142,12 +150,22 @@ const ProductsPage = () => {
   const [filterCategory, setFilterCategory] = useState("");
 
   // Form
-  const [form, setForm] = useState({
-    name: "", slug: "", description: "", short_description: "", sku: "",
-    price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5",
-    category_id: "", brand_id: "", images: [] as string[],
-    is_active: true, is_featured: false, is_new: false, discount_percent: "0",
-    vitrina_id: "", vitrina_floor: "",
+  const [form, setForm] = useState(emptyProductForm);
+
+  const restoreDraft = useCallback((draft: { editing: any; form: typeof emptyProductForm }) => {
+    if (!draft?.form) return;
+    setForm({ ...emptyProductForm, ...draft.form });
+    setEditing(draft.editing ?? null);
+    setDialogOpen(true);
+    toast.info("Se restauró tu borrador de producto");
+  }, []);
+
+  const { clearDraft } = usePersistentDraft({
+    storageKey: "admin:products:draft",
+    enabled: dialogOpen,
+    value: { form, editing },
+    isEmpty: (draft) => !draft.editing && JSON.stringify(draft.form) === JSON.stringify(emptyProductForm),
+    onRestore: restoreDraft,
   });
 
   const fetchAll = async () => {
@@ -167,8 +185,14 @@ const ProductsPage = () => {
   useEffect(() => { fetchAll(); }, []);
 
   const resetForm = () => {
-    setForm({ name: "", slug: "", description: "", short_description: "", sku: "", price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5", category_id: "", brand_id: "", images: [], is_active: true, is_featured: false, is_new: false, discount_percent: "0", vitrina_id: "", vitrina_floor: "" });
+    setForm(emptyProductForm);
     setEditing(null);
+  };
+
+  const openNew = () => {
+    clearDraft();
+    resetForm();
+    setDialogOpen(true);
   };
 
   const openEdit = (p: any) => {
@@ -207,6 +231,7 @@ const ProductsPage = () => {
       if (error) { toast.error(error.message); return; }
       toast.success("Producto creado");
     }
+    clearDraft();
     setDialogOpen(false);
     resetForm();
     fetchAll();
@@ -234,9 +259,9 @@ const ProductsPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-display font-bold">Productos ({products.length})</h1>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="glow-green-sm gap-2"><Plus className="h-4 w-4" /> Nuevo Producto</Button>
+            <Button className="glow-green-sm gap-2" onClick={openNew}><Plus className="h-4 w-4" /> Nuevo Producto</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
