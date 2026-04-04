@@ -335,7 +335,7 @@ const AccountingPage = () => {
   const closeForm = () => {
     setFormOpen(false);
     setEditingId(null);
-    setForm({ fecha: new Date().toISOString().split("T")[0], cliente_nombre: "", cliente_telefono: "", notas: "", emitido_por: "" });
+    setForm({ fecha: new Date().toISOString().split("T")[0], cliente_nombre: "", cliente_telefono: "", notas: "", emitido_por: "Personal de Infocom" });
     setItems([]);
   };
 
