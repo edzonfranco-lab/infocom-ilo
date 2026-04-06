@@ -292,7 +292,7 @@ const ProductsPage = () => {
                     <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={() => setForm({ ...form, sku: generateSku() })} title="Generar SKU">🔄</Button>
                   </div>
                 </div>
-                <div className="space-y-2"><Label>Precio Original</Label><Input type="number" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} /></div>
+                <div className="space-y-2"><Label>Precio *</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Precio Costo</Label><Input type="number" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Stock</Label><Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Stock Mínimo</Label><Input type="number" value={form.min_stock} onChange={(e) => setForm({ ...form, min_stock: e.target.value })} /></div>
