@@ -2,7 +2,8 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings,
   ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign,
-  Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid, UserCheck, CalendarClock, Bell
+  Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid, UserCheck, CalendarClock, Bell,
+  Truck, PackagePlus, History
 } from "lucide-react";
 import NotificationBell from "@/features/admin/components/NotificationBell";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,14 @@ const allNavItems: NavItem[] = [
       { to: "/admin/vitrinas", icon: LayoutGrid, label: "Vitrinas", roles: ["admin"] },
       { to: "/admin/categorias", icon: FolderTree, label: "Categorías", roles: ["admin"] },
       { to: "/admin/marcas", icon: Tags, label: "Marcas", roles: ["admin"] },
+      { to: "/admin/kardex", icon: History, label: "Kardex", roles: ["admin", "moderator"] },
+    ],
+  },
+  {
+    to: "/admin/compras", icon: PackagePlus, label: "Compras", roles: ["admin", "moderator"],
+    children: [
+      { to: "/admin/compras", icon: PackagePlus, label: "Compras", end: true, roles: ["admin", "moderator"] },
+      { to: "/admin/proveedores", icon: Truck, label: "Proveedores", roles: ["admin"] },
     ],
   },
   {

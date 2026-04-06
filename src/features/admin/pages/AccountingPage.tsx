@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
-  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check
+  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
@@ -44,7 +44,7 @@ interface Transaction {
   fecha: string;
   cliente_nombre: string | null;
   cliente_telefono: string | null;
-  estado: "borrador" | "emitido" | "anulado";
+  estado: "borrador" | "emitido" | "anulado" | "devuelto";
   tipo_general: "venta" | "servicio" | "mixto";
   subtotal_productos: number;
   subtotal_servicios: number;
@@ -56,6 +56,9 @@ interface Transaction {
   anulado_en: string | null;
   anulado_por: string | null;
   motivo_anulacion: string | null;
+  devuelto_en: string | null;
+  devuelto_por: string | null;
+  motivo_devolucion: string | null;
   created_at: string;
   items?: TransactionItem[];
 }
@@ -69,9 +72,10 @@ const IMPORT_COLUMNS = [
 ];
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  borrador: { label: "Borrador", variant: "secondary" },
-  emitido: { label: "Emitido", variant: "default" },
-  anulado: { label: "Anulado", variant: "destructive" },
+  borrador: { label: "📝 Borrador", variant: "secondary" },
+  emitido: { label: "🟢 Emitido", variant: "default" },
+  anulado: { label: "🔴 Anulado", variant: "destructive" },
+  devuelto: { label: "🟡 Devuelto", variant: "outline" },
 };
 
 const TYPE_MAP: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -94,10 +98,12 @@ const AccountingPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [anularOpen, setAnularOpen] = useState(false);
+  const [devolverOpen, setDevolverOpen] = useState(false);
   const [serviceTypesOpen, setServiceTypesOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
   const [motivoAnulacion, setMotivoAnulacion] = useState("");
+  const [motivoDevolucion, setMotivoDevolucion] = useState("");
   const [newServiceName, setNewServiceName] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
 
@@ -303,13 +309,35 @@ const AccountingPage = () => {
         emitido_por: form.emitido_por || user?.email || "Admin",
       }).eq("id", id);
       if (error) throw error;
+
+      // Reduce stock for product items (salida)
+      const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", id).eq("item_type", "producto");
+      for (const it of txItems || []) {
+        if (it.referencia_id && it.referencia_id !== "service") {
+          const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
+          if (prod) {
+            const stockBefore = prod.stock;
+            const stockAfter = stockBefore - (it.cantidad || 0);
+            await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
+            await supabase.from("inventory_movements").insert({
+              product_id: it.referencia_id, product_name: it.descripcion,
+              movement_type: "salida", quantity: it.cantidad,
+              reference_type: "venta", reference_id: id,
+              stock_before: stockBefore, stock_after: stockAfter,
+              created_by: user?.id || null,
+            } as any);
+          }
+        }
+      }
+
       await supabase.from("transaction_history").insert({
         transaction_id: id, accion: "emitido", usuario_id: user?.id || null,
       });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-      toast.success("Transaccion emitida");
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Transacción emitida — Stock actualizado");
     },
   });
 
@@ -322,6 +350,27 @@ const AccountingPage = () => {
         motivo_anulacion: motivoAnulacion || null,
       }).eq("id", id);
       if (error) throw error;
+
+      // Return stock for product items (anulación)
+      const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", id).eq("item_type", "producto");
+      for (const it of txItems || []) {
+        if (it.referencia_id && it.referencia_id !== "service") {
+          const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
+          if (prod) {
+            const stockBefore = prod.stock;
+            const stockAfter = stockBefore + (it.cantidad || 0);
+            await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
+            await supabase.from("inventory_movements").insert({
+              product_id: it.referencia_id, product_name: it.descripcion,
+              movement_type: "anulacion", quantity: it.cantidad,
+              reference_type: "anulacion", reference_id: id,
+              stock_before: stockBefore, stock_after: stockAfter,
+              created_by: user?.id || null,
+            } as any);
+          }
+        }
+      }
+
       await supabase.from("transaction_history").insert({
         transaction_id: id, accion: "anulado",
         detalles: { motivo: motivoAnulacion },
@@ -330,9 +379,55 @@ const AccountingPage = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-      toast.success("Transaccion anulada");
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Transacción anulada — Stock restaurado");
       setAnularOpen(false);
       setMotivoAnulacion("");
+    },
+  });
+
+  const devolverMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("transactions").update({
+        estado: "devuelto" as any,
+        devuelto_en: new Date().toISOString(),
+        devuelto_por: user?.email || "Admin",
+        motivo_devolucion: motivoDevolucion || null,
+      } as any).eq("id", id);
+      if (error) throw error;
+
+      // Return stock for product items (devolución)
+      const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", id).eq("item_type", "producto");
+      for (const it of txItems || []) {
+        if (it.referencia_id && it.referencia_id !== "service") {
+          const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
+          if (prod) {
+            const stockBefore = prod.stock;
+            const stockAfter = stockBefore + (it.cantidad || 0);
+            await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
+            await supabase.from("inventory_movements").insert({
+              product_id: it.referencia_id, product_name: it.descripcion,
+              movement_type: "devolucion", quantity: it.cantidad,
+              reference_type: "devolucion", reference_id: id,
+              stock_before: stockBefore, stock_after: stockAfter,
+              created_by: user?.id || null,
+            } as any);
+          }
+        }
+      }
+
+      await supabase.from("transaction_history").insert({
+        transaction_id: id, accion: "devuelto",
+        detalles: { motivo: motivoDevolucion },
+        usuario_id: user?.id || null,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions", month, year] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Transacción marcada como devuelta — Stock restaurado");
+      setDevolverOpen(false);
+      setMotivoDevolucion("");
     },
   });
 
@@ -651,7 +746,7 @@ const AccountingPage = () => {
                   const displayedAmounts = getDisplayedAmounts(tx);
 
                   return (
-                    <TableRow key={tx.id} className={tx.estado === "anulado" ? "opacity-50" : ""}>
+                    <TableRow key={tx.id} className={tx.estado === "anulado" || tx.estado === "devuelto" ? "opacity-60" : ""}>
                       <TableCell className="whitespace-nowrap">
                         {new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE")}
                       </TableCell>
@@ -672,14 +767,16 @@ const AccountingPage = () => {
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>
                             <Eye className="h-3 w-3" />
                           </Button>
-                          {tx.estado !== "anulado" && (
+                          {/* Only borradores can be edited */}
+                          {tx.estado === "borrador" && (
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
                               <Pencil className="h-3 w-3" />
                             </Button>
                           )}
+                          {/* Borrador → Emitir or Delete */}
                           {tx.estado === "borrador" && (
                             <>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => emitirMutation.mutate(tx.id)}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => emitirMutation.mutate(tx.id)} title="Emitir">
                                 <FileText className="h-3 w-3" />
                               </Button>
                               {isAdmin && (
@@ -689,10 +786,16 @@ const AccountingPage = () => {
                               )}
                             </>
                           )}
+                          {/* Emitido → Anular or Devolver */}
                           {tx.estado === "emitido" && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setViewingTx(tx); setAnularOpen(true); }}>
-                              <Ban className="h-3 w-3" />
-                            </Button>
+                            <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setViewingTx(tx); setAnularOpen(true); }} title="Anular">
+                                <Ban className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-500" onClick={() => { setViewingTx(tx); setDevolverOpen(true); }} title="Devolver">
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -1065,7 +1168,11 @@ const AccountingPage = () => {
               {viewingTx.notas && <p className="text-sm text-muted-foreground"><span className="font-bold">Notas:</span> {viewingTx.notas}</p>}
 
               {viewingTx.estado === "anulado" && viewingTx.motivo_anulacion && (
-                <p className="text-sm text-destructive"><span className="font-bold">Motivo anulacion:</span> {viewingTx.motivo_anulacion}</p>
+                <p className="text-sm text-destructive"><span className="font-bold">Motivo anulación:</span> {viewingTx.motivo_anulacion}</p>
+              )}
+
+              {viewingTx.estado === "devuelto" && (viewingTx as any).motivo_devolucion && (
+                <p className="text-sm text-amber-600"><span className="font-bold">Motivo devolución:</span> {(viewingTx as any).motivo_devolucion}</p>
               )}
 
               {/* Print button for transactions */}
@@ -1135,7 +1242,7 @@ const AccountingPage = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Esta accion no puede deshacerse. La transaccion quedara registrada como anulada.</p>
+            <p className="text-sm text-muted-foreground">Esta acción no puede deshacerse. La transacción quedará como anulada y el stock se restaurará.</p>
             <div>
               <Label>Motivo de Anulacion</Label>
               <Input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Motivo..." />
@@ -1144,6 +1251,30 @@ const AccountingPage = () => {
               <Button variant="outline" className="flex-1" onClick={() => setAnularOpen(false)}>Cancelar</Button>
               <Button variant="destructive" className="flex-1" onClick={() => viewingTx && anularMutation.mutate(viewingTx.id)} disabled={anularMutation.isPending}>
                 Confirmar Anulacion
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── DEVOLVER DIALOG ─── */}
+      <Dialog open={devolverOpen} onOpenChange={setDevolverOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <RotateCcw className="h-5 w-5" /> Marcar como Devuelto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">La venta se contabiliza como devolución. El stock se restaurará.</p>
+            <div>
+              <Label>Motivo de Devolución</Label>
+              <Input value={motivoDevolucion} onChange={e => setMotivoDevolucion(e.target.value)} placeholder="Motivo..." />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setDevolverOpen(false)}>Cancelar</Button>
+              <Button variant="default" className="flex-1 bg-amber-600 hover:bg-amber-700" onClick={() => viewingTx && devolverMutation.mutate(viewingTx.id)} disabled={devolverMutation.isPending}>
+                Confirmar Devolución
               </Button>
             </div>
           </div>

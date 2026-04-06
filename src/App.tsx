@@ -46,6 +46,9 @@ import SalesPage from "@/features/admin/pages/SalesPage";
 import VitrinasPage from "@/features/admin/pages/VitrinasPage";
 import CustomersPage from "@/features/admin/pages/CustomersPage";
 import AppointmentsPage from "@/features/admin/pages/AppointmentsPage";
+import SuppliersPage from "@/features/admin/pages/SuppliersPage";
+import PurchasesPage from "@/features/admin/pages/PurchasesPage";
+import KardexPage from "@/features/admin/pages/KardexPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -112,6 +115,9 @@ const App = () => (
                   <Route path="categorias" element={<AdminOnlyRoute><CategoriesPage /></AdminOnlyRoute>} />
                   <Route path="vitrinas" element={<AdminOnlyRoute><VitrinasPage /></AdminOnlyRoute>} />
                   <Route path="marcas" element={<AdminOnlyRoute><BrandsPage /></AdminOnlyRoute>} />
+                  <Route path="kardex" element={<KardexPage />} />
+                  <Route path="compras" element={<PurchasesPage />} />
+                  <Route path="proveedores" element={<AdminOnlyRoute><SuppliersPage /></AdminOnlyRoute>} />
                   <Route path="banners" element={<AdminOnlyRoute><BannersPage /></AdminOnlyRoute>} />
                   <Route path="empresa" element={<AdminOnlyRoute><CompanyPage /></AdminOnlyRoute>} />
                   <Route path="roles" element={<AdminOnlyRoute><RolesPage /></AdminOnlyRoute>} />

@@ -17,7 +17,7 @@ import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const BUCKET = "product-images";
 const emptyProductForm = {
-  name: "", slug: "", description: "", short_description: "", sku: "",
+  name: "", slug: "", description: "", short_description: "", sku: "", modelo: "",
   price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5",
   category_id: "", brand_id: "", images: [] as string[],
   is_active: true, is_featured: false, is_new: false, discount_percent: "0",
@@ -198,7 +198,7 @@ const ProductsPage = () => {
   const openEdit = (p: any) => {
     setEditing(p);
     setForm({
-      name: p.name, slug: p.slug, description: p.description || "", short_description: p.short_description || "", sku: p.sku || "",
+      name: p.name, slug: p.slug, description: p.description || "", short_description: p.short_description || "", sku: p.sku || "", modelo: p.modelo || "",
       price: String(p.price), original_price: p.original_price ? String(p.original_price) : "", cost_price: p.cost_price ? String(p.cost_price) : "",
       stock: String(p.stock), min_stock: String(p.min_stock || 5), category_id: p.category_id || "", brand_id: p.brand_id || "",
       images: p.images || [],
@@ -210,11 +210,24 @@ const ProductsPage = () => {
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
+  // Auto-generate SKU: CAT-MARCA-DETALLE-001
+  const generateSku = () => {
+    const cat = categories.find((c: any) => c.id === form.category_id);
+    const brand = brands.find((b: any) => b.id === form.brand_id);
+    const catCode = cat ? cat.name.substring(0, 3).toUpperCase() : "GEN";
+    const brandCode = brand ? brand.name.substring(0, 3).toUpperCase() : "SIN";
+    const nameCode = form.name.substring(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const random = String(Math.floor(Math.random() * 999) + 1).padStart(3, "0");
+    return `${catCode}-${brandCode}-${nameCode}-${random}`;
+  };
+
   const handleSave = async () => {
     const slug = form.slug || generateSlug(form.name);
+    const sku = form.sku || generateSku();
     const payload = {
       name: form.name, slug, description: form.description || null, short_description: form.short_description || null,
-      sku: form.sku || null, price: Number(form.price), original_price: form.original_price ? Number(form.original_price) : null,
+      sku, modelo: form.modelo || null,
+      price: Number(form.price), original_price: form.original_price ? Number(form.original_price) : null,
       cost_price: form.cost_price ? Number(form.cost_price) : null, stock: Number(form.stock), min_stock: Number(form.min_stock),
       category_id: form.category_id || null, brand_id: form.brand_id || null,
       images: form.images,
@@ -270,8 +283,15 @@ const ProductsPage = () => {
             <div className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Nombre *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: generateSlug(e.target.value) })} /></div>
+                <div className="space-y-2"><Label>Modelo</Label><Input value={form.modelo} onChange={(e) => setForm({ ...form, modelo: e.target.value })} placeholder="Ej: DTX/64GB" /></div>
                 <div className="space-y-2"><Label>Slug</Label><Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></div>
-                <div className="space-y-2"><Label>SKU</Label><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} /></div>
+                <div className="space-y-2">
+                  <Label>SKU</Label>
+                  <div className="flex gap-1">
+                    <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="Auto-generado al guardar" />
+                    <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={() => setForm({ ...form, sku: generateSku() })} title="Generar SKU">🔄</Button>
+                  </div>
+                </div>
                 <div className="space-y-2"><Label>Precio *</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Precio Original</Label><Input type="number" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Precio Costo</Label><Input type="number" value={form.cost_price} onChange={(e) => setForm({ ...form, cost_price: e.target.value })} /></div>
@@ -418,8 +438,9 @@ const ProductsPage = () => {
                     <Badge variant="secondary" className="self-end text-[9px] px-1 py-0 -ml-3 mb-0.5">+{p.images.length - 1}</Badge>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
+                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm line-clamp-1">{p.name}</p>
+                  {p.modelo && <p className="text-xs text-muted-foreground">Modelo: {p.modelo}</p>}
                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                      <span className="text-sm font-bold text-primary">{CURRENCY}{Number(p.price).toLocaleString()}</span>
                      <span className="text-xs text-muted-foreground">Stock: {p.stock}</span>
