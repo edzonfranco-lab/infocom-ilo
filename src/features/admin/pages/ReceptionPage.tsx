@@ -260,6 +260,8 @@ const ReceptionPage = () => {
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><Wrench className="h-4 w-4" /> Diagnóstico Técnico</h3>
                   <Textarea value={form.diagnosis} onChange={e => setForm({...form, diagnosis: e.target.value})} placeholder="Diagnóstico del técnico..." rows={2} />
+                  <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><Package className="h-4 w-4" /> Repuestos Utilizados</h3>
+                  <Textarea value={form.spare_parts} onChange={e => setForm({...form, spare_parts: e.target.value})} placeholder="Ej: Pantalla 15.6 HD, Teclado español, Pasta térmica..." rows={2} />
                 </div>
               )}
 
