@@ -44,7 +44,7 @@ interface Transaction {
   fecha: string;
   cliente_nombre: string | null;
   cliente_telefono: string | null;
-  estado: "borrador" | "emitido" | "anulado";
+  estado: "borrador" | "emitido" | "anulado" | "devuelto";
   tipo_general: "venta" | "servicio" | "mixto";
   subtotal_productos: number;
   subtotal_servicios: number;
@@ -56,6 +56,9 @@ interface Transaction {
   anulado_en: string | null;
   anulado_por: string | null;
   motivo_anulacion: string | null;
+  devuelto_en: string | null;
+  devuelto_por: string | null;
+  motivo_devolucion: string | null;
   created_at: string;
   items?: TransactionItem[];
 }
@@ -69,9 +72,10 @@ const IMPORT_COLUMNS = [
 ];
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  borrador: { label: "Borrador", variant: "secondary" },
-  emitido: { label: "Emitido", variant: "default" },
-  anulado: { label: "Anulado", variant: "destructive" },
+  borrador: { label: "📝 Borrador", variant: "secondary" },
+  emitido: { label: "🟢 Emitido", variant: "default" },
+  anulado: { label: "🔴 Anulado", variant: "destructive" },
+  devuelto: { label: "🟡 Devuelto", variant: "outline" },
 };
 
 const TYPE_MAP: Record<string, { label: string; icon: React.ReactNode }> = {
