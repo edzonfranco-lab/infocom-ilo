@@ -94,9 +94,12 @@ const AccountingPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [anularOpen, setAnularOpen] = useState(false);
+  const [serviceTypesOpen, setServiceTypesOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
   const [motivoAnulacion, setMotivoAnulacion] = useState("");
+  const [newServiceName, setNewServiceName] = useState("");
+  const [newServicePrice, setNewServicePrice] = useState("");
 
   // Form state
   const [form, setForm] = useState({
@@ -148,7 +151,8 @@ const AccountingPage = () => {
     },
   });
 
-  // Service types from settings
+  // Service types from settings (with prices)
+  interface ServiceType { name: string; price: number }
   const { data: serviceTypesRow } = useQuery({
     queryKey: ["store_settings", "service_types"],
     queryFn: async () => {
@@ -157,10 +161,27 @@ const AccountingPage = () => {
       return data;
     },
   });
-  const SERVICE_TYPES: string[] = Array.isArray(serviceTypesRow?.value) ? (serviceTypesRow.value as string[]) : [
-    "Mantenimiento preventivo", "Mantenimiento correctivo", "Formateo e instalación de S.O.",
-    "Reparación de hardware", "Diagnóstico técnico", "Otro servicio",
-  ];
+  const SERVICE_TYPES: ServiceType[] = useMemo(() => {
+    if (!serviceTypesRow?.value) return [];
+    const val = serviceTypesRow.value;
+    if (Array.isArray(val)) {
+      return val.map((v: any) => typeof v === "string" ? { name: v, price: 0 } : { name: v.name, price: Number(v.price) || 0 });
+    }
+    return [];
+  }, [serviceTypesRow]);
+
+  const saveServiceTypes = useMutation({
+    mutationFn: async (types: ServiceType[]) => {
+      const { error } = await supabase
+        .from("store_settings")
+        .upsert({ key: "service_types", value: types as any, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["store_settings", "service_types"] });
+      toast.success("Tipos de servicio actualizados");
+    },
+  });
 
   // ─── Filtered views ───────────────────────────────────────────
   const filtered = useMemo(() => {
