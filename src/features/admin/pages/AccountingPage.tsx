@@ -825,10 +825,11 @@ const AccountingPage = () => {
                                       <CommandEmpty>No encontrado</CommandEmpty>
                                       <CommandGroup heading="Servicios">
                                         {SERVICE_TYPES.map(st => (
-                                          <CommandItem key={st} value={st} onSelect={() => updateItem(idx, { descripcion: st, referencia_id: "service" })}>
-                                            <Check className={`h-3 w-3 mr-2 ${item.descripcion === st ? "opacity-100" : "opacity-0"}`} />
+                                          <CommandItem key={st.name} value={st.name} onSelect={() => updateItem(idx, { descripcion: st.name, precio_unitario: st.price, referencia_id: "service" })}>
+                                            <Check className={`h-3 w-3 mr-2 ${item.descripcion === st.name ? "opacity-100" : "opacity-0"}`} />
                                             <Wrench className="h-3 w-3 mr-2 text-muted-foreground" />
-                                            <span className="text-xs">{st}</span>
+                                            <span className="text-xs flex-1">{st.name}</span>
+                                            {st.price > 0 && <span className="text-xs font-bold text-primary ml-2">S/.{st.price.toFixed(2)}</span>}
                                           </CommandItem>
                                         ))}
                                       </CommandGroup>
