@@ -438,8 +438,9 @@ const ProductsPage = () => {
                     <Badge variant="secondary" className="self-end text-[9px] px-1 py-0 -ml-3 mb-0.5">+{p.images.length - 1}</Badge>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
+                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm line-clamp-1">{p.name}</p>
+                  {p.modelo && <p className="text-xs text-muted-foreground">Modelo: {p.modelo}</p>}
                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                      <span className="text-sm font-bold text-primary">{CURRENCY}{Number(p.price).toLocaleString()}</span>
                      <span className="text-xs text-muted-foreground">Stock: {p.stock}</span>
