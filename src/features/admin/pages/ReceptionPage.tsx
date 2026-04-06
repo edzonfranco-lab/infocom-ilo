@@ -45,7 +45,7 @@ const emptyForm = {
   device_type: "", device_brand: "", device_model: "",
   accessories: "", reported_issue: "", priority: "normal",
   estimated_cost: "", notes: "", diagnosis: "", final_cost: "",
-  received_by_id: "",
+  received_by_id: "", spare_parts: "",
 };
 
 const ReceptionPage = () => {
@@ -120,6 +120,7 @@ const ReceptionPage = () => {
         final_cost: formData.final_cost ? parseFloat(formData.final_cost) : null,
         diagnosis: formData.diagnosis || null,
         notes: formData.notes || null,
+        spare_parts: formData.spare_parts || null,
       };
       if (editingId) {
         if (isAdmin && formData.received_by_id) {
@@ -195,6 +196,7 @@ const ReceptionPage = () => {
       diagnosis: order.diagnosis || "",
       notes: order.notes || "",
       received_by_id: order.received_by_id || "",
+      spare_parts: order.spare_parts || "",
     });
     setEditingId(order.id);
     setDialogOpen(true);
