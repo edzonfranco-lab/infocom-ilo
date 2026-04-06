@@ -124,3 +124,12 @@
     );
   }
 }
+
+/* Fix date input calendar icon in dark mode */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) sepia(1) saturate(5) hue-rotate(85deg) brightness(1.2);
+  cursor: pointer;
+}
+.dark input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) sepia(1) saturate(8) hue-rotate(85deg) brightness(1.5);
+}

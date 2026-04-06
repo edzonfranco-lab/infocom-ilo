@@ -233,13 +233,69 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     const totalFinal = Number(order.total || order.price || 0);
 
     if (isA4) {
-      // ─── A4 FORMAL BOLETA FORMAT ───
-      const ticketType = type === "service" ? t.serviceTitle : t.saleTitle;
-      const a4Header = t.headerMode === "logo" && t.logoUrl
-        ? `<img src="${t.logoUrl}" alt="Logo" style="max-height:60px;margin-bottom:4px" />`
-        : `<div style="font-size:20px;font-weight:900;letter-spacing:2px">${t.companyName}</div>`;
+      if (type === "reception") {
+        // ─── A4 RECEPTION FORMAT ───
+        const a4Header = t.headerMode === "logo" && t.logoUrl
+          ? `<img src="${t.logoUrl}" alt="Logo" style="max-height:60px;margin-bottom:4px" />`
+          : `<div style="font-size:20px;font-weight:900;letter-spacing:2px">${t.companyName}</div>`;
 
-      bodyContent = `
+        bodyContent = `
+<div class="a4-container">
+  <div class="a4-header">
+    <div class="a4-company">
+      ${a4Header}
+      <div style="font-size:10px;margin-top:2px">${t.companySubtitle.replace(/\n/g, " | ")}</div>
+    </div>
+    <div class="a4-doc-type">
+      <div class="doc-title">${t.receptionTitle}</div>
+      <div style="font-size:14px;font-weight:700;margin-top:4px">N° ${order.order_number || ""}</div>
+    </div>
+  </div>
+  <div class="a4-separator"></div>
+  <div class="a4-info-grid">
+    <div class="a4-info-left">
+      <div class="a4-field"><span class="a4-label">Fecha de Recepcion:</span><span>${new Date(order.received_at).toLocaleString("es-PE")}</span></div>
+      <div class="a4-field"><span class="a4-label">Cliente:</span><span style="font-weight:700">${order.customer_name || ""}</span></div>
+      ${order.customer_phone ? `<div class="a4-field"><span class="a4-label">Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
+      ${order.customer_email ? `<div class="a4-field"><span class="a4-label">Email:</span><span>${order.customer_email}</span></div>` : ""}
+    </div>
+    <div class="a4-info-right">
+      <div class="a4-field"><span class="a4-label">Tipo de Equipo:</span><span style="font-weight:700">${order.device_type || ""}</span></div>
+      ${order.device_brand ? `<div class="a4-field"><span class="a4-label">Marca:</span><span>${order.device_brand}</span></div>` : ""}
+      ${order.device_model ? `<div class="a4-field"><span class="a4-label">Modelo:</span><span>${order.device_model}</span></div>` : ""}
+      <div class="a4-field"><span class="a4-label">Accesorios:</span><span>${order.accessories || "No dejo"}</span></div>
+    </div>
+  </div>
+  <div class="a4-separator"></div>
+  <table class="a4-items" style="margin-bottom:0">
+    <thead><tr><th style="width:35%">${issueLabel}</th><th style="width:35%">DIAGNOSTICO</th><th style="width:30%">REPUESTOS UTILIZADOS</th></tr></thead>
+    <tbody><tr>
+      <td style="vertical-align:top;min-height:60px;padding:10px 8px">${order.reported_issue || ""}</td>
+      <td style="vertical-align:top;padding:10px 8px">${order.diagnosis || "Pendiente"}</td>
+      <td style="vertical-align:top;padding:10px 8px">${order.spare_parts || "—"}</td>
+    </tr></tbody>
+  </table>
+  <div class="a4-totals" style="margin-top:12px">
+    ${order.estimated_cost ? `<div class="a4-total-row"><span>Costo Estimado:</span><span>S/. ${Number(order.estimated_cost).toFixed(2)}</span></div>` : ""}
+    ${order.final_cost ? `<div class="a4-total-row a4-total-final"><span>COSTO FINAL S/</span><span>S/. ${Number(order.final_cost).toFixed(2)}</span></div>` : ""}
+  </div>
+  ${t.showConditions ? `<div style="margin-top:16px;font-size:9px;text-align:justify;border:1px solid #ccc;padding:8px;border-radius:4px"><strong>CONDICIONES:</strong><br>${t.receptionConditionsText}</div>` : ""}
+  ${t.showSignatures ? `<div style="display:flex;justify-content:space-between;margin-top:40px;padding:0 40px">
+    <div style="text-align:center;border-top:1px solid #000;min-width:180px;padding-top:4px;font-size:10px">${t.signatureLeft}</div>
+    <div style="text-align:center;border-top:1px solid #000;min-width:180px;padding-top:4px;font-size:10px">${t.signatureRight}</div>
+  </div>` : ""}
+  <div class="a4-footer">
+    <p>${t.footerText.replace(/\n/g, "<br>")}</p>
+  </div>
+</div>`;
+      } else {
+        // ─── A4 FORMAL BOLETA FORMAT (sale/service) ───
+        const ticketType = type === "service" ? t.serviceTitle : t.saleTitle;
+        const a4Header = t.headerMode === "logo" && t.logoUrl
+          ? `<img src="${t.logoUrl}" alt="Logo" style="max-height:60px;margin-bottom:4px" />`
+          : `<div style="font-size:20px;font-weight:900;letter-spacing:2px">${t.companyName}</div>`;
+
+        bodyContent = `
 <div class="a4-container">
   <div class="a4-header">
     <div class="a4-company">
@@ -285,9 +341,10 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     <p>${t.footerText.replace(/\n/g, "<br>")}</p>
   </div>
 </div>`;
+      }
 
       const a4Html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${ticketType}</title>
+<html><head><meta charset="utf-8"><title>${type === "reception" ? t.receptionTitle : (type === "service" ? t.serviceTitle : t.saleTitle)}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#000;padding:20px}
@@ -347,6 +404,7 @@ ${order.device_model ? `<div class="row"><span>Modelo:</span><span>${order.devic
 <p style="margin:4px 0;word-break:break-word">${order.reported_issue}</p>
 <div class="line"></div>
 ${t.showEstimatedCost && order.estimated_cost ? `<div class="row"><span>Costo Est.:</span><span class="bold">S/. ${Number(order.estimated_cost).toFixed(2)}</span></div><div class="line"></div>` : ""}
+${order.spare_parts ? `<h3>REPUESTOS</h3><p style="margin:4px 0;word-break:break-word">${order.spare_parts}</p><div class="line"></div>` : ""}
 ${t.showConditions ? `<div class="conditions"><p>${t.receptionConditionsText}</p></div>` : ""}
 ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureRight}</span></div></div>` : ""}`;
     } else if (type === "sale") {

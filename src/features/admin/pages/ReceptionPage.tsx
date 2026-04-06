@@ -45,7 +45,7 @@ const emptyForm = {
   device_type: "", device_brand: "", device_model: "",
   accessories: "", reported_issue: "", priority: "normal",
   estimated_cost: "", notes: "", diagnosis: "", final_cost: "",
-  received_by_id: "",
+  received_by_id: "", spare_parts: "",
 };
 
 const ReceptionPage = () => {
@@ -120,6 +120,7 @@ const ReceptionPage = () => {
         final_cost: formData.final_cost ? parseFloat(formData.final_cost) : null,
         diagnosis: formData.diagnosis || null,
         notes: formData.notes || null,
+        spare_parts: formData.spare_parts || null,
       };
       if (editingId) {
         if (isAdmin && formData.received_by_id) {
@@ -195,6 +196,7 @@ const ReceptionPage = () => {
       diagnosis: order.diagnosis || "",
       notes: order.notes || "",
       received_by_id: order.received_by_id || "",
+      spare_parts: order.spare_parts || "",
     });
     setEditingId(order.id);
     setDialogOpen(true);
@@ -258,6 +260,8 @@ const ReceptionPage = () => {
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><Wrench className="h-4 w-4" /> Diagnóstico Técnico</h3>
                   <Textarea value={form.diagnosis} onChange={e => setForm({...form, diagnosis: e.target.value})} placeholder="Diagnóstico del técnico..." rows={2} />
+                  <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><Package className="h-4 w-4" /> Repuestos Utilizados</h3>
+                  <Textarea value={form.spare_parts} onChange={e => setForm({...form, spare_parts: e.target.value})} placeholder="Ej: Pantalla 15.6 HD, Teclado español, Pasta térmica..." rows={2} />
                 </div>
               )}
 
@@ -409,6 +413,7 @@ const ReceptionPage = () => {
                   <div><span className="text-muted-foreground">Accesorios:</span><p>{selectedOrder.accessories || "Ninguno"}</p></div>
                   <div><span className="text-muted-foreground">Falla Reportada:</span><p className="font-medium">{selectedOrder.reported_issue}</p></div>
                   <div><span className="text-muted-foreground">Diagnóstico:</span><p>{selectedOrder.diagnosis || "Pendiente"}</p></div>
+                  {selectedOrder.spare_parts && <div><span className="text-muted-foreground">Repuestos Utilizados:</span><p className="font-medium text-primary">{selectedOrder.spare_parts}</p></div>}
                   <div className="grid grid-cols-2 gap-3">
                     <div><span className="text-muted-foreground">Costo Estimado:</span><p>{selectedOrder.estimated_cost ? `S/. ${Number(selectedOrder.estimated_cost).toFixed(2)}` : "—"}</p></div>
                     <div><span className="text-muted-foreground">Costo Final:</span><p>{selectedOrder.final_cost ? `S/. ${Number(selectedOrder.final_cost).toFixed(2)}` : "—"}</p></div>
