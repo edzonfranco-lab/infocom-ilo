@@ -98,10 +98,12 @@ const AccountingPage = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [anularOpen, setAnularOpen] = useState(false);
+  const [devolverOpen, setDevolverOpen] = useState(false);
   const [serviceTypesOpen, setServiceTypesOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewingTx, setViewingTx] = useState<Transaction | null>(null);
   const [motivoAnulacion, setMotivoAnulacion] = useState("");
+  const [motivoDevolucion, setMotivoDevolucion] = useState("");
   const [newServiceName, setNewServiceName] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
 
