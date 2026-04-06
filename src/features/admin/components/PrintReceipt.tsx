@@ -404,6 +404,7 @@ ${order.device_model ? `<div class="row"><span>Modelo:</span><span>${order.devic
 <p style="margin:4px 0;word-break:break-word">${order.reported_issue}</p>
 <div class="line"></div>
 ${t.showEstimatedCost && order.estimated_cost ? `<div class="row"><span>Costo Est.:</span><span class="bold">S/. ${Number(order.estimated_cost).toFixed(2)}</span></div><div class="line"></div>` : ""}
+${order.spare_parts ? `<h3>REPUESTOS</h3><p style="margin:4px 0;word-break:break-word">${order.spare_parts}</p><div class="line"></div>` : ""}
 ${t.showConditions ? `<div class="conditions"><p>${t.receptionConditionsText}</p></div>` : ""}
 ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureRight}</span></div></div>` : ""}`;
     } else if (type === "sale") {
