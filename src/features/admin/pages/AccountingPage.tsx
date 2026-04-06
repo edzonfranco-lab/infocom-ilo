@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
-  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check
+  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
@@ -746,7 +746,7 @@ const AccountingPage = () => {
                   const displayedAmounts = getDisplayedAmounts(tx);
 
                   return (
-                    <TableRow key={tx.id} className={tx.estado === "anulado" ? "opacity-50" : ""}>
+                    <TableRow key={tx.id} className={tx.estado === "anulado" || tx.estado === "devuelto" ? "opacity-60" : ""}>
                       <TableCell className="whitespace-nowrap">
                         {new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE")}
                       </TableCell>
@@ -767,14 +767,16 @@ const AccountingPage = () => {
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>
                             <Eye className="h-3 w-3" />
                           </Button>
-                          {tx.estado !== "anulado" && (
+                          {/* Only borradores can be edited */}
+                          {tx.estado === "borrador" && (
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
                               <Pencil className="h-3 w-3" />
                             </Button>
                           )}
+                          {/* Borrador → Emitir or Delete */}
                           {tx.estado === "borrador" && (
                             <>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => emitirMutation.mutate(tx.id)}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => emitirMutation.mutate(tx.id)} title="Emitir">
                                 <FileText className="h-3 w-3" />
                               </Button>
                               {isAdmin && (
@@ -784,10 +786,16 @@ const AccountingPage = () => {
                               )}
                             </>
                           )}
+                          {/* Emitido → Anular or Devolver */}
                           {tx.estado === "emitido" && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setViewingTx(tx); setAnularOpen(true); }}>
-                              <Ban className="h-3 w-3" />
-                            </Button>
+                            <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setViewingTx(tx); setAnularOpen(true); }} title="Anular">
+                                <Ban className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-500" onClick={() => { setViewingTx(tx); setDevolverOpen(true); }} title="Devolver">
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
