@@ -44,8 +44,19 @@ export function useProducts(options: UseProductsOptions = {}) {
       if (options.featured) query = query.eq("is_featured", true);
       if (options.isNew) query = query.eq("is_new", true);
       if (options.category) {
+        // Get the selected category and all its children for hierarchy filtering
         const { data: cat } = await supabase.from("categories").select("id").eq("slug", options.category).single();
-        if (cat) query = query.eq("category_id", cat.id);
+        if (cat) {
+          // Check if this category has children
+          const { data: children } = await supabase.from("categories").select("id").eq("parent_id", cat.id);
+          if (children && children.length > 0) {
+            // Parent category: include parent + all children
+            const allIds = [cat.id, ...children.map(c => c.id)];
+            query = query.in("category_id", allIds);
+          } else {
+            query = query.eq("category_id", cat.id);
+          }
+        }
       }
       if (options.brand) {
         const { data: br } = await supabase.from("brands").select("id").eq("slug", options.brand).single();
