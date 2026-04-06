@@ -15,49 +15,97 @@ import { Plus, Pencil, Trash2, FileUp, FileText, ExternalLink, X, Loader2,
   Smartphone, Tablet, Watch, Usb, Cable, Plug, Battery,
   MonitorSmartphone, Tv, Speaker, Gamepad2, ScanLine, Router,
   MemoryStick, CircuitBoard, Fan, Wrench, ShoppingBag, Zap,
-  Globe, Lock, Microchip, Radio, Disc, MonitorSpeaker
+  Globe, Lock, Microchip, Radio, Disc, MonitorSpeaker,
+  Armchair, PcCase, Droplets, PenTool, BookOpen, FileKey,
+  Webcam, Pipette, Box, Inbox, SquareStack, Network,
+  Power, Maximize, MonitorDown, VolumeX, Volume2, Ratio,
+  Flashlight, BatteryCharging, Hash, Link2, ScreenShare,
+  Clapperboard, Podcast, Music, Glasses, Ruler, Compass,
+  Thermometer, ScrollText, Layers, Settings, Timer, ClipboardList
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const ICON_OPTIONS: { key: string; label: string; icon: any }[] = [
+  // Computadoras y laptops
   { key: "laptop", label: "Laptop", icon: Laptop },
   { key: "monitor", label: "Monitor", icon: Monitor },
-  { key: "keyboard", label: "Teclado", icon: Keyboard },
-  { key: "camera", label: "Cámara", icon: Camera },
-  { key: "projector", label: "Proyector", icon: Projector },
-  { key: "printer", label: "Impresora", icon: Printer },
-  { key: "cpu", label: "Procesador", icon: Cpu },
-  { key: "hard-drive", label: "Disco/SSD", icon: HardDrive },
-  { key: "headphones", label: "Audífonos", icon: Headphones },
-  { key: "mouse", label: "Mouse", icon: Mouse },
-  { key: "wifi", label: "WiFi/Redes", icon: Wifi },
-  { key: "shield", label: "Seguridad", icon: Shield },
+  { key: "pc-case", label: "PC/Case", icon: PcCase },
+  { key: "monitor-smartphone", label: "Todo en Uno", icon: MonitorSmartphone },
   { key: "server", label: "Servidor", icon: Server },
+  // Periféricos
+  { key: "keyboard", label: "Teclado", icon: Keyboard },
+  { key: "mouse", label: "Mouse", icon: Mouse },
+  { key: "headphones", label: "Audífonos", icon: Headphones },
+  { key: "webcam", label: "Webcam", icon: Webcam },
+  { key: "speaker", label: "Parlante", icon: Speaker },
+  { key: "scanner", label: "Escáner", icon: ScanLine },
+  // Impresión y tintas
+  { key: "printer", label: "Impresora", icon: Printer },
+  { key: "droplets", label: "Tintas", icon: Droplets },
+  { key: "pen-tool", label: "Tóner", icon: PenTool },
+  // Componentes internos
+  { key: "cpu", label: "Procesador", icon: Cpu },
+  { key: "memory", label: "Memoria RAM", icon: MemoryStick },
+  { key: "hard-drive", label: "Disco/SSD", icon: HardDrive },
+  { key: "circuit", label: "Placa/Tarjeta", icon: CircuitBoard },
+  { key: "microchip", label: "Chip/GPU", icon: Microchip },
+  { key: "fan", label: "Ventilador/Cooler", icon: Fan },
+  { key: "battery", label: "Batería", icon: Battery },
+  { key: "battery-charging", label: "Cargador", icon: BatteryCharging },
+  // Cables y conectores
+  { key: "cable", label: "Cable General", icon: Cable },
+  { key: "usb", label: "Cable USB", icon: Usb },
+  { key: "link2", label: "Cable HDMI", icon: Link2 },
+  { key: "ratio", label: "Cable VGA", icon: Ratio },
+  { key: "hash", label: "Hub/Adaptador", icon: Hash },
+  { key: "plug", label: "Energía/UPS", icon: Plug },
+  { key: "power", label: "Extensión", icon: Power },
+  // Redes
+  { key: "wifi", label: "WiFi/Redes", icon: Wifi },
+  { key: "router", label: "Router", icon: Router },
+  { key: "network", label: "Switch/Red", icon: Network },
+  { key: "globe", label: "Internet", icon: Globe },
+  // Dispositivos móviles
   { key: "smartphone", label: "Celular", icon: Smartphone },
   { key: "tablet", label: "Tablet", icon: Tablet },
   { key: "watch", label: "Smartwatch", icon: Watch },
-  { key: "usb", label: "USB", icon: Usb },
-  { key: "cable", label: "Cable", icon: Cable },
-  { key: "plug", label: "Energía/UPS", icon: Plug },
-  { key: "battery", label: "Batería", icon: Battery },
-  { key: "monitor-smartphone", label: "Todo en Uno", icon: MonitorSmartphone },
-  { key: "tv", label: "TV", icon: Tv },
-  { key: "speaker", label: "Parlante", icon: Speaker },
+  // Audio y video
+  { key: "camera", label: "Cámara", icon: Camera },
+  { key: "projector", label: "Proyector", icon: Projector },
+  { key: "tv", label: "TV/Pantalla", icon: Tv },
+  { key: "radio", label: "Radio", icon: Radio },
+  { key: "music", label: "Audio", icon: Music },
+  { key: "podcast", label: "Micrófono", icon: Podcast },
+  // Gaming
   { key: "gamepad", label: "Gaming", icon: Gamepad2 },
-  { key: "scanner", label: "Escáner", icon: ScanLine },
-  { key: "router", label: "Router", icon: Router },
-  { key: "memory", label: "Memoria RAM", icon: MemoryStick },
-  { key: "circuit", label: "Placa/Tarjeta", icon: CircuitBoard },
-  { key: "fan", label: "Ventilador", icon: Fan },
+  { key: "armchair", label: "Silla Gamer", icon: Armchair },
+  // Mobiliario oficina
+  { key: "maximize", label: "Escritorio", icon: Maximize },
+  { key: "layers", label: "Mueble", icon: Layers },
+  // Software y licencias
+  { key: "file-key", label: "Licencia", icon: FileKey },
+  { key: "book-open", label: "Software", icon: BookOpen },
+  { key: "shield", label: "Antivirus", icon: Shield },
+  { key: "lock", label: "Seguridad", icon: Lock },
+  // Almacenamiento
+  { key: "disc", label: "CD/DVD", icon: Disc },
+  { key: "inbox", label: "Almacenamiento", icon: Inbox },
+  { key: "box", label: "NAS/Backup", icon: Box },
+  // Herramientas y accesorios
   { key: "wrench", label: "Herramientas", icon: Wrench },
   { key: "shopping", label: "Accesorios", icon: ShoppingBag },
+  { key: "flashlight", label: "Linterna/LED", icon: Flashlight },
+  { key: "glasses", label: "Lentes/VR", icon: Glasses },
+  { key: "ruler", label: "Medición", icon: Ruler },
+  { key: "thermometer", label: "Temperatura", icon: Thermometer },
+  // Servicios y otros
+  { key: "clipboard", label: "Servicios", icon: ClipboardList },
+  { key: "settings", label: "Configuración", icon: Settings },
+  { key: "timer", label: "Mantenimiento", icon: Timer },
   { key: "zap", label: "Eléctrico", icon: Zap },
-  { key: "globe", label: "Internet", icon: Globe },
-  { key: "lock", label: "Candado", icon: Lock },
-  { key: "microchip", label: "Chip", icon: Microchip },
-  { key: "radio", label: "Radio", icon: Radio },
-  { key: "disc", label: "Disco", icon: Disc },
+  { key: "screen-share", label: "Pantalla Comp.", icon: ScreenShare },
+  { key: "scroll-text", label: "Documentos", icon: ScrollText },
   { key: "package", label: "Genérico", icon: Package },
 ];
 
@@ -186,14 +234,18 @@ const CategoriesPage = () => {
                       {form.icon ? ICON_OPTIONS.find(o => o.key === form.icon)?.label || form.icon : "Seleccionar ícono..."}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-3" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                  <PopoverContent className="w-96 p-3" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <Input 
                       placeholder="Buscar ícono..." 
                       value={iconSearch} 
                       onChange={(e) => setIconSearch(e.target.value)} 
                       className="mb-2"
                     />
-                    <div className="grid grid-cols-5 gap-1 max-h-[240px] overflow-y-auto pr-1 touch-pan-y" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+                    <div 
+                      className="grid grid-cols-6 gap-1 max-h-[320px] overflow-y-scroll pr-1"
+                      onWheel={(e) => { e.stopPropagation(); }}
+                      onTouchMove={(e) => { e.stopPropagation(); }}
+                    >
                       {filteredIcons.map((opt) => {
                         const Icon = opt.icon;
                         return (
