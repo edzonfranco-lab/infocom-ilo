@@ -148,23 +148,18 @@ const AccountingPage = () => {
     },
   });
 
-  // Service types (categories that represent services)
-  const SERVICE_TYPES = [
-    "Mantenimiento preventivo",
-    "Mantenimiento correctivo", 
-    "Formateo e instalación de S.O.",
-    "Reparación de hardware",
-    "Reparación de impresora",
-    "Cambio de pantalla",
-    "Cambio de teclado",
-    "Cambio de batería",
-    "Limpieza interna",
-    "Instalación de software",
-    "Recuperación de datos",
-    "Diagnóstico técnico",
-    "Configuración de red",
-    "Ensamblaje de PC",
-    "Otro servicio",
+  // Service types from settings
+  const { data: serviceTypesRow } = useQuery({
+    queryKey: ["store_settings", "service_types"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("store_settings").select("*").eq("key", "service_types").maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const SERVICE_TYPES: string[] = Array.isArray(serviceTypesRow?.value) ? (serviceTypesRow.value as string[]) : [
+    "Mantenimiento preventivo", "Mantenimiento correctivo", "Formateo e instalación de S.O.",
+    "Reparación de hardware", "Diagnóstico técnico", "Otro servicio",
   ];
 
   // ─── Filtered views ───────────────────────────────────────────
