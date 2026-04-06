@@ -413,6 +413,7 @@ const ReceptionPage = () => {
                   <div><span className="text-muted-foreground">Accesorios:</span><p>{selectedOrder.accessories || "Ninguno"}</p></div>
                   <div><span className="text-muted-foreground">Falla Reportada:</span><p className="font-medium">{selectedOrder.reported_issue}</p></div>
                   <div><span className="text-muted-foreground">Diagnóstico:</span><p>{selectedOrder.diagnosis || "Pendiente"}</p></div>
+                  {selectedOrder.spare_parts && <div><span className="text-muted-foreground">Repuestos Utilizados:</span><p className="font-medium text-primary">{selectedOrder.spare_parts}</p></div>}
                   <div className="grid grid-cols-2 gap-3">
                     <div><span className="text-muted-foreground">Costo Estimado:</span><p>{selectedOrder.estimated_cost ? `S/. ${Number(selectedOrder.estimated_cost).toFixed(2)}` : "—"}</p></div>
                     <div><span className="text-muted-foreground">Costo Final:</span><p>{selectedOrder.final_cost ? `S/. ${Number(selectedOrder.final_cost).toFixed(2)}` : "—"}</p></div>
