@@ -1257,6 +1257,30 @@ const AccountingPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* ─── DEVOLVER DIALOG ─── */}
+      <Dialog open={devolverOpen} onOpenChange={setDevolverOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <RotateCcw className="h-5 w-5" /> Marcar como Devuelto
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">La venta se contabiliza como devolución. El stock se restaurará.</p>
+            <div>
+              <Label>Motivo de Devolución</Label>
+              <Input value={motivoDevolucion} onChange={e => setMotivoDevolucion(e.target.value)} placeholder="Motivo..." />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setDevolverOpen(false)}>Cancelar</Button>
+              <Button variant="default" className="flex-1 bg-amber-600 hover:bg-amber-700" onClick={() => viewingTx && devolverMutation.mutate(viewingTx.id)} disabled={devolverMutation.isPending}>
+                Confirmar Devolución
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Service Types Management Dialog */}
       <Dialog open={serviceTypesOpen} onOpenChange={setServiceTypesOpen}>
         <DialogContent className="max-w-lg">
