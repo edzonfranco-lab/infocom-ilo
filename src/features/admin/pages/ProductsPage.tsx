@@ -210,11 +210,24 @@ const ProductsPage = () => {
 
   const generateSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
+  // Auto-generate SKU: CAT-MARCA-DETALLE-001
+  const generateSku = () => {
+    const cat = categories.find((c: any) => c.id === form.category_id);
+    const brand = brands.find((b: any) => b.id === form.brand_id);
+    const catCode = cat ? cat.name.substring(0, 3).toUpperCase() : "GEN";
+    const brandCode = brand ? brand.name.substring(0, 3).toUpperCase() : "SIN";
+    const nameCode = form.name.substring(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const random = String(Math.floor(Math.random() * 999) + 1).padStart(3, "0");
+    return `${catCode}-${brandCode}-${nameCode}-${random}`;
+  };
+
   const handleSave = async () => {
     const slug = form.slug || generateSlug(form.name);
+    const sku = form.sku || generateSku();
     const payload = {
       name: form.name, slug, description: form.description || null, short_description: form.short_description || null,
-      sku: form.sku || null, price: Number(form.price), original_price: form.original_price ? Number(form.original_price) : null,
+      sku, modelo: form.modelo || null,
+      price: Number(form.price), original_price: form.original_price ? Number(form.original_price) : null,
       cost_price: form.cost_price ? Number(form.cost_price) : null, stock: Number(form.stock), min_stock: Number(form.min_stock),
       category_id: form.category_id || null, brand_id: form.brand_id || null,
       images: form.images,
