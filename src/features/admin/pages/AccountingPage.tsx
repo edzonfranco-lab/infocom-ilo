@@ -767,8 +767,8 @@ const AccountingPage = () => {
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>
                             <Eye className="h-3 w-3" />
                           </Button>
-                          {/* Only borradores can be edited */}
-                          {tx.estado === "borrador" && (
+                          {/* Borradores y emitidos pueden editarse */}
+                          {(tx.estado === "borrador" || tx.estado === "emitido") && (
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
                               <Pencil className="h-3 w-3" />
                             </Button>
@@ -776,8 +776,8 @@ const AccountingPage = () => {
                           {/* Borrador → Emitir or Delete */}
                           {tx.estado === "borrador" && (
                             <>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => emitirMutation.mutate(tx.id)} title="Emitir">
-                                <FileText className="h-3 w-3" />
+                              <Button variant="ghost" size="sm" className="h-7 px-4 text-success font-semibold col-span-2" onClick={() => emitirMutation.mutate(tx.id)} title="Emitir">
+                                <FileText className="h-3 w-3 mr-1" /> Emitir
                               </Button>
                               {isAdmin && (
                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if (confirm("Eliminar borrador?")) deleteMutation.mutate(tx.id); }}>
