@@ -578,12 +578,19 @@ const AccountingPage = () => {
         {/* Shared content for all tabs */}
         <div className="mt-4 space-y-4">
           <div className="flex justify-between items-center flex-wrap gap-2">
-            <Input
-              placeholder="Buscar por cliente..."
-              value={searchClient}
-              onChange={(e) => setSearchClient(e.target.value)}
-              className="max-w-[200px] h-8 text-xs bg-secondary/50 border-primary/20"
-            />
+            <div className="flex gap-2 items-center">
+              <Input
+                placeholder="Buscar por cliente..."
+                value={searchClient}
+                onChange={(e) => setSearchClient(e.target.value)}
+                className="max-w-[200px] h-8 text-xs bg-secondary/50 border-primary/20"
+              />
+              {isAdmin && (
+                <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" onClick={() => setServiceTypesOpen(true)}>
+                  <Settings2 className="h-3.5 w-3.5" /> Tipos de Servicio
+                </Button>
+              )}
+            </div>
             <DataImportExport
               columns={IMPORT_COLUMNS}
               exportColumns={exportColumns}
@@ -1139,6 +1146,64 @@ const AccountingPage = () => {
                 Confirmar Anulacion
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Service Types Management Dialog */}
+      <Dialog open={serviceTypesOpen} onOpenChange={setServiceTypesOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Wrench className="h-5 w-5 text-primary" /> Gestionar Tipos de Servicio</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Agrega, edita precios o elimina tipos de servicio. Al seleccionar un servicio en una transacción, el precio se autocompletará.</p>
+            
+            {/* Add new */}
+            <div className="flex gap-2">
+              <Input placeholder="Nombre del servicio..." value={newServiceName} onChange={e => setNewServiceName(e.target.value)} className="flex-1 h-9 text-sm" />
+              <Input placeholder="Precio" type="number" value={newServicePrice} onChange={e => setNewServicePrice(e.target.value)} className="w-24 h-9 text-sm" />
+              <Button size="sm" className="h-9 gap-1" onClick={() => {
+                const name = newServiceName.trim();
+                if (!name) return;
+                if (SERVICE_TYPES.some(s => s.name === name)) { toast.error("Ya existe"); return; }
+                saveServiceTypes.mutate([...SERVICE_TYPES, { name, price: Number(newServicePrice) || 0 }]);
+                setNewServiceName(""); setNewServicePrice("");
+              }}>
+                <Plus className="h-4 w-4" /> Agregar
+              </Button>
+            </div>
+
+            {/* List */}
+            <div className="space-y-1 max-h-72 overflow-y-auto">
+              {SERVICE_TYPES.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">Sin tipos de servicio</p>}
+              {SERVICE_TYPES.map((st, idx) => (
+                <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border border-border/50 hover:bg-secondary/30 group">
+                  <Wrench className="h-3.5 w-3.5 text-primary/60 shrink-0" />
+                  <span className="text-sm flex-1 truncate">{st.name}</span>
+                  <Input
+                    type="number"
+                    value={st.price}
+                    onChange={e => {
+                      const updated = [...SERVICE_TYPES];
+                      updated[idx] = { ...st, price: Number(e.target.value) || 0 };
+                      saveServiceTypes.mutate(updated);
+                    }}
+                    className="w-24 h-7 text-xs text-right"
+                    placeholder="Precio"
+                  />
+                  <span className="text-xs text-muted-foreground">S/.</span>
+                  <Button
+                    variant="ghost" size="icon"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive shrink-0"
+                    onClick={() => saveServiceTypes.mutate(SERVICE_TYPES.filter((_, i) => i !== idx))}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Total: {SERVICE_TYPES.length} tipos configurados</p>
           </div>
         </DialogContent>
       </Dialog>
