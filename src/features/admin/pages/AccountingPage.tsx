@@ -309,13 +309,35 @@ const AccountingPage = () => {
         emitido_por: form.emitido_por || user?.email || "Admin",
       }).eq("id", id);
       if (error) throw error;
+
+      // Reduce stock for product items (salida)
+      const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", id).eq("item_type", "producto");
+      for (const it of txItems || []) {
+        if (it.referencia_id && it.referencia_id !== "service") {
+          const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
+          if (prod) {
+            const stockBefore = prod.stock;
+            const stockAfter = stockBefore - (it.cantidad || 0);
+            await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
+            await supabase.from("inventory_movements").insert({
+              product_id: it.referencia_id, product_name: it.descripcion,
+              movement_type: "salida", quantity: it.cantidad,
+              reference_type: "venta", reference_id: id,
+              stock_before: stockBefore, stock_after: stockAfter,
+              created_by: user?.id || null,
+            } as any);
+          }
+        }
+      }
+
       await supabase.from("transaction_history").insert({
         transaction_id: id, accion: "emitido", usuario_id: user?.id || null,
       });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-      toast.success("Transaccion emitida");
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Transacción emitida — Stock actualizado");
     },
   });
 
@@ -328,6 +350,27 @@ const AccountingPage = () => {
         motivo_anulacion: motivoAnulacion || null,
       }).eq("id", id);
       if (error) throw error;
+
+      // Return stock for product items (anulación)
+      const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", id).eq("item_type", "producto");
+      for (const it of txItems || []) {
+        if (it.referencia_id && it.referencia_id !== "service") {
+          const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
+          if (prod) {
+            const stockBefore = prod.stock;
+            const stockAfter = stockBefore + (it.cantidad || 0);
+            await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
+            await supabase.from("inventory_movements").insert({
+              product_id: it.referencia_id, product_name: it.descripcion,
+              movement_type: "anulacion", quantity: it.cantidad,
+              reference_type: "anulacion", reference_id: id,
+              stock_before: stockBefore, stock_after: stockAfter,
+              created_by: user?.id || null,
+            } as any);
+          }
+        }
+      }
+
       await supabase.from("transaction_history").insert({
         transaction_id: id, accion: "anulado",
         detalles: { motivo: motivoAnulacion },
@@ -336,9 +379,55 @@ const AccountingPage = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-      toast.success("Transaccion anulada");
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Transacción anulada — Stock restaurado");
       setAnularOpen(false);
       setMotivoAnulacion("");
+    },
+  });
+
+  const devolverMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("transactions").update({
+        estado: "devuelto" as any,
+        devuelto_en: new Date().toISOString(),
+        devuelto_por: user?.email || "Admin",
+        motivo_devolucion: motivoDevolucion || null,
+      } as any).eq("id", id);
+      if (error) throw error;
+
+      // Return stock for product items (devolución)
+      const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", id).eq("item_type", "producto");
+      for (const it of txItems || []) {
+        if (it.referencia_id && it.referencia_id !== "service") {
+          const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
+          if (prod) {
+            const stockBefore = prod.stock;
+            const stockAfter = stockBefore + (it.cantidad || 0);
+            await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
+            await supabase.from("inventory_movements").insert({
+              product_id: it.referencia_id, product_name: it.descripcion,
+              movement_type: "devolucion", quantity: it.cantidad,
+              reference_type: "devolucion", reference_id: id,
+              stock_before: stockBefore, stock_after: stockAfter,
+              created_by: user?.id || null,
+            } as any);
+          }
+        }
+      }
+
+      await supabase.from("transaction_history").insert({
+        transaction_id: id, accion: "devuelto",
+        detalles: { motivo: motivoDevolucion },
+        usuario_id: user?.id || null,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions", month, year] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      toast.success("Transacción marcada como devuelta — Stock restaurado");
+      setDevolverOpen(false);
+      setMotivoDevolucion("");
     },
   });
 
