@@ -1168,7 +1168,11 @@ const AccountingPage = () => {
               {viewingTx.notas && <p className="text-sm text-muted-foreground"><span className="font-bold">Notas:</span> {viewingTx.notas}</p>}
 
               {viewingTx.estado === "anulado" && viewingTx.motivo_anulacion && (
-                <p className="text-sm text-destructive"><span className="font-bold">Motivo anulacion:</span> {viewingTx.motivo_anulacion}</p>
+                <p className="text-sm text-destructive"><span className="font-bold">Motivo anulación:</span> {viewingTx.motivo_anulacion}</p>
+              )}
+
+              {viewingTx.estado === "devuelto" && (viewingTx as any).motivo_devolucion && (
+                <p className="text-sm text-amber-600"><span className="font-bold">Motivo devolución:</span> {(viewingTx as any).motivo_devolucion}</p>
               )}
 
               {/* Print button for transactions */}
@@ -1238,7 +1242,7 @@ const AccountingPage = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Esta accion no puede deshacerse. La transaccion quedara registrada como anulada.</p>
+            <p className="text-sm text-muted-foreground">Esta acción no puede deshacerse. La transacción quedará como anulada y el stock se restaurará.</p>
             <div>
               <Label>Motivo de Anulacion</Label>
               <Input value={motivoAnulacion} onChange={e => setMotivoAnulacion(e.target.value)} placeholder="Motivo..." />
