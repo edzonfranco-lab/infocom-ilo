@@ -730,137 +730,165 @@ const AccountingPage = () => {
                   Agrega productos o servicios a esta transaccion
                 </p>
               ) : (
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[80px]">Tipo</TableHead>
-                        <TableHead>Descripcion</TableHead>
-                        <TableHead className="w-[80px]">Cant.</TableHead>
-                        <TableHead className="w-[110px]">P. Unit.</TableHead>
-                        <TableHead className="w-[100px] text-right">Subtotal</TableHead>
-                        <TableHead className="w-[40px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item, idx) => (
-                        <React.Fragment key={idx}>
-                          <TableRow>
-                            <TableCell>
-                              <Badge variant={item.item_type === "producto" ? "default" : "secondary"} className="text-xs">
-                                {item.item_type === "producto" ? "Prod." : "Serv."}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {item.item_type === "producto" ? (
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button variant="outline" className="h-8 text-xs w-full justify-between font-normal">
-                                      {item.descripcion || "Seleccionar producto..."}
-                                      <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-[300px] p-0" align="start">
-                                    <Command>
-                                      <CommandInput placeholder="Buscar producto..." className="h-8 text-xs" />
-                                      <CommandList>
-                                        <CommandEmpty>No encontrado</CommandEmpty>
-                                        <CommandGroup heading="Inventario">
-                                          {products.map((p: any) => (
-                                            <CommandItem key={p.id} value={p.name} onSelect={() => {
-                                              updateItem(idx, { descripcion: p.name, precio_unitario: Number(p.price), referencia_id: p.id });
-                                            }}>
-                                              <Check className={`h-3 w-3 mr-2 ${item.referencia_id === p.id ? "opacity-100" : "opacity-0"}`} />
-                                              <div className="flex-1">
-                                                <span className="text-xs font-medium">{p.name}</span>
-                                                {p.sku && <span className="text-[10px] text-muted-foreground ml-2">SKU: {p.sku}</span>}
-                                              </div>
-                                              <span className="text-xs font-bold text-primary">S/.{Number(p.price).toFixed(2)}</span>
-                                              <span className="text-[10px] text-muted-foreground ml-1">({p.stock} uds)</span>
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
-                                        <CommandGroup heading="Personalizado">
-                                          <CommandItem onSelect={() => updateItem(idx, { referencia_id: null })}>
-                                            <Package className="h-3 w-3 mr-2" /> Escribir manualmente
+                <div className="space-y-2">
+                  {items.map((item, idx) => (
+                    <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={item.item_type === "producto" ? "default" : "secondary"} className="text-xs shrink-0">
+                          {item.item_type === "producto" ? "Producto" : "Servicio"}
+                        </Badge>
+                        <div className="flex-1" />
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(idx)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px_90px] gap-2 items-end">
+                        {/* Description - Combobox for both products and services */}
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Descripción</Label>
+                          {item.item_type === "producto" ? (
+                            <>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" className="h-9 text-xs w-full justify-between font-normal">
+                                    {item.descripcion || "Seleccionar producto..."}
+                                    <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[350px] p-0" align="start">
+                                  <Command>
+                                    <CommandInput placeholder="Buscar producto..." className="h-9" />
+                                    <CommandList>
+                                      <CommandEmpty>No encontrado</CommandEmpty>
+                                      <CommandGroup heading="Inventario">
+                                        {products.map((p: any) => (
+                                          <CommandItem key={p.id} value={`${p.name} ${p.sku || ""}`} onSelect={() => {
+                                            updateItem(idx, { descripcion: p.name, precio_unitario: Number(p.price) || 0, referencia_id: p.id });
+                                          }}>
+                                            <Check className={`h-3 w-3 mr-2 ${item.referencia_id === p.id ? "opacity-100" : "opacity-0"}`} />
+                                            <div className="flex-1 min-w-0">
+                                              <span className="text-xs font-medium truncate block">{p.name}</span>
+                                              {p.sku && <span className="text-[10px] text-muted-foreground">SKU: {p.sku}</span>}
+                                            </div>
+                                            <span className="text-xs font-bold text-primary ml-2">S/.{Number(p.price).toFixed(2)}</span>
                                           </CommandItem>
-                                        </CommandGroup>
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
-                              ) : (
-                                <Select value={item.descripcion} onValueChange={v => updateItem(idx, { descripcion: v })}>
-                                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Tipo de servicio..." /></SelectTrigger>
-                                  <SelectContent>
-                                    {SERVICE_TYPES.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                              {item.item_type === "producto" && !item.referencia_id && (
+                                        ))}
+                                      </CommandGroup>
+                                      <CommandGroup heading="Manual">
+                                        <CommandItem onSelect={() => updateItem(idx, { referencia_id: null, descripcion: "" })}>
+                                          <Package className="h-3 w-3 mr-2" /> Escribir manualmente
+                                        </CommandItem>
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                              {!item.referencia_id && (
                                 <Input
                                   value={item.descripcion}
                                   onChange={e => updateItem(idx, { descripcion: e.target.value })}
                                   placeholder="Escribir nombre del producto..."
-                                  className="h-7 text-xs mt-1"
+                                  className="h-8 text-xs mt-1"
                                 />
                               )}
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number" min="1"
-                                value={item.cantidad}
-                                onChange={e => updateItem(idx, { cantidad: parseInt(e.target.value) || 1 })}
-                                className="h-8 text-xs w-16"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number" step="0.01" min="0"
-                                value={item.precio_unitario}
-                                onChange={e => updateItem(idx, { precio_unitario: parseFloat(e.target.value) || 0 })}
-                                className="h-8 text-xs"
-                              />
-                            </TableCell>
-                            <TableCell className="text-right font-bold text-xs">
-                              S/. {(item.cantidad * item.precio_unitario).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(idx)}>
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                          {/* Extra fields for services */}
-                          {item.item_type === "servicio" && (
-                            <TableRow className="bg-secondary/10">
-                              <TableCell colSpan={6}>
-                                <div className="grid grid-cols-3 gap-2 py-1">
-                                  <div>
-                                    <Label className="text-[10px] text-muted-foreground">Responsable</Label>
-                                    <Select value={item.responsable || ""} onValueChange={v => updateItem(idx, { responsable: v })}>
-                                      <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                                      <SelectContent>
-                                        {staffMembers.map((s: any) => <SelectItem key={s.id} value={s.full_name}>{s.full_name}</SelectItem>)}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label className="text-[10px] text-muted-foreground">Tipo de Equipo</Label>
-                                    <Input value={item.tipo_equipo || ""} onChange={e => updateItem(idx, { tipo_equipo: e.target.value })} placeholder="LAPTOP, IMPRESORA..." className="h-7 text-xs" />
-                                  </div>
-                                  <div>
-                                    <Label className="text-[10px] text-muted-foreground">Diagnóstico</Label>
-                                    <Input value={item.diagnostico || ""} onChange={e => updateItem(idx, { diagnostico: e.target.value })} placeholder="FALLA FISICA..." className="h-7 text-xs" />
-                                  </div>
-                                </div>
-                              </TableCell>
-                            </TableRow>
+                            </>
+                          ) : (
+                            <>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" className="h-9 text-xs w-full justify-between font-normal">
+                                    {item.descripcion || "Seleccionar servicio..."}
+                                    <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[350px] p-0" align="start">
+                                  <Command>
+                                    <CommandInput placeholder="Buscar servicio..." className="h-9" />
+                                    <CommandList>
+                                      <CommandEmpty>No encontrado</CommandEmpty>
+                                      <CommandGroup heading="Servicios">
+                                        {SERVICE_TYPES.map(st => (
+                                          <CommandItem key={st} value={st} onSelect={() => updateItem(idx, { descripcion: st, referencia_id: "service" })}>
+                                            <Check className={`h-3 w-3 mr-2 ${item.descripcion === st ? "opacity-100" : "opacity-0"}`} />
+                                            <Wrench className="h-3 w-3 mr-2 text-muted-foreground" />
+                                            <span className="text-xs">{st}</span>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                      <CommandGroup heading="Manual">
+                                        <CommandItem onSelect={() => updateItem(idx, { referencia_id: null, descripcion: "" })}>
+                                          <Settings2 className="h-3 w-3 mr-2" /> Escribir manualmente
+                                        </CommandItem>
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                              {!item.referencia_id && (
+                                <Input
+                                  value={item.descripcion}
+                                  onChange={e => updateItem(idx, { descripcion: e.target.value })}
+                                  placeholder="Escribir servicio manualmente..."
+                                  className="h-8 text-xs mt-1"
+                                />
+                              )}
+                            </>
                           )}
-                        </React.Fragment>
-                      ))}
-                    </TableBody>
-                  </Table>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Cant.</Label>
+                          <Input
+                            type="number" min="1"
+                            value={item.cantidad}
+                            onChange={e => updateItem(idx, { cantidad: parseInt(e.target.value) || 1 })}
+                            className="h-9 text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-xs text-muted-foreground">P. Unit.</Label>
+                          <Input
+                            type="number" step="0.01" min="0"
+                            value={item.precio_unitario}
+                            onChange={e => updateItem(idx, { precio_unitario: parseFloat(e.target.value) || 0 })}
+                            className="h-9 text-xs"
+                          />
+                        </div>
+
+                        <div className="text-right">
+                          <Label className="text-xs text-muted-foreground">Subtotal</Label>
+                          <p className="h-9 flex items-center justify-end font-bold text-sm text-primary">
+                            S/. {(item.cantidad * item.precio_unitario).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Extra fields for services */}
+                      {item.item_type === "servicio" && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-border/50">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Responsable</Label>
+                            <Select value={item.responsable || ""} onValueChange={v => updateItem(idx, { responsable: v })}>
+                              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                              <SelectContent>
+                                {staffMembers.map((s: any) => <SelectItem key={s.id} value={s.full_name}>{s.full_name}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Tipo de Equipo</Label>
+                            <Input value={item.tipo_equipo || ""} onChange={e => updateItem(idx, { tipo_equipo: e.target.value })} placeholder="LAPTOP, IMPRESORA..." className="h-8 text-xs" />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Diagnóstico</Label>
+                            <Input value={item.diagnostico || ""} onChange={e => updateItem(idx, { diagnostico: e.target.value })} placeholder="FALLA FISICA..." className="h-8 text-xs" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
