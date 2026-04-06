@@ -867,6 +867,7 @@ export type Database = {
           received_at: string
           received_by_id: string | null
           reported_issue: string
+          spare_parts: string | null
           status: string
           updated_at: string
         }
@@ -892,6 +893,7 @@ export type Database = {
           received_at?: string
           received_by_id?: string | null
           reported_issue: string
+          spare_parts?: string | null
           status?: string
           updated_at?: string
         }
@@ -917,6 +919,7 @@ export type Database = {
           received_at?: string
           received_by_id?: string | null
           reported_issue?: string
+          spare_parts?: string | null
           status?: string
           updated_at?: string
         }
