@@ -17,7 +17,7 @@ import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const BUCKET = "product-images";
 const emptyProductForm = {
-  name: "", slug: "", description: "", short_description: "", sku: "",
+  name: "", slug: "", description: "", short_description: "", sku: "", modelo: "",
   price: "", original_price: "", cost_price: "", stock: "0", min_stock: "5",
   category_id: "", brand_id: "", images: [] as string[],
   is_active: true, is_featured: false, is_new: false, discount_percent: "0",
@@ -198,7 +198,7 @@ const ProductsPage = () => {
   const openEdit = (p: any) => {
     setEditing(p);
     setForm({
-      name: p.name, slug: p.slug, description: p.description || "", short_description: p.short_description || "", sku: p.sku || "",
+      name: p.name, slug: p.slug, description: p.description || "", short_description: p.short_description || "", sku: p.sku || "", modelo: p.modelo || "",
       price: String(p.price), original_price: p.original_price ? String(p.original_price) : "", cost_price: p.cost_price ? String(p.cost_price) : "",
       stock: String(p.stock), min_stock: String(p.min_stock || 5), category_id: p.category_id || "", brand_id: p.brand_id || "",
       images: p.images || [],
