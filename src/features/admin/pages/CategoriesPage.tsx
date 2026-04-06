@@ -234,14 +234,18 @@ const CategoriesPage = () => {
                       {form.icon ? ICON_OPTIONS.find(o => o.key === form.icon)?.label || form.icon : "Seleccionar ícono..."}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-3" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                  <PopoverContent className="w-96 p-3" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <Input 
                       placeholder="Buscar ícono..." 
                       value={iconSearch} 
                       onChange={(e) => setIconSearch(e.target.value)} 
                       className="mb-2"
                     />
-                    <div className="grid grid-cols-5 gap-1 max-h-[240px] overflow-y-auto pr-1 touch-pan-y" style={{ overscrollBehavior: 'contain', WebkitOverflowScrolling: 'touch' }}>
+                    <div 
+                      className="grid grid-cols-6 gap-1 max-h-[320px] overflow-y-scroll pr-1"
+                      onWheel={(e) => { e.stopPropagation(); }}
+                      onTouchMove={(e) => { e.stopPropagation(); }}
+                    >
                       {filteredIcons.map((opt) => {
                         const Icon = opt.icon;
                         return (
