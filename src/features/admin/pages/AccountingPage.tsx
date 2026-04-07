@@ -1192,6 +1192,8 @@ const AccountingPage = () => {
 
                       return {
                         id: viewingTx.id,
+                        ticket_number: (viewingTx as any).ticket_number || "",
+                        created_at: viewingTx.created_at,
                         date: viewingTx.fecha,
                         customer_name: viewingTx.cliente_nombre || "",
                         customer_phone: viewingTx.cliente_telefono || "",
