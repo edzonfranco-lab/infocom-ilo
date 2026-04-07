@@ -296,32 +296,38 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
       } else {
         // ─── A4 FORMAL BOLETA FORMAT (sale/service) ───
         const ticketType = type === "service" ? t.serviceTitle : t.saleTitle;
+        const ticketNum = order.ticket_number || "------";
+        const hora = order.created_at ? new Date(order.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : "";
         const a4Header = t.headerMode === "logo" && t.logoUrl
           ? `<img src="${t.logoUrl}" alt="Logo" style="max-height:60px;margin-bottom:4px" />`
           : `<div style="font-size:20px;font-weight:900;letter-spacing:2px">${t.companyName}</div>`;
+
+        const isSale = type === "sale";
 
         bodyContent = `
 <div class="a4-container">
   <div class="a4-header">
     <div class="a4-company">
       ${a4Header}
-      <div style="font-size:10px;margin-top:2px">${t.companySubtitle.replace(/\n/g, " | ")}</div>
+      <div style="font-size:9px;margin-top:4px;line-height:1.5">${COMPANY_INFO_BLOCK}</div>
     </div>
     <div class="a4-doc-type">
       <div class="doc-title">${ticketType}</div>
+      <div style="font-size:14px;font-weight:700;margin-top:4px">N° ${ticketNum}</div>
     </div>
   </div>
   <div class="a4-separator"></div>
   <div class="a4-info-grid">
     <div class="a4-info-left">
       <div class="a4-field"><span class="a4-label">Fecha de Emision:</span><span>${order.date || new Date().toISOString().split("T")[0]}</span></div>
+      ${hora ? `<div class="a4-field"><span class="a4-label">Hora:</span><span>${hora}</span></div>` : ""}
       ${order.customer_name ? `<div class="a4-field"><span class="a4-label">Cliente:</span><span>${order.customer_name}</span></div>` : ""}
       ${order.customer_dni ? `<div class="a4-field"><span class="a4-label">D.N.I.:</span><span>${order.customer_dni}</span></div>` : ""}
       ${order.customer_phone ? `<div class="a4-field"><span class="a4-label">Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
     </div>
     <div class="a4-info-right">
-      ${order.seller ? `<div class="a4-field"><span class="a4-label">Vendedor:</span><span>${String(order.seller).toUpperCase()}</span></div>` : ""}
-      ${order.responsible ? `<div class="a4-field"><span class="a4-label">Responsable:</span><span>${String(order.responsible).toUpperCase()}</span></div>` : ""}
+      ${isSale && (order.seller || order.emitido_por) ? `<div class="a4-field"><span class="a4-label">Vendedor:</span><span>${String(order.seller || order.emitido_por).toUpperCase()}</span></div>` : ""}
+      ${!isSale && order.responsible ? `<div class="a4-field"><span class="a4-label">Responsable:</span><span>${String(order.responsible).toUpperCase()}</span></div>` : ""}
       ${order.payment_method ? `<div class="a4-field"><span class="a4-label">Condicion de Pago:</span><span>${String(order.payment_method).toUpperCase()}</span></div>` : ""}
       ${order.equipo || order.device_type ? `<div class="a4-field"><span class="a4-label">Equipo:</span><span>${String(order.equipo || order.device_type).toUpperCase()}</span></div>` : ""}
     </div>
@@ -343,7 +349,8 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     <div class="a4-total-row"><span>Vuelto:</span><span>S/. ${(Number(order.amount_given) - totalFinal).toFixed(2)}</span></div>
   </div>` : ""}
   <div class="a4-footer">
-    <p>${t.footerText.replace(/\n/g, "<br>")}</p>
+    <p>${isSale ? SALE_FOOTER_TEXT : t.footerText.replace(/\n/g, "<br>")}</p>
+    <p style="margin-top:6px;font-size:9px">© ${new Date().getFullYear()} INFOCOM SOLUCIONES.</p>
   </div>
 </div>`;
       }
