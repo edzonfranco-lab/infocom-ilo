@@ -365,7 +365,12 @@ const StaffPage = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {!s.user_id && (
+                            <Button variant="outline" size="sm" onClick={() => openAccountDialog(s)} className="gap-1 text-primary border-primary/30">
+                              <KeyRound className="h-3.5 w-3.5" /> Crear Cuenta
+                            </Button>
+                          )}
                           <Button variant="outline" size="sm" onClick={() => openScheduleDialog(s.id)} className="gap-1">
                             <CalendarClock className="h-3.5 w-3.5" /> Horario
                           </Button>
