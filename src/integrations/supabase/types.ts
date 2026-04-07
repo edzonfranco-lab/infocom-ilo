@@ -995,6 +995,33 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          can_access: boolean
+          created_at: string
+          id: string
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          can_access?: boolean
+          created_at?: string
+          id?: string
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          can_access?: boolean
+          created_at?: string
+          id?: string
+          module?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       service_orders: {
         Row: {
           accessories: string | null
@@ -1079,6 +1106,8 @@ export type Database = {
       staff_members: {
         Row: {
           created_at: string | null
+          deactivated_at: string | null
+          deactivated_reason: string | null
           document_number: string | null
           email: string | null
           full_name: string
@@ -1093,6 +1122,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deactivated_at?: string | null
+          deactivated_reason?: string | null
           document_number?: string | null
           email?: string | null
           full_name: string
@@ -1107,6 +1138,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deactivated_at?: string | null
+          deactivated_reason?: string | null
           document_number?: string | null
           email?: string | null
           full_name?: string
