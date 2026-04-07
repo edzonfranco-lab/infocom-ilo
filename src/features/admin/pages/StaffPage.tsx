@@ -162,6 +162,49 @@ const StaffPage = () => {
     },
   });
 
+  // Account creation for staff without linked accounts
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [accountStaffId, setAccountStaffId] = useState<string | null>(null);
+  const [accountForm, setAccountForm] = useState({ email: "", password: "", role: "moderator" });
+  const [showPassword, setShowPassword] = useState(false);
+
+  const createAccountMutation = useMutation({
+    mutationFn: async () => {
+      const staffMember = staff.find((s: any) => s.id === accountStaffId);
+      if (!staffMember) throw new Error("Personal no encontrado");
+
+      const { data, error } = await supabase.functions.invoke("create-staff-account", {
+        body: {
+          email: accountForm.email,
+          password: accountForm.password,
+          full_name: staffMember.full_name,
+          staff_id: accountStaffId,
+          role: accountForm.role,
+        },
+      });
+
+      if (error) throw new Error(error.message || "Error al crear cuenta");
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["staff_members"] });
+      qc.invalidateQueries({ queryKey: ["profiles_for_staff_link"] });
+      toast.success(data?.message || "Cuenta creada exitosamente");
+      setAccountDialogOpen(false);
+      setAccountForm({ email: "", password: "", role: "moderator" });
+      setAccountStaffId(null);
+    },
+    onError: (e: any) => toast.error(e.message || "Error al crear cuenta"),
+  });
+
+  const openAccountDialog = (s: any) => {
+    setAccountStaffId(s.id);
+    setAccountForm({ email: s.email || "", password: "", role: "moderator" });
+    setShowPassword(false);
+    setAccountDialogOpen(true);
+  };
+
   const positions = [...new Set(staff.map((s: any) => s.position))].sort();
 
   const linkedUserIds = new Set(
