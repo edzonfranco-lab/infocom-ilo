@@ -200,7 +200,13 @@ const StaffPage = () => {
 
   const openAccountDialog = (s: any) => {
     setAccountStaffId(s.id);
-    setAccountForm({ email: s.email || "", password: "", role: "moderator" });
+    // Auto-generate email: nombre_apellido@infocomtecnology.ilo
+    const autoEmail = s.full_name
+      ? s.full_name.trim().toLowerCase().replace(/\s+/g, "_").normalize("NFD").replace(/[\u0300-\u036f]/g, "") + "@infocomtecnology.ilo"
+      : "";
+    // Auto-fill password with DNI
+    const autoPassword = s.document_number || "";
+    setAccountForm({ email: autoEmail, password: autoPassword, role: "moderator" });
     setShowPassword(false);
     setAccountDialogOpen(true);
   };
