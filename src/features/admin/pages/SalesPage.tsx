@@ -169,7 +169,7 @@ const SalesPage = () => {
         emitido_en: new Date().toISOString(),
         emitido_por: user?.email || "POS",
         created_by: user?.id || null,
-      }).select("id").single();
+      }).select("id, ticket_number, created_at").single();
       if (txErr) throw txErr;
 
       const itemPayload = cart.map(c => ({
