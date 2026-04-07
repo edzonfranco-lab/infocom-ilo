@@ -1394,6 +1394,7 @@ export type Database = {
           notas: string | null
           subtotal_productos: number
           subtotal_servicios: number
+          ticket_number: string | null
           tipo_general: Database["public"]["Enums"]["transaction_type"]
           total: number
           updated_at: string
@@ -1418,6 +1419,7 @@ export type Database = {
           notas?: string | null
           subtotal_productos?: number
           subtotal_servicios?: number
+          ticket_number?: string | null
           tipo_general?: Database["public"]["Enums"]["transaction_type"]
           total?: number
           updated_at?: string
@@ -1442,6 +1444,7 @@ export type Database = {
           notas?: string | null
           subtotal_productos?: number
           subtotal_servicios?: number
+          ticket_number?: string | null
           tipo_general?: Database["public"]["Enums"]["transaction_type"]
           total?: number
           updated_at?: string

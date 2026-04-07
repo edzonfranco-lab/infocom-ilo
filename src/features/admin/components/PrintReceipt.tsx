@@ -137,12 +137,17 @@ const saveOrderOverrides = (orderId: string, o: OrderOverrides) => {
   localStorage.setItem(`receipt_overrides_${orderId}`, JSON.stringify(o));
 };
 
+export const COMPANY_INFO_BLOCK = `R.U.C. :10479533852<br>ILO - MOQUEGUA - PERU<br>Tel. :963326971<br>DIRECCION: 24 de Octubre Mz 53 Lt 03<br>Ilo - Moquegua - Perú<br>www.infocom-ilo.lovable.app`;
+
+export const SALE_FOOTER_TEXT = `¡Gracias!<br>Si tiene alguna pregunta sobre este ticket,<br>no dude en comunicarse con nosotros:<br>infocomcotizaciones@gmail.com<br>963326971`;
+
 /** Build the header HTML used in all ticket types */
-export const buildHeaderHtml = (t: ReceiptTemplate) => {
+export const buildHeaderHtml = (t: ReceiptTemplate, includeCompanyInfo = false) => {
+  const companyBlock = includeCompanyInfo ? `<div class="company-info">${COMPANY_INFO_BLOCK}</div>` : "";
   if (t.headerMode === "logo" && t.logoUrl) {
-    return `<div class="center"><img src="${t.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" /><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+    return `<div class="center"><img src="${t.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" />${companyBlock}<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
   }
-  return `<div class="center"><div class="title">${t.companyName}</div><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+  return `<div class="center"><div class="title">${t.companyName}</div>${companyBlock}<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
 };
 
 interface PrintReceiptProps {
@@ -291,32 +296,38 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
       } else {
         // ─── A4 FORMAL BOLETA FORMAT (sale/service) ───
         const ticketType = type === "service" ? t.serviceTitle : t.saleTitle;
+        const ticketNum = order.ticket_number || "------";
+        const hora = order.created_at ? new Date(order.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : "";
         const a4Header = t.headerMode === "logo" && t.logoUrl
           ? `<img src="${t.logoUrl}" alt="Logo" style="max-height:60px;margin-bottom:4px" />`
           : `<div style="font-size:20px;font-weight:900;letter-spacing:2px">${t.companyName}</div>`;
+
+        const isSale = type === "sale";
 
         bodyContent = `
 <div class="a4-container">
   <div class="a4-header">
     <div class="a4-company">
       ${a4Header}
-      <div style="font-size:10px;margin-top:2px">${t.companySubtitle.replace(/\n/g, " | ")}</div>
+      <div style="font-size:9px;margin-top:4px;line-height:1.5">${COMPANY_INFO_BLOCK}</div>
     </div>
     <div class="a4-doc-type">
       <div class="doc-title">${ticketType}</div>
+      <div style="font-size:14px;font-weight:700;margin-top:4px">N° ${ticketNum}</div>
     </div>
   </div>
   <div class="a4-separator"></div>
   <div class="a4-info-grid">
     <div class="a4-info-left">
       <div class="a4-field"><span class="a4-label">Fecha de Emision:</span><span>${order.date || new Date().toISOString().split("T")[0]}</span></div>
+      ${hora ? `<div class="a4-field"><span class="a4-label">Hora:</span><span>${hora}</span></div>` : ""}
       ${order.customer_name ? `<div class="a4-field"><span class="a4-label">Cliente:</span><span>${order.customer_name}</span></div>` : ""}
       ${order.customer_dni ? `<div class="a4-field"><span class="a4-label">D.N.I.:</span><span>${order.customer_dni}</span></div>` : ""}
       ${order.customer_phone ? `<div class="a4-field"><span class="a4-label">Telefono:</span><span>${order.customer_phone}</span></div>` : ""}
     </div>
     <div class="a4-info-right">
-      ${order.seller ? `<div class="a4-field"><span class="a4-label">Vendedor:</span><span>${String(order.seller).toUpperCase()}</span></div>` : ""}
-      ${order.responsible ? `<div class="a4-field"><span class="a4-label">Responsable:</span><span>${String(order.responsible).toUpperCase()}</span></div>` : ""}
+      ${isSale && (order.seller || order.emitido_por) ? `<div class="a4-field"><span class="a4-label">Vendedor:</span><span>${String(order.seller || order.emitido_por).toUpperCase()}</span></div>` : ""}
+      ${!isSale && order.responsible ? `<div class="a4-field"><span class="a4-label">Responsable:</span><span>${String(order.responsible).toUpperCase()}</span></div>` : ""}
       ${order.payment_method ? `<div class="a4-field"><span class="a4-label">Condicion de Pago:</span><span>${String(order.payment_method).toUpperCase()}</span></div>` : ""}
       ${order.equipo || order.device_type ? `<div class="a4-field"><span class="a4-label">Equipo:</span><span>${String(order.equipo || order.device_type).toUpperCase()}</span></div>` : ""}
     </div>
@@ -338,7 +349,8 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     <div class="a4-total-row"><span>Vuelto:</span><span>S/. ${(Number(order.amount_given) - totalFinal).toFixed(2)}</span></div>
   </div>` : ""}
   <div class="a4-footer">
-    <p>${t.footerText.replace(/\n/g, "<br>")}</p>
+    <p>${isSale ? SALE_FOOTER_TEXT : t.footerText.replace(/\n/g, "<br>")}</p>
+    <p style="margin-top:6px;font-size:9px">© ${new Date().getFullYear()} INFOCOM SOLUCIONES.</p>
   </div>
 </div>`;
       }
@@ -408,18 +420,21 @@ ${order.spare_parts ? `<h3>REPUESTOS</h3><p style="margin:4px 0;word-break:break
 ${t.showConditions ? `<div class="conditions"><p>${t.receptionConditionsText}</p></div>` : ""}
 ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureRight}</span></div></div>` : ""}`;
     } else if (type === "sale") {
+      const ticketNum = order.ticket_number || "------";
+      const hora = order.created_at ? new Date(order.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
       bodyContent = `
-${headerHtml}
+${buildHeaderHtml(t, true)}
 <div class="line"></div>
 <div class="center receipt-title">${t.saleTitle}</div>
+<div class="center" style="font-size:${fs}px;font-weight:900">N° ${ticketNum}</div>
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
+<div class="row"><span>Hora:</span><span>${hora}</span></div>
 ${order.customer_name ? `<div class="row"><span>Cliente:</span><span class="bold">${order.customer_name}</span></div>` : ""}
 ${order.customer_phone ? `<div class="row"><span>Tel:</span><span>${order.customer_phone}</span></div>` : ""}
 ${order.customer_dni ? `<div class="row"><span>DNI:</span><span>${order.customer_dni}</span></div>` : ""}
 ${order.payment_method ? `<div class="row"><span>Pago:</span><span class="bold">${String(order.payment_method).toUpperCase()}</span></div>` : ""}
-<div class="row"><span>Vendedor:</span><span class="bold">${String(order.seller || "").toUpperCase()}</span></div>
-${order.equipo ? `<div class="row"><span>Equipo:</span><span class="bold">${String(order.equipo).toUpperCase()}</span></div>` : ""}
+<div class="row"><span>Vendedor:</span><span class="bold">${String(order.seller || order.emitido_por || "").toUpperCase()}</span></div>
 <div class="line"></div>
 <table class="items-table">
 <thead><tr><th>Cant.</th><th>Descripcion</th><th>P.U.</th><th>Total</th></tr></thead>
@@ -473,6 +488,7 @@ ${Number(order.subtotal_productos || 0) > 0 && Number(order.subtotal_servicios |
   .footer{margin-top:8px;font-size:${Math.max(fs - 3, 7)}px;text-align:center;font-weight:700}
   .big{font-size:${fs + 4}px;font-weight:900}
   .conditions{margin:6px 0;font-size:${Math.max(fs - 3, 7)}px;font-weight:700;text-align:center}
+  .company-info{font-size:${Math.max(fs - 3, 7)}px;margin:4px 0;font-weight:700;line-height:1.4}
   .items-table{width:100%;border-collapse:collapse;margin:3px 0;font-size:${Math.max(fs - 2, 7)}px}
   .items-table th{border-bottom:1px solid #000;padding:1px;text-align:left;font-weight:900;font-size:${Math.max(fs - 2, 7)}px}
   .items-table td{padding:1px;vertical-align:top;word-break:break-word}
@@ -481,7 +497,7 @@ ${Number(order.subtotal_productos || 0) > 0 && Number(order.subtotal_servicios |
   @media print{body{padding:2px}@page{margin:1mm}}
 </style></head><body>
 ${bodyContent}
-<div class="footer"><p>${t.footerText.replace(/\n/g, "<br>")}</p></div>
+<div class="footer"><p>${type === "sale" ? SALE_FOOTER_TEXT : t.footerText.replace(/\n/g, "<br>")}</p><p style="margin-top:4px;font-size:${Math.max(fs - 4, 6)}px">© ${new Date().getFullYear()} INFOCOM SOLUCIONES.</p></div>
 </body></html>`;
 
     w.document.write(html);
