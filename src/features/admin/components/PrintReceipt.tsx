@@ -474,7 +474,7 @@ ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top
       const ticketNum = order.ticket_number || "------";
       const hora = order.created_at ? new Date(order.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
       bodyContent = `
-${buildHeaderHtml(t, true)}
+${buildHeaderHtml(t, true, companyInfo)}
 <div class="line"></div>
 <div class="center receipt-title">${t.saleTitle}</div>
 <div class="center" style="font-size:${fs}px;font-weight:900">N° ${ticketNum}</div>
@@ -548,7 +548,7 @@ ${Number(order.subtotal_productos || 0) > 0 && Number(order.subtotal_servicios |
   @media print{body{padding:2px}@page{margin:1mm}}
 </style></head><body>
 ${bodyContent}
-<div class="footer"><p>${type === "sale" ? SALE_FOOTER_TEXT : t.footerText.replace(/\n/g, "<br>")}</p><p style="margin-top:4px;font-size:${Math.max(fs - 4, 6)}px">© ${new Date().getFullYear()} INFOCOM SOLUCIONES.</p></div>
+<div class="footer"><p>${type === "sale" ? buildSaleFooter(companyInfo) : t.footerText.replace(/\n/g, "<br>")}</p><p style="margin-top:4px;font-size:${Math.max(fs - 4, 6)}px">${buildCopyright(companyInfo)}</p></div>
 </body></html>`;
 
     w.document.write(html);
