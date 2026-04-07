@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
   fallbackPath?: string;
 }
 
-const ADMIN_PANEL_ROLES: AppRole[] = ["admin", "moderator"];
+const ADMIN_PANEL_ROLES: AppRole[] = ["admin", "moderator", "user"];
 
 const ProtectedRoute = ({ children, requireAdmin = false, allowedRoles, fallbackPath = "/" }: ProtectedRouteProps) => {
   const { user, loading, roles } = useAuth();
@@ -35,4 +35,3 @@ const ProtectedRoute = ({ children, requireAdmin = false, allowedRoles, fallback
 };
 
 export default ProtectedRoute;
-
