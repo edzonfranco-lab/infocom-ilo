@@ -49,6 +49,7 @@ import AppointmentsPage from "@/features/admin/pages/AppointmentsPage";
 import SuppliersPage from "@/features/admin/pages/SuppliersPage";
 import PurchasesPage from "@/features/admin/pages/PurchasesPage";
 import KardexPage from "@/features/admin/pages/KardexPage";
+import PermissionsConfigPage from "@/features/admin/pages/PermissionsConfigPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({

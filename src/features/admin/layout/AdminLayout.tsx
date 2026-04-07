@@ -3,12 +3,13 @@ import {
   LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings,
   ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign,
   Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid, UserCheck, CalendarClock, Bell,
-  Truck, PackagePlus, History
+  Truck, PackagePlus, History, Lock
 } from "lucide-react";
 import NotificationBell from "@/features/admin/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import logoDark from "@/assets/logo-dark-theme.png";
 
 interface NavItem {
@@ -16,58 +17,59 @@ interface NavItem {
   icon: any;
   label: string;
   end?: boolean;
-  roles: string[];
+  module?: string; // permission module key
   children?: NavItem[];
 }
 
 const allNavItems: NavItem[] = [
-  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true, roles: ["admin", "moderator"] },
-  { to: "/admin/recepcion", icon: ClipboardList, label: "Recepción Técnica", roles: ["admin", "moderator"] },
-  { to: "/admin/soporte", icon: Wrench, label: "Soporte Técnico", roles: ["admin", "moderator"] },
+  { to: "/admin", icon: LayoutDashboard, label: "Dashboard", end: true, module: "dashboard" },
+  { to: "/admin/recepcion", icon: ClipboardList, label: "Recepción Técnica", module: "recepcion" },
+  { to: "/admin/soporte", icon: Wrench, label: "Soporte Técnico", module: "soporte" },
   {
-    to: "/admin/productos", icon: Package, label: "Productos", roles: ["admin", "moderator"],
+    to: "/admin/productos", icon: Package, label: "Productos",
     children: [
-      { to: "/admin/productos", icon: Package, label: "Inventario", end: true, roles: ["admin", "moderator"] },
-      { to: "/admin/vitrinas", icon: LayoutGrid, label: "Vitrinas", roles: ["admin"] },
-      { to: "/admin/categorias", icon: FolderTree, label: "Categorías", roles: ["admin"] },
-      { to: "/admin/marcas", icon: Tags, label: "Marcas", roles: ["admin"] },
-      { to: "/admin/kardex", icon: History, label: "Kardex", roles: ["admin", "moderator"] },
+      { to: "/admin/productos", icon: Package, label: "Inventario", end: true, module: "inventario" },
+      { to: "/admin/vitrinas", icon: LayoutGrid, label: "Vitrinas", module: "vitrinas" },
+      { to: "/admin/categorias", icon: FolderTree, label: "Categorías", module: "categorias" },
+      { to: "/admin/marcas", icon: Tags, label: "Marcas", module: "marcas" },
+      { to: "/admin/kardex", icon: History, label: "Kardex", module: "kardex" },
     ],
   },
   {
-    to: "/admin/compras", icon: PackagePlus, label: "Compras", roles: ["admin", "moderator"],
+    to: "/admin/compras", icon: PackagePlus, label: "Compras",
     children: [
-      { to: "/admin/compras", icon: PackagePlus, label: "Compras", end: true, roles: ["admin", "moderator"] },
-      { to: "/admin/proveedores", icon: Truck, label: "Proveedores", roles: ["admin"] },
+      { to: "/admin/compras", icon: PackagePlus, label: "Compras", end: true, module: "compras" },
+      { to: "/admin/proveedores", icon: Truck, label: "Proveedores", module: "proveedores" },
     ],
   },
   {
-    to: "/admin/ventas", icon: Store, label: "Ventas", roles: ["admin", "moderator"],
+    to: "/admin/ventas", icon: Store, label: "Ventas",
     children: [
-      { to: "/admin/ventas/pos", icon: ShoppingCart, label: "Punto de Venta", roles: ["admin", "moderator"] },
-      { to: "/admin/pedidos", icon: ShoppingBag, label: "Pedidos Online", roles: ["admin", "moderator"] },
+      { to: "/admin/ventas/pos", icon: ShoppingCart, label: "Punto de Venta", module: "pos" },
+      { to: "/admin/pedidos", icon: ShoppingBag, label: "Pedidos Online", module: "pedidos" },
     ],
   },
-  { to: "/admin/contabilidad", icon: DollarSign, label: "Contabilidad", roles: ["admin"] },
+  { to: "/admin/contabilidad", icon: DollarSign, label: "Contabilidad", module: "contabilidad" },
   {
-    to: "/admin/clientes", icon: UserCheck, label: "Clientes", roles: ["admin", "moderator"],
+    to: "/admin/clientes", icon: UserCheck, label: "Clientes",
     children: [
-      { to: "/admin/clientes", icon: UserCheck, label: "Directorio", end: true, roles: ["admin", "moderator"] },
-      { to: "/admin/agenda", icon: CalendarClock, label: "Agenda / Citas", roles: ["admin", "moderator"] },
+      { to: "/admin/clientes", icon: UserCheck, label: "Directorio", end: true, module: "clientes" },
+      { to: "/admin/agenda", icon: CalendarClock, label: "Agenda / Citas", module: "agenda" },
     ],
   },
-  { to: "/admin/banners", icon: Image, label: "Banners", roles: ["admin"] },
-  { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago", roles: ["admin"] },
-  { to: "/admin/empresa", icon: Building2, label: "Empresa", roles: ["admin"] },
+  { to: "/admin/banners", icon: Image, label: "Banners", module: "banners" },
+  { to: "/admin/pagos", icon: CreditCard, label: "Cuentas de Pago", module: "pagos" },
+  { to: "/admin/empresa", icon: Building2, label: "Empresa", module: "empresa" },
   {
-    to: "/admin/personal", icon: Users, label: "Personal", roles: ["admin", "moderator"],
+    to: "/admin/personal", icon: Users, label: "Personal",
     children: [
-      { to: "/admin/personal", icon: Users, label: "Gestión", end: true, roles: ["admin"] },
-      { to: "/admin/asistencias", icon: CalendarDays, label: "Asistencias", roles: ["admin", "moderator"] },
+      { to: "/admin/personal", icon: Users, label: "Gestión", end: true, module: "personal" },
+      { to: "/admin/asistencias", icon: CalendarDays, label: "Asistencias", module: "asistencias" },
     ],
   },
-  { to: "/admin/roles", icon: Shield, label: "Roles", roles: ["admin"] },
-  { to: "/admin/configuracion", icon: Settings, label: "Configuración", roles: ["admin"] },
+  { to: "/admin/roles", icon: Shield, label: "Roles", module: "roles" },
+  { to: "/admin/permisos", icon: Lock, label: "Permisos", module: "roles" },
+  { to: "/admin/configuracion", icon: Settings, label: "Configuración", module: "configuracion" },
 ];
 
 const AdminLayout = () => {
@@ -75,6 +77,7 @@ const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const { roles } = useAuth();
+  const { canAccess } = usePermissions();
 
   const isActive = (path: string, end?: boolean) => {
     if (end) return location.pathname === path;
@@ -87,21 +90,32 @@ const AdminLayout = () => {
     );
   };
 
-  // Auto-expand sections that contain the current route
   const isChildActive = (item: NavItem) => {
     return item.children?.some(c => isActive(c.to, c.end));
   };
 
-  const navItems = allNavItems.filter(item =>
-    item.roles.some(r => roles.includes(r as any))
-  );
+  // Filter by permission
+  const filterByPermission = (item: NavItem): NavItem | null => {
+    if (item.children) {
+      const filteredChildren = item.children
+        .map(c => filterByPermission(c))
+        .filter(Boolean) as NavItem[];
+      if (filteredChildren.length === 0) return null;
+      return { ...item, children: filteredChildren };
+    }
+    if (item.module && !canAccess(item.module)) return null;
+    return item;
+  };
+
+  const navItems = allNavItems
+    .map(filterByPermission)
+    .filter(Boolean) as NavItem[];
 
   const renderNavItem = (item: NavItem) => {
     const hasChildren = item.children && item.children.length > 0;
-    const childrenFiltered = item.children?.filter(c => c.roles.some(r => roles.includes(r as any)));
     const expanded = expandedSections.includes(item.label) || isChildActive(item);
 
-    if (hasChildren && childrenFiltered && childrenFiltered.length > 0) {
+    if (hasChildren && item.children) {
       return (
         <div key={item.label}>
           <button
@@ -120,7 +134,7 @@ const AdminLayout = () => {
           </button>
           {expanded && (
             <div className="ml-4 mt-1 space-y-0.5 border-l border-primary/10 pl-3">
-              {childrenFiltered.map(child => (
+              {item.children.map(child => (
                 <Link
                   key={child.to}
                   to={child.to}
@@ -204,7 +218,6 @@ const AdminLayout = () => {
           </div>
           <NotificationBell />
         </header>
-        {/* Desktop notification bell */}
         <div className="hidden lg:flex sticky top-0 z-40 bg-card/95 backdrop-blur-xl border-b border-primary/10 px-6 py-2 justify-end">
           <NotificationBell />
         </div>
