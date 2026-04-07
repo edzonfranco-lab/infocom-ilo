@@ -481,6 +481,7 @@ ${Number(order.subtotal_productos || 0) > 0 && Number(order.subtotal_servicios |
   .footer{margin-top:8px;font-size:${Math.max(fs - 3, 7)}px;text-align:center;font-weight:700}
   .big{font-size:${fs + 4}px;font-weight:900}
   .conditions{margin:6px 0;font-size:${Math.max(fs - 3, 7)}px;font-weight:700;text-align:center}
+  .company-info{font-size:${Math.max(fs - 3, 7)}px;margin:4px 0;font-weight:700;line-height:1.4}
   .items-table{width:100%;border-collapse:collapse;margin:3px 0;font-size:${Math.max(fs - 2, 7)}px}
   .items-table th{border-bottom:1px solid #000;padding:1px;text-align:left;font-weight:900;font-size:${Math.max(fs - 2, 7)}px}
   .items-table td{padding:1px;vertical-align:top;word-break:break-word}
@@ -489,7 +490,7 @@ ${Number(order.subtotal_productos || 0) > 0 && Number(order.subtotal_servicios |
   @media print{body{padding:2px}@page{margin:1mm}}
 </style></head><body>
 ${bodyContent}
-<div class="footer"><p>${t.footerText.replace(/\n/g, "<br>")}</p></div>
+<div class="footer"><p>${type === "sale" ? SALE_FOOTER_TEXT : t.footerText.replace(/\n/g, "<br>")}</p><p style="margin-top:4px;font-size:${Math.max(fs - 4, 6)}px">© ${new Date().getFullYear()} INFOCOM SOLUCIONES.</p></div>
 </body></html>`;
 
     w.document.write(html);
