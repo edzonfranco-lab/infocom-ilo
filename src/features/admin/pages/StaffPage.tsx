@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Users, Plus, Search, UserCheck, UserX, Briefcase, Phone, Mail, IdCard, Clock, Trash2, CalendarClock } from "lucide-react";
+import { Users, Plus, Search, UserCheck, UserX, Briefcase, Phone, Mail, IdCard, Clock, Trash2, CalendarClock, KeyRound, Eye, EyeOff } from "lucide-react";
 import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
