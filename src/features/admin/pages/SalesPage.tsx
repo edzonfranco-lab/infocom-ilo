@@ -49,7 +49,7 @@ const SalesPage = () => {
   });
 
   // Last completed sale for printing
-  const [lastSale, setLastSale] = useState<{ items: CartItem[]; customer: typeof customerForm; total: number; date: string; saleType: SaleType; change: number } | null>(null);
+  const [lastSale, setLastSale] = useState<{ items: CartItem[]; customer: typeof customerForm; total: number; date: string; saleType: SaleType; change: number; ticket_number?: string; created_at?: string } | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
 
   const { data: products = [] } = useQuery({
