@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ShoppingCart, Search, Plus, Minus, X, Receipt, User, Loader2, Printer, AlertCircle, FileText } from "lucide-react";
-import { loadTemplate, buildHeaderHtml } from "@/features/admin/components/PrintReceipt";
+import { loadTemplate, buildHeaderHtml, SALE_FOOTER_TEXT } from "@/features/admin/components/PrintReceipt";
 import { CURRENCY, PAYMENT_METHOD_LABELS } from "@/lib/types";
 import type { PaymentMethod } from "@/lib/types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
