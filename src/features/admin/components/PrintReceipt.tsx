@@ -137,12 +137,17 @@ const saveOrderOverrides = (orderId: string, o: OrderOverrides) => {
   localStorage.setItem(`receipt_overrides_${orderId}`, JSON.stringify(o));
 };
 
+const COMPANY_INFO_BLOCK = `R.U.C. :10479533852<br>ILO - MOQUEGUA - PERU<br>Tel. :963326971<br>DIRECCION: 24 de Octubre Mz 53 Lt 03<br>Ilo - Moquegua - Perú<br>www.infocom-ilo.lovable.app`;
+
+const SALE_FOOTER_TEXT = `¡Gracias!<br>Si tiene alguna pregunta sobre este ticket,<br>no dude en comunicarse con nosotros:<br>infocomcotizaciones@gmail.com<br>963326971`;
+
 /** Build the header HTML used in all ticket types */
-export const buildHeaderHtml = (t: ReceiptTemplate) => {
+export const buildHeaderHtml = (t: ReceiptTemplate, includeCompanyInfo = false) => {
+  const companyBlock = includeCompanyInfo ? `<div class="company-info">${COMPANY_INFO_BLOCK}</div>` : "";
   if (t.headerMode === "logo" && t.logoUrl) {
-    return `<div class="center"><img src="${t.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" /><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+    return `<div class="center"><img src="${t.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" />${companyBlock}<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
   }
-  return `<div class="center"><div class="title">${t.companyName}</div><div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
+  return `<div class="center"><div class="title">${t.companyName}</div>${companyBlock}<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
 };
 
 interface PrintReceiptProps {
