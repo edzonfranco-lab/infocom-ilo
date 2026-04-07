@@ -230,8 +230,10 @@ const SalesPage = () => {
     const sz = PAPER_SIZES[template.paperSize] || "210px";
     const fs = parseInt(template.fontSize) || 12;
     const title = lastSale.saleType === "boleta" ? template.saleTitle : "NOTA DE VENTA";
+    const ticketNum = lastSale.ticket_number || "------";
+    const hora = lastSale.created_at ? new Date(lastSale.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : "";
 
-    const headerHtml = buildHeaderHtml(template);
+    const headerHtml = buildHeaderHtml(template, true);
 
     const itemsHtml = lastSale.items.map(c =>
       `<div class="row"><span>${c.quantity}x ${c.name}</span><span class="bold">S/${(c.price * c.quantity).toLocaleString()}</span></div>`
@@ -245,6 +247,7 @@ body{font-family:'Courier New',monospace;font-size:${fs}px;font-weight:700;paddi
 .row{display:flex;justify-content:space-between;margin:2px 0;gap:4px}
 .title{font-size:${fs + 4}px;font-weight:900;margin-bottom:2px}
 .subtitle{font-size:${Math.max(fs - 2, 8)}px;margin-bottom:6px;font-weight:700}
+.company-info{font-size:${Math.max(fs - 3, 7)}px;margin:4px 0;font-weight:700;line-height:1.4}
 .big{font-size:${fs + 6}px;font-weight:900}
 .footer{margin-top:12px;font-size:${Math.max(fs - 3, 8)}px;text-align:center;font-weight:700}
 @media print{body{padding:4px}@page{margin:2mm}}
@@ -252,8 +255,10 @@ body{font-family:'Courier New',monospace;font-size:${fs}px;font-weight:700;paddi
 ${headerHtml}
 <div class="line"></div>
 <div class="center big">${title}</div>
+<div class="center" style="font-size:${fs}px;font-weight:900">N° ${ticketNum}</div>
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${lastSale.date}</span></div>
+${hora ? `<div class="row"><span>Hora:</span><span>${hora}</span></div>` : ""}
 ${lastSale.customer.nombre ? `<div class="row"><span>Cliente:</span><span class="bold">${lastSale.customer.nombre}</span></div>` : ""}
 ${lastSale.saleType === "boleta" && lastSale.customer.dni ? `<div class="row"><span>DNI:</span><span>${lastSale.customer.dni}</span></div>` : ""}
 ${lastSale.customer.telefono ? `<div class="row"><span>Telefono:</span><span>${lastSale.customer.telefono}</span></div>` : ""}
@@ -264,7 +269,7 @@ ${itemsHtml}
 <div class="row"><span>Metodo:</span><span>${PAYMENT_METHOD_LABELS[lastSale.customer.metodo_pago as PaymentMethod] || lastSale.customer.metodo_pago}</span></div>
 ${lastSale.customer.metodo_pago === "cash" && lastSale.change > 0 ? `<div class="row"><span>Recibido:</span><span>S/${parseFloat(lastSale.customer.monto_recibido).toFixed(2)}</span></div>
 <div class="row"><span class="bold">Vuelto:</span><span class="bold">S/${lastSale.change.toFixed(2)}</span></div>` : ""}
-<div class="footer"><p>${template.footerText.replace(/\n/g, "<br>")}</p></div>
+<div class="footer"><p>${SALE_FOOTER_TEXT}</p><p style="margin-top:4px;font-size:${Math.max(fs - 4, 6)}px">© ${new Date().getFullYear()} INFOCOM SOLUCIONES.</p></div>
 </body></html>`;
 
     const w = window.open("", "_blank", "width=500,height=700");
