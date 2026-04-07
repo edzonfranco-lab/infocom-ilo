@@ -206,6 +206,8 @@ const SalesPage = () => {
         date: new Date().toLocaleString("es-PE"),
         saleType,
         change: cambio,
+        ticket_number: (tx as any).ticket_number || "",
+        created_at: (tx as any).created_at || new Date().toISOString(),
       });
 
       toast.success("¡Venta registrada exitosamente!");
