@@ -137,13 +137,62 @@ const saveOrderOverrides = (orderId: string, o: OrderOverrides) => {
   localStorage.setItem(`receipt_overrides_${orderId}`, JSON.stringify(o));
 };
 
-export const COMPANY_INFO_BLOCK = `R.U.C. :10479533852<br>ILO - MOQUEGUA - PERU<br>Tel. :963326971<br>DIRECCION: 24 de Octubre Mz 53 Lt 03<br>Ilo - Moquegua - Perú<br>www.infocom-ilo.lovable.app`;
+export interface CompanyReceiptInfo {
+  ruc: string;
+  direccion: string;
+  ciudad: string;
+  telefono: string;
+  web: string;
+  email: string;
+  copyright: string;
+}
 
-export const SALE_FOOTER_TEXT = `¡Gracias!<br>Si tiene alguna pregunta sobre este ticket,<br>no dude en comunicarse con nosotros:<br>infocomcotizaciones@gmail.com<br>963326971`;
+export const DEFAULT_COMPANY_INFO: CompanyReceiptInfo = {
+  ruc: "10479533852",
+  direccion: "24 de Octubre Mz 53 Lt 03",
+  ciudad: "Ilo - Moquegua - Perú",
+  telefono: "963326971",
+  web: "www.infocomilo.com",
+  email: "infocomcotizaciones@gmail.com",
+  copyright: "INFOCOM SOLUCIONES",
+};
+
+let _cachedCompanyInfo: CompanyReceiptInfo | null = null;
+
+export const loadCompanyInfo = async (): Promise<CompanyReceiptInfo> => {
+  try {
+    const { data } = await supabase
+      .from("store_settings")
+      .select("value")
+      .eq("key", "receipt_company_info")
+      .maybeSingle();
+    if (data?.value) {
+      _cachedCompanyInfo = { ...DEFAULT_COMPANY_INFO, ...(data.value as any) };
+      return _cachedCompanyInfo;
+    }
+  } catch { /* fall through */ }
+  return DEFAULT_COMPANY_INFO;
+};
+
+export const getCachedCompanyInfo = (): CompanyReceiptInfo => _cachedCompanyInfo || DEFAULT_COMPANY_INFO;
+
+export const buildCompanyInfoBlock = (ci: CompanyReceiptInfo) =>
+  `R.U.C. :${ci.ruc}<br>${ci.ciudad.toUpperCase()}<br>Tel. :${ci.telefono}<br>DIRECCION: ${ci.direccion}<br>${ci.ciudad}<br>${ci.web}`;
+
+export const buildSaleFooter = (ci: CompanyReceiptInfo) =>
+  `¡Gracias!<br>Si tiene alguna pregunta sobre este ticket,<br>no dude en comunicarse con nosotros:<br>${ci.email}<br>${ci.telefono}`;
+
+export const buildCopyright = (ci: CompanyReceiptInfo) =>
+  `© ${new Date().getFullYear()} ${ci.copyright}.`;
+
+// Keep backward compat exports
+export const COMPANY_INFO_BLOCK = buildCompanyInfoBlock(DEFAULT_COMPANY_INFO);
+export const SALE_FOOTER_TEXT = buildSaleFooter(DEFAULT_COMPANY_INFO);
 
 /** Build the header HTML used in all ticket types */
-export const buildHeaderHtml = (t: ReceiptTemplate, includeCompanyInfo = false) => {
-  const companyBlock = includeCompanyInfo ? `<div class="company-info">${COMPANY_INFO_BLOCK}</div>` : "";
+export const buildHeaderHtml = (t: ReceiptTemplate, includeCompanyInfo = false, ci?: CompanyReceiptInfo) => {
+  const info = ci || getCachedCompanyInfo();
+  const companyBlock = includeCompanyInfo ? `<div class="company-info">${buildCompanyInfoBlock(info)}</div>` : "";
   if (t.headerMode === "logo" && t.logoUrl) {
     return `<div class="center"><img src="${t.logoUrl}" alt="Logo" style="max-width:80%;max-height:60px;margin:0 auto 4px;display:block" />${companyBlock}<div class="subtitle">${t.companySubtitle.replace(/\n/g, "<br>")}</div></div>`;
   }

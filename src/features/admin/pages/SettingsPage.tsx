@@ -1,21 +1,37 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useTheme } from "@/features/theme/ThemeProvider";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings, PartyPopper, Sun } from "lucide-react";
+import { Settings, PartyPopper, Sun, Receipt, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { DEFAULT_COMPANY_INFO, type CompanyReceiptInfo } from "@/features/admin/components/PrintReceipt";
 
 const THEME_EMOJIS: Record<string, string> = {
   default: "🎮", san_valentin: "❤️", halloween: "🎃", navidad: "🎄",
   dia_madre: "🌸", dia_padre: "👔", año_nuevo: "🎆", dia_niño: "🎈", custom: "🎨",
 };
 
+const COMPANY_FIELDS: { key: keyof CompanyReceiptInfo; label: string; placeholder: string; icon: string }[] = [
+  { key: "ruc", label: "R.U.C.", placeholder: "10479533852", icon: "🏢" },
+  { key: "direccion", label: "Dirección", placeholder: "24 de Octubre Mz 53 Lt 03", icon: "📍" },
+  { key: "ciudad", label: "Ciudad / Región", placeholder: "Ilo - Moquegua - Perú", icon: "🌍" },
+  { key: "telefono", label: "Teléfono", placeholder: "963326971", icon: "📞" },
+  { key: "web", label: "Página Web", placeholder: "www.infocomilo.com", icon: "🌐" },
+  { key: "email", label: "Correo Electrónico", placeholder: "infocomcotizaciones@gmail.com", icon: "📧" },
+  { key: "copyright", label: "Nombre en Copyright", placeholder: "INFOCOM SOLUCIONES", icon: "©️" },
+];
+
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
+  const [companyInfo, setCompanyInfo] = useState<CompanyReceiptInfo>(DEFAULT_COMPANY_INFO);
+  const [saving, setSaving] = useState(false);
 
   const { data: themeSettings = [] } = useQuery({
     queryKey: ["theme_settings"],
@@ -25,6 +41,22 @@ const SettingsPage = () => {
       return data;
     },
   });
+
+  const { data: storedCompanyInfo } = useQuery({
+    queryKey: ["receipt_company_info"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("store_settings")
+        .select("value")
+        .eq("key", "receipt_company_info")
+        .maybeSingle();
+      return data?.value ? { ...DEFAULT_COMPANY_INFO, ...(data.value as any) } : DEFAULT_COMPANY_INFO;
+    },
+  });
+
+  useEffect(() => {
+    if (storedCompanyInfo) setCompanyInfo(storedCompanyInfo);
+  }, [storedCompanyInfo]);
 
   const activateThemeMutation = useMutation({
     mutationFn: async (key: string) => {
@@ -38,12 +70,89 @@ const SettingsPage = () => {
     },
   });
 
+  const saveCompanyInfo = async () => {
+    setSaving(true);
+    try {
+      const { data: existing } = await supabase
+        .from("store_settings")
+        .select("id")
+        .eq("key", "receipt_company_info")
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("store_settings").update({ value: companyInfo as any }).eq("key", "receipt_company_info");
+      } else {
+        await supabase.from("store_settings").insert({ key: "receipt_company_info", value: companyInfo as any });
+      }
+      queryClient.invalidateQueries({ queryKey: ["receipt_company_info"] });
+      toast.success("✅ Datos de comprobantes guardados correctamente");
+    } catch (e: any) {
+      toast.error("Error al guardar: " + e.message);
+    }
+    setSaving(false);
+  };
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-display font-bold flex items-center gap-2">
         <Settings className="h-6 w-6 text-primary" /> Configuración
       </h1>
 
+      {/* ─── Company Receipt Info ─── */}
+      <Card className="border-primary/10">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Receipt className="h-5 w-5" /> Datos de Comprobantes / Boletas
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Estos datos aparecerán en todos los tickets y boletas impresas. Editá cualquier campo y guardá los cambios.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {COMPANY_FIELDS.map(f => (
+              <div key={f.key} className="space-y-1.5">
+                <Label className="text-sm flex items-center gap-1.5">
+                  <span>{f.icon}</span> {f.label}
+                </Label>
+                <Input
+                  value={companyInfo[f.key]}
+                  placeholder={f.placeholder}
+                  onChange={e => setCompanyInfo(prev => ({ ...prev, [f.key]: e.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Preview */}
+          <div className="mt-4 p-4 rounded-lg border border-dashed border-primary/30 bg-muted/30">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Vista previa en ticket:</p>
+            <div className="text-xs text-center leading-relaxed font-mono">
+              <p className="font-bold">R.U.C. :{companyInfo.ruc}</p>
+              <p>{companyInfo.ciudad.toUpperCase()}</p>
+              <p>Tel. :{companyInfo.telefono}</p>
+              <p>DIRECCION: {companyInfo.direccion}</p>
+              <p>{companyInfo.ciudad}</p>
+              <p>{companyInfo.web}</p>
+              <div className="border-t border-dashed mt-2 pt-2">
+                <p>¡Gracias!</p>
+                <p className="text-muted-foreground">Si tiene alguna pregunta sobre este ticket,</p>
+                <p className="text-muted-foreground">no dude en comunicarse con nosotros:</p>
+                <p>{companyInfo.email}</p>
+                <p>{companyInfo.telefono}</p>
+                <p className="mt-1">© {new Date().getFullYear()} {companyInfo.copyright}.</p>
+              </div>
+            </div>
+          </div>
+
+          <Button onClick={saveCompanyInfo} disabled={saving} className="w-full sm:w-auto">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+            Guardar Datos de Comprobantes
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ─── Appearance ─── */}
       <Card className="border-primary/10">
         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Sun className="h-5 w-5" /> Apariencia</CardTitle></CardHeader>
         <CardContent className="space-y-4">
@@ -57,6 +166,7 @@ const SettingsPage = () => {
         </CardContent>
       </Card>
 
+      {/* ─── Seasonal Themes ─── */}
       <Card className="border-primary/10">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2"><PartyPopper className="h-5 w-5" /> Temas Estacionales</CardTitle>
