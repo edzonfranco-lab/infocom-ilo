@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ShoppingCart, Search, Plus, Minus, X, Receipt, User, Loader2, Printer, AlertCircle, FileText } from "lucide-react";
-import { loadTemplate, buildHeaderHtml, SALE_FOOTER_TEXT } from "@/features/admin/components/PrintReceipt";
+import { loadTemplate, buildHeaderHtml, buildSaleFooter, buildCopyright, loadCompanyInfo, type CompanyReceiptInfo, DEFAULT_COMPANY_INFO } from "@/features/admin/components/PrintReceipt";
 import { CURRENCY, PAYMENT_METHOD_LABELS } from "@/lib/types";
 import type { PaymentMethod } from "@/lib/types";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -222,9 +222,10 @@ const SalesPage = () => {
     setProcessing(false);
   };
 
-  const printReceipt = () => {
+  const printReceipt = async () => {
     if (!lastSale) return;
     const template = loadTemplate();
+    const ci = await loadCompanyInfo();
 
     const PAPER_SIZES: Record<string, string> = { "50mm": "180px", "58mm": "210px", "80mm": "300px", A4: "700px" };
     const sz = PAPER_SIZES[template.paperSize] || "210px";
@@ -233,7 +234,7 @@ const SalesPage = () => {
     const ticketNum = lastSale.ticket_number || "------";
     const hora = lastSale.created_at ? new Date(lastSale.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : "";
 
-    const headerHtml = buildHeaderHtml(template, true);
+    const headerHtml = buildHeaderHtml(template, true, ci);
 
     const itemsHtml = lastSale.items.map(c =>
       `<div class="row"><span>${c.quantity}x ${c.name}</span><span class="bold">S/${(c.price * c.quantity).toLocaleString()}</span></div>`
@@ -269,7 +270,7 @@ ${itemsHtml}
 <div class="row"><span>Metodo:</span><span>${PAYMENT_METHOD_LABELS[lastSale.customer.metodo_pago as PaymentMethod] || lastSale.customer.metodo_pago}</span></div>
 ${lastSale.customer.metodo_pago === "cash" && lastSale.change > 0 ? `<div class="row"><span>Recibido:</span><span>S/${parseFloat(lastSale.customer.monto_recibido).toFixed(2)}</span></div>
 <div class="row"><span class="bold">Vuelto:</span><span class="bold">S/${lastSale.change.toFixed(2)}</span></div>` : ""}
-<div class="footer"><p>${SALE_FOOTER_TEXT}</p><p style="margin-top:4px;font-size:${Math.max(fs - 4, 6)}px">© ${new Date().getFullYear()} INFOCOM SOLUCIONES.</p></div>
+<div class="footer"><p>${buildSaleFooter(ci)}</p><p style="margin-top:4px;font-size:${Math.max(fs - 4, 6)}px">${buildCopyright(ci)}</p></div>
 </body></html>`;
 
     const w = window.open("", "_blank", "width=500,height=700");
