@@ -413,18 +413,21 @@ ${order.spare_parts ? `<h3>REPUESTOS</h3><p style="margin:4px 0;word-break:break
 ${t.showConditions ? `<div class="conditions"><p>${t.receptionConditionsText}</p></div>` : ""}
 ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top:20px"><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureLeft}</span></div><div style="flex:1;text-align:center;border-top:1px solid #000;margin:0 4px;padding-top:2px"><span style="font-size:${Math.max(fs - 3, 7)}px">${t.signatureRight}</span></div></div>` : ""}`;
     } else if (type === "sale") {
+      const ticketNum = order.ticket_number || "------";
+      const hora = order.created_at ? new Date(order.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
       bodyContent = `
-${headerHtml}
+${buildHeaderHtml(t, true)}
 <div class="line"></div>
 <div class="center receipt-title">${t.saleTitle}</div>
+<div class="center" style="font-size:${fs}px;font-weight:900">N° ${ticketNum}</div>
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
+<div class="row"><span>Hora:</span><span>${hora}</span></div>
 ${order.customer_name ? `<div class="row"><span>Cliente:</span><span class="bold">${order.customer_name}</span></div>` : ""}
 ${order.customer_phone ? `<div class="row"><span>Tel:</span><span>${order.customer_phone}</span></div>` : ""}
 ${order.customer_dni ? `<div class="row"><span>DNI:</span><span>${order.customer_dni}</span></div>` : ""}
 ${order.payment_method ? `<div class="row"><span>Pago:</span><span class="bold">${String(order.payment_method).toUpperCase()}</span></div>` : ""}
-<div class="row"><span>Vendedor:</span><span class="bold">${String(order.seller || "").toUpperCase()}</span></div>
-${order.equipo ? `<div class="row"><span>Equipo:</span><span class="bold">${String(order.equipo).toUpperCase()}</span></div>` : ""}
+<div class="row"><span>Vendedor:</span><span class="bold">${String(order.seller || order.emitido_por || "").toUpperCase()}</span></div>
 <div class="line"></div>
 <table class="items-table">
 <thead><tr><th>Cant.</th><th>Descripcion</th><th>P.U.</th><th>Total</th></tr></thead>
