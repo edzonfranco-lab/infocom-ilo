@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Users, Plus, Search, UserCheck, UserX, Briefcase, Phone, Mail, IdCard, Clock, Trash2, CalendarClock } from "lucide-react";
+import { Users, Plus, Search, UserCheck, UserX, Briefcase, Phone, Mail, IdCard, Clock, Trash2, CalendarClock, KeyRound, Eye, EyeOff } from "lucide-react";
 import { usePersistentDraft } from "@/hooks/use-persistent-draft";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -161,6 +161,49 @@ const StaffPage = () => {
       toast.success("Horario eliminado");
     },
   });
+
+  // Account creation for staff without linked accounts
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [accountStaffId, setAccountStaffId] = useState<string | null>(null);
+  const [accountForm, setAccountForm] = useState({ email: "", password: "", role: "moderator" });
+  const [showPassword, setShowPassword] = useState(false);
+
+  const createAccountMutation = useMutation({
+    mutationFn: async () => {
+      const staffMember = staff.find((s: any) => s.id === accountStaffId);
+      if (!staffMember) throw new Error("Personal no encontrado");
+
+      const { data, error } = await supabase.functions.invoke("create-staff-account", {
+        body: {
+          email: accountForm.email,
+          password: accountForm.password,
+          full_name: staffMember.full_name,
+          staff_id: accountStaffId,
+          role: accountForm.role,
+        },
+      });
+
+      if (error) throw new Error(error.message || "Error al crear cuenta");
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["staff_members"] });
+      qc.invalidateQueries({ queryKey: ["profiles_for_staff_link"] });
+      toast.success(data?.message || "Cuenta creada exitosamente");
+      setAccountDialogOpen(false);
+      setAccountForm({ email: "", password: "", role: "moderator" });
+      setAccountStaffId(null);
+    },
+    onError: (e: any) => toast.error(e.message || "Error al crear cuenta"),
+  });
+
+  const openAccountDialog = (s: any) => {
+    setAccountStaffId(s.id);
+    setAccountForm({ email: s.email || "", password: "", role: "moderator" });
+    setShowPassword(false);
+    setAccountDialogOpen(true);
+  };
 
   const positions = [...new Set(staff.map((s: any) => s.position))].sort();
 
@@ -322,7 +365,12 @@ const StaffPage = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {!s.user_id && (
+                            <Button variant="outline" size="sm" onClick={() => openAccountDialog(s)} className="gap-1 text-primary border-primary/30">
+                              <KeyRound className="h-3.5 w-3.5" /> Crear Cuenta
+                            </Button>
+                          )}
                           <Button variant="outline" size="sm" onClick={() => openScheduleDialog(s.id)} className="gap-1">
                             <CalendarClock className="h-3.5 w-3.5" /> Horario
                           </Button>
@@ -458,6 +506,75 @@ const StaffPage = () => {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={saveScheduleMutation.isPending}>Asignar Horario</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Account creation dialog */}
+      <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" />
+              Crear Cuenta — {staff.find((s: any) => s.id === accountStaffId)?.full_name}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={e => { e.preventDefault(); createAccountMutation.mutate(); }} className="space-y-4">
+            <div>
+              <Label>Email de acceso *</Label>
+              <Input
+                type="email"
+                required
+                value={accountForm.email}
+                onChange={e => setAccountForm({ ...accountForm, email: e.target.value })}
+                placeholder="correo@ejemplo.com"
+              />
+              <p className="text-xs text-muted-foreground mt-1">El personal usará este email para iniciar sesión</p>
+            </div>
+            <div>
+              <Label>Contraseña *</Label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={accountForm.password}
+                  onChange={e => setAccountForm({ ...accountForm, password: e.target.value })}
+                  placeholder="Mínimo 6 caracteres"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Comparte esta contraseña con el personal de forma segura</p>
+            </div>
+            <div>
+              <Label>Rol en el sistema</Label>
+              <Select value={accountForm.role} onValueChange={v => setAccountForm({ ...accountForm, role: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="moderator">🛡️ Moderador (acceso al panel según permisos)</SelectItem>
+                  <SelectItem value="user">👤 Usuario (acceso mínimo: asistencia)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">Luego puedes configurar los permisos específicos en el Panel de Permisos</p>
+            </div>
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm space-y-1">
+              <p className="font-semibold text-primary">📋 Resumen</p>
+              <p className="text-xs text-muted-foreground">• Se creará una cuenta con email confirmado</p>
+              <p className="text-xs text-muted-foreground">• Se vinculará automáticamente al registro de personal</p>
+              <p className="text-xs text-muted-foreground">• El personal podrá iniciar sesión inmediatamente</p>
+            </div>
+            <Button type="submit" className="w-full gap-2" disabled={createAccountMutation.isPending || !accountForm.email || !accountForm.password}>
+              <KeyRound className="h-4 w-4" />
+              {createAccountMutation.isPending ? "Creando cuenta..." : "Crear Cuenta y Vincular"}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
