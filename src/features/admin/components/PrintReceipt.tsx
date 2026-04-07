@@ -212,13 +212,15 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
   );
   const [uploading, setUploading] = useState(false);
   const [dbLoaded, setDbLoaded] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState<CompanyReceiptInfo>(DEFAULT_COMPANY_INFO);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load from DB on mount
   useEffect(() => {
     if (!dbLoaded) {
-      loadTemplateFromDb().then(t => {
+      Promise.all([loadTemplateFromDb(), loadCompanyInfo()]).then(([t, ci]) => {
         setTemplate(t);
+        setCompanyInfo(ci);
         setDbLoaded(true);
       });
     }
@@ -358,7 +360,7 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
   <div class="a4-header">
     <div class="a4-company">
       ${a4Header}
-      <div style="font-size:9px;margin-top:4px;line-height:1.5">${COMPANY_INFO_BLOCK}</div>
+      <div style="font-size:9px;margin-top:4px;line-height:1.5">${buildCompanyInfoBlock(companyInfo)}</div>
     </div>
     <div class="a4-doc-type">
       <div class="doc-title">${ticketType}</div>
@@ -398,8 +400,8 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     <div class="a4-total-row"><span>Vuelto:</span><span>S/. ${(Number(order.amount_given) - totalFinal).toFixed(2)}</span></div>
   </div>` : ""}
   <div class="a4-footer">
-    <p>${isSale ? SALE_FOOTER_TEXT : t.footerText.replace(/\n/g, "<br>")}</p>
-    <p style="margin-top:6px;font-size:9px">© ${new Date().getFullYear()} INFOCOM SOLUCIONES.</p>
+    <p>${isSale ? buildSaleFooter(companyInfo) : t.footerText.replace(/\n/g, "<br>")}</p>
+    <p style="margin-top:6px;font-size:9px">${buildCopyright(companyInfo)}</p>
   </div>
 </div>`;
       }
