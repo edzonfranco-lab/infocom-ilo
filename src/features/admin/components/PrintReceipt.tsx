@@ -137,9 +137,9 @@ const saveOrderOverrides = (orderId: string, o: OrderOverrides) => {
   localStorage.setItem(`receipt_overrides_${orderId}`, JSON.stringify(o));
 };
 
-const COMPANY_INFO_BLOCK = `R.U.C. :10479533852<br>ILO - MOQUEGUA - PERU<br>Tel. :963326971<br>DIRECCION: 24 de Octubre Mz 53 Lt 03<br>Ilo - Moquegua - Perú<br>www.infocom-ilo.lovable.app`;
+export const COMPANY_INFO_BLOCK = `R.U.C. :10479533852<br>ILO - MOQUEGUA - PERU<br>Tel. :963326971<br>DIRECCION: 24 de Octubre Mz 53 Lt 03<br>Ilo - Moquegua - Perú<br>www.infocom-ilo.lovable.app`;
 
-const SALE_FOOTER_TEXT = `¡Gracias!<br>Si tiene alguna pregunta sobre este ticket,<br>no dude en comunicarse con nosotros:<br>infocomcotizaciones@gmail.com<br>963326971`;
+export const SALE_FOOTER_TEXT = `¡Gracias!<br>Si tiene alguna pregunta sobre este ticket,<br>no dude en comunicarse con nosotros:<br>infocomcotizaciones@gmail.com<br>963326971`;
 
 /** Build the header HTML used in all ticket types */
 export const buildHeaderHtml = (t: ReceiptTemplate, includeCompanyInfo = false) => {
