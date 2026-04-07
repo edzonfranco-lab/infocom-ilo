@@ -49,6 +49,7 @@ import AppointmentsPage from "@/features/admin/pages/AppointmentsPage";
 import SuppliersPage from "@/features/admin/pages/SuppliersPage";
 import PurchasesPage from "@/features/admin/pages/PurchasesPage";
 import KardexPage from "@/features/admin/pages/KardexPage";
+import PermissionsConfigPage from "@/features/admin/pages/PermissionsConfigPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -104,7 +105,7 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                 {/* Admin */}
-                <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin", "moderator"]}><AdminLayout /></ProtectedRoute>}>
+                <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin", "moderator", "user"]}><AdminLayout /></ProtectedRoute>}>
                   <Route index element={<DashboardPage />} />
                   <Route path="recepcion" element={<ReceptionPage />} />
                   <Route path="productos" element={<ProductsPage />} />
@@ -121,6 +122,7 @@ const App = () => (
                   <Route path="banners" element={<AdminOnlyRoute><BannersPage /></AdminOnlyRoute>} />
                   <Route path="empresa" element={<AdminOnlyRoute><CompanyPage /></AdminOnlyRoute>} />
                   <Route path="roles" element={<AdminOnlyRoute><RolesPage /></AdminOnlyRoute>} />
+                  <Route path="permisos" element={<AdminOnlyRoute><PermissionsConfigPage /></AdminOnlyRoute>} />
                   <Route path="personal" element={<AdminOnlyRoute><StaffPage /></AdminOnlyRoute>} />
                   <Route path="asistencias" element={<AttendancePage />} />
                   <Route path="contabilidad" element={<AdminOnlyRoute><AccountingPage /></AdminOnlyRoute>} />
