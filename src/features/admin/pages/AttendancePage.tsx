@@ -316,12 +316,13 @@ const AttendancePage = () => {
       return [s.full_name, s.position, ...dayCols, st.a, st.f, st.t, st.j, `${st.pct}%`, `${st.totalHours}h`, `${st.scheduledHours}h`, `${st.overtime}h`];
     });
 
-    const ws = XLSX.utils.aoa_to_sheet([
+    const allRows = [
       [`CONTROL DE ASISTENCIAS — ${MONTHS[month].toUpperCase()} ${year}`],
       [],
       header,
       ...dataRows,
-    ]);
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(allRows);
 
     // Column widths
     ws["!cols"] = [
@@ -333,22 +334,69 @@ const AttendancePage = () => {
     // Merge title row
     ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
 
+    // Add borders to all data cells (header + data rows, starting row 2)
+    const borderStyle = { style: "thin", color: { rgb: "999999" } };
+    const border = { top: borderStyle, bottom: borderStyle, left: borderStyle, right: borderStyle };
+    const totalCols = header.length;
+    const startRow = 2; // row index of header (0-based)
+    const endRow = 2 + dataRows.length;
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = 0; c < totalCols; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
+        ws[cellRef].s = {
+          border,
+          alignment: { horizontal: "center", vertical: "center" },
+          ...(r === startRow ? {
+            font: { bold: true, sz: 10 },
+            fill: { fgColor: { rgb: "2D7D46" } },
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 10 },
+          } : {}),
+        };
+      }
+    }
+    // Title style
+    const titleRef = XLSX.utils.encode_cell({ r: 0, c: 0 });
+    if (ws[titleRef]) {
+      ws[titleRef].s = {
+        font: { bold: true, sz: 14, color: { rgb: "1a5c2e" } },
+        alignment: { horizontal: "left" },
+      };
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Asistencias");
 
-    // Summary sheet
-    const summaryData = [
+    // Summary sheet with borders
+    const summaryHeader = ["Personal", "Cargo", "Asistencias", "Faltas", "Tardanzas", "Justificadas", "% Asistencia", "Total Horas", "Horas Programadas", "Horas Extra"];
+    const summaryRows = filteredStaff.map((s: any) => {
+      const st = getStats(s.id);
+      return [s.full_name, s.position, st.a, st.f, st.t, st.j, `${st.pct}%`, `${st.totalHours}h`, `${st.scheduledHours}h`, `${st.overtime}h`];
+    });
+    const summaryAll = [
       [`RESUMEN DE ASISTENCIAS — ${MONTHS[month].toUpperCase()} ${year}`],
       [],
-      ["Personal", "Cargo", "Asistencias", "Faltas", "Tardanzas", "Justificadas", "% Asistencia", "Total Horas", "Horas Programadas", "Horas Extra"],
-      ...filteredStaff.map((s: any) => {
-        const st = getStats(s.id);
-        return [s.full_name, s.position, st.a, st.f, st.t, st.j, `${st.pct}%`, `${st.totalHours}h`, `${st.scheduledHours}h`, `${st.overtime}h`];
-      }),
+      summaryHeader,
+      ...summaryRows,
     ];
-    const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+    const ws2 = XLSX.utils.aoa_to_sheet(summaryAll);
     ws2["!cols"] = [{ wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 12 }];
     ws2["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+    // Borders for summary
+    for (let r = 2; r <= 2 + summaryRows.length; r++) {
+      for (let c = 0; c < summaryHeader.length; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (!ws2[cellRef]) ws2[cellRef] = { v: "", t: "s" };
+        ws2[cellRef].s = {
+          border,
+          alignment: { horizontal: "center", vertical: "center" },
+          ...(r === 2 ? {
+            fill: { fgColor: { rgb: "2D7D46" } },
+            font: { bold: true, color: { rgb: "FFFFFF" }, sz: 10 },
+          } : {}),
+        };
+      }
+    }
     XLSX.utils.book_append_sheet(wb, ws2, "Resumen");
 
     XLSX.writeFile(wb, `asistencias_${MONTHS[month]}_${year}.xlsx`);
