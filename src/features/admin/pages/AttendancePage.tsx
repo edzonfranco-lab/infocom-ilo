@@ -348,7 +348,6 @@ const AttendancePage = () => {
           border,
           alignment: { horizontal: "center", vertical: "center" },
           ...(r === startRow ? {
-            font: { bold: true, sz: 10 },
             fill: { fgColor: { rgb: "2D7D46" } },
             font: { bold: true, color: { rgb: "FFFFFF" }, sz: 10 },
           } : {}),
