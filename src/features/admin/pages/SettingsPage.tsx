@@ -5,11 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useTheme } from "@/features/theme/ThemeProvider";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings, PartyPopper, Sun, Receipt, Save, Loader2, Clock, Building2 } from "lucide-react";
+import { Settings, PartyPopper, Sun, Receipt, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_COMPANY_INFO, type CompanyReceiptInfo } from "@/features/admin/components/PrintReceipt";
 
@@ -28,31 +27,11 @@ const COMPANY_FIELDS: { key: keyof CompanyReceiptInfo; label: string; placeholde
   { key: "copyright", label: "Nombre en Copyright", placeholder: "INFOCOM SOLUCIONES", icon: "©️" },
 ];
 
-const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-
-interface BusinessHours {
-  morning_start: string;
-  morning_end: string;
-  afternoon_start: string;
-  afternoon_end: string;
-  work_days: number[];
-}
-
-const DEFAULT_BUSINESS_HOURS: BusinessHours = {
-  morning_start: "09:00",
-  morning_end: "13:00",
-  afternoon_start: "15:00",
-  afternoon_end: "20:00",
-  work_days: [1, 2, 3, 4, 5, 6],
-};
-
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   const [companyInfo, setCompanyInfo] = useState<CompanyReceiptInfo>(DEFAULT_COMPANY_INFO);
   const [saving, setSaving] = useState(false);
-  const [businessHours, setBusinessHours] = useState<BusinessHours>(DEFAULT_BUSINESS_HOURS);
-  const [savingHours, setSavingHours] = useState(false);
 
   const { data: themeSettings = [] } = useQuery({
     queryKey: ["theme_settings"],
@@ -75,25 +54,9 @@ const SettingsPage = () => {
     },
   });
 
-  const { data: storedBusinessHours } = useQuery({
-    queryKey: ["store_settings", "business_hours"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("store_settings")
-        .select("value")
-        .eq("key", "business_hours")
-        .maybeSingle();
-      return data?.value ? { ...DEFAULT_BUSINESS_HOURS, ...(data.value as any) } : DEFAULT_BUSINESS_HOURS;
-    },
-  });
-
   useEffect(() => {
     if (storedCompanyInfo) setCompanyInfo(storedCompanyInfo);
   }, [storedCompanyInfo]);
-
-  useEffect(() => {
-    if (storedBusinessHours) setBusinessHours(storedBusinessHours);
-  }, [storedBusinessHours]);
 
   const activateThemeMutation = useMutation({
     mutationFn: async (key: string) => {
@@ -128,36 +91,6 @@ const SettingsPage = () => {
     }
     setSaving(false);
   };
-  const saveBusinessHours = async () => {
-    setSavingHours(true);
-    try {
-      const { data: existing } = await supabase
-        .from("store_settings")
-        .select("id")
-        .eq("key", "business_hours")
-        .maybeSingle();
-
-      if (existing) {
-        await supabase.from("store_settings").update({ value: businessHours as any }).eq("key", "business_hours");
-      } else {
-        await supabase.from("store_settings").insert({ key: "business_hours", value: businessHours as any });
-      }
-      queryClient.invalidateQueries({ queryKey: ["store_settings", "business_hours"] });
-      toast.success("✅ Horario de atención guardado correctamente");
-    } catch (e: any) {
-      toast.error("Error al guardar: " + e.message);
-    }
-    setSavingHours(false);
-  };
-
-  const toggleWorkDay = (day: number) => {
-    setBusinessHours(prev => ({
-      ...prev,
-      work_days: prev.work_days.includes(day)
-        ? prev.work_days.filter(d => d !== day)
-        : [...prev.work_days, day].sort(),
-    }));
-  };
 
   return (
     <div className="space-y-6">
@@ -165,66 +98,7 @@ const SettingsPage = () => {
         <Settings className="h-6 w-6 text-primary" /> Configuración
       </h1>
 
-      {/* ─── Business Hours ─── */}
-      <Card className="border-primary/10">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Building2 className="h-5 w-5" /> Horario de Atención y Días Laborales
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Define el horario de la empresa y los días laborales. Los días no marcados se considerarán como días de descanso para el personal sin horario específico asignado.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-3 p-3 rounded-lg bg-secondary/30">
-              <p className="text-xs font-semibold flex items-center gap-1"><span>🌅</span> Turno Mañana</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label className="text-xs">Entrada</Label><Input type="time" value={businessHours.morning_start} onChange={e => setBusinessHours(p => ({ ...p, morning_start: e.target.value }))} /></div>
-                <div><Label className="text-xs">Salida</Label><Input type="time" value={businessHours.morning_end} onChange={e => setBusinessHours(p => ({ ...p, morning_end: e.target.value }))} /></div>
-              </div>
-            </div>
-            <div className="space-y-3 p-3 rounded-lg bg-secondary/30">
-              <p className="text-xs font-semibold flex items-center gap-1"><span>🌇</span> Turno Tarde</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label className="text-xs">Entrada</Label><Input type="time" value={businessHours.afternoon_start} onChange={e => setBusinessHours(p => ({ ...p, afternoon_start: e.target.value }))} /></div>
-                <div><Label className="text-xs">Salida</Label><Input type="time" value={businessHours.afternoon_end} onChange={e => setBusinessHours(p => ({ ...p, afternoon_end: e.target.value }))} /></div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-sm mb-2 block">Días Laborales (marca los que aplican)</Label>
-            <div className="flex flex-wrap gap-2">
-              {DAY_NAMES.map((name, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                    businessHours.work_days.includes(i)
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-muted/30 text-muted-foreground opacity-60"
-                  }`}
-                  onClick={() => toggleWorkDay(i)}
-                >
-                  <Checkbox
-                    checked={businessHours.work_days.includes(i)}
-                    onCheckedChange={() => toggleWorkDay(i)}
-                  />
-                  <span className="text-sm font-medium">{name}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              💡 Los días sin marcar se mostrarán como "Descanso" (D) en el control de asistencias. Si un empleado tiene un horario personalizado asignado en Gestión de Personal, se usará ese en vez del horario general.
-            </p>
-          </div>
-
-          <Button onClick={saveBusinessHours} disabled={savingHours} className="w-full sm:w-auto">
-            {savingHours ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Guardar Horario de Atención
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Business hours moved to Attendance page */}
 
       {/* ─── Company Receipt Info ─── */}
       <Card className="border-primary/10">

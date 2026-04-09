@@ -509,11 +509,11 @@ const StaffPage = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Hora Entrada</Label>
-                <Input type="time" value={scheduleForm.start_time} onChange={e => setScheduleForm({ ...scheduleForm, start_time: e.target.value })} />
+                <Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={scheduleForm.start_time} onChange={e => setScheduleForm({ ...scheduleForm, start_time: e.target.value })} />
               </div>
               <div>
                 <Label>Hora Salida</Label>
-                <Input type="time" value={scheduleForm.end_time} onChange={e => setScheduleForm({ ...scheduleForm, end_time: e.target.value })} />
+                <Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={scheduleForm.end_time} onChange={e => setScheduleForm({ ...scheduleForm, end_time: e.target.value })} />
               </div>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1">

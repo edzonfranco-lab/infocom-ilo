@@ -1,15 +1,19 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight, Download, Clock, UserCheck, Filter, AlertTriangle, UserPlus, Sun, Moon } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Clock, UserCheck, Filter, AlertTriangle, UserPlus, Sun, Moon, Settings2, Save, Loader2, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import * as XLSX from "xlsx";
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const STATUS_LABELS: Record<string,{ label: string; color: string; full: string }> = {
@@ -21,6 +25,23 @@ const STATUS_LABELS: Record<string,{ label: string; color: string; full: string 
 };
 
 const DAY_NAMES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const DAY_NAMES_SHORT = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+interface BusinessHours {
+  morning_start: string;
+  morning_end: string;
+  afternoon_start: string;
+  afternoon_end: string;
+  work_days: number[];
+}
+
+const DEFAULT_BUSINESS_HOURS: BusinessHours = {
+  morning_start: "09:00",
+  morning_end: "13:00",
+  afternoon_start: "15:00",
+  afternoon_end: "20:00",
+  work_days: [1, 2, 3, 4, 5, 6],
+};
 
 const AttendancePage = () => {
   const qc = useQueryClient();
@@ -30,6 +51,8 @@ const AttendancePage = () => {
   const [year, setYear] = useState(now.getFullYear());
   const [filterStaff, setFilterStaff] = useState("all");
   const [activeTab, setActiveTab] = useState("grid");
+  const [editHours, setEditHours] = useState<BusinessHours>(DEFAULT_BUSINESS_HOURS);
+  const [savingHours, setSavingHours] = useState(false);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -78,6 +101,10 @@ const AttendancePage = () => {
     },
     staleTime: 60000,
   });
+
+  useEffect(() => {
+    if (businessHours) setEditHours(businessHours);
+  }, [businessHours]);
 
   const scheduleMap = useMemo(() => {
     const m: Record<string, any[]> = {};
@@ -267,26 +294,91 @@ const AttendancePage = () => {
 
   const filteredStaff = filterStaff === "all" ? staff : staff.filter((s: any) => s.id === filterStaff);
 
-  const exportCSV = () => {
-    const rows = [["Personal","Cargo",...days.map(d => String(d)),"A","F","T","J","%","Horas Trabajadas","Horas Programadas","Horas Extra"].join(",")];
-    filteredStaff.forEach((s: any) => {
+  const exportExcel = () => {
+    // Header row
+    const header = ["Personal", "Cargo", ...days.map(d => {
+      const dow = new Date(year, month, d).getDay();
+      return `${DAY_NAMES_SHORT[dow]} ${d}`;
+    }), "Asistencias", "Faltas", "Tardanzas", "Justificadas", "% Asist.", "Horas Trabajadas", "Horas Programadas", "Horas Extra"];
+
+    const dataRows = filteredStaff.map((s: any) => {
       const st = getStats(s.id);
       const dayCols = days.map(d => {
         const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const rec = recordMap[s.id]?.[date];
         const dayOfWeek = new Date(year, month, d).getDay();
-        if (!rec && isRestDay(s.id, dayOfWeek)) return `"D"`;
+        if (!rec && isRestDay(s.id, dayOfWeek)) return "D";
         let val = rec?.status || "";
-        if (rec?.check_in_time) val += ` ${rec.check_in_time}`;
-        if (rec?.check_out_time) val += `-${rec.check_out_time}`;
-        return `"${val}"`;
+        if (rec?.check_in_time) val += ` ${rec.check_in_time.slice(0,5)}`;
+        if (rec?.check_out_time) val += `-${rec.check_out_time.slice(0,5)}`;
+        return val;
       });
-      rows.push([`"${s.full_name}"`,`"${s.position}"`, ...dayCols, st.a, st.f, st.t, st.j, st.pct + "%", st.totalHours + "h", st.scheduledHours + "h", st.overtime + "h"].join(","));
+      return [s.full_name, s.position, ...dayCols, st.a, st.f, st.t, st.j, `${st.pct}%`, `${st.totalHours}h`, `${st.scheduledHours}h`, `${st.overtime}h`];
     });
-    const blob = new Blob(["\uFEFF" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `asistencias_${MONTHS[month]}_${year}.csv`; a.click();
-    URL.revokeObjectURL(url);
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      [`CONTROL DE ASISTENCIAS — ${MONTHS[month].toUpperCase()} ${year}`],
+      [],
+      header,
+      ...dataRows,
+    ]);
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 22 }, { wch: 16 },
+      ...days.map(() => ({ wch: 14 })),
+      { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
+    ];
+
+    // Merge title row
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Asistencias");
+
+    // Summary sheet
+    const summaryData = [
+      [`RESUMEN DE ASISTENCIAS — ${MONTHS[month].toUpperCase()} ${year}`],
+      [],
+      ["Personal", "Cargo", "Asistencias", "Faltas", "Tardanzas", "Justificadas", "% Asistencia", "Total Horas", "Horas Programadas", "Horas Extra"],
+      ...filteredStaff.map((s: any) => {
+        const st = getStats(s.id);
+        return [s.full_name, s.position, st.a, st.f, st.t, st.j, `${st.pct}%`, `${st.totalHours}h`, `${st.scheduledHours}h`, `${st.overtime}h`];
+      }),
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+    ws2["!cols"] = [{ wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 12 }];
+    ws2["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+    XLSX.utils.book_append_sheet(wb, ws2, "Resumen");
+
+    XLSX.writeFile(wb, `asistencias_${MONTHS[month]}_${year}.xlsx`);
+    toast.success("📊 Excel descargado correctamente");
+  };
+
+  const saveBusinessHours = async () => {
+    setSavingHours(true);
+    try {
+      const { data: existing } = await supabase.from("store_settings").select("id").eq("key", "business_hours").maybeSingle();
+      if (existing) {
+        await supabase.from("store_settings").update({ value: editHours as any }).eq("key", "business_hours");
+      } else {
+        await supabase.from("store_settings").insert({ key: "business_hours", value: editHours as any });
+      }
+      qc.invalidateQueries({ queryKey: ["store_settings", "business_hours"] });
+      toast.success("✅ Horario de atención guardado");
+    } catch (e: any) {
+      toast.error("Error al guardar: " + e.message);
+    }
+    setSavingHours(false);
+  };
+
+  const toggleWorkDay = (day: number) => {
+    setEditHours(prev => ({
+      ...prev,
+      work_days: prev.work_days.includes(day)
+        ? prev.work_days.filter(d => d !== day)
+        : [...prev.work_days, day].sort(),
+    }));
   };
 
   const selfCheckIn = async () => {
@@ -553,8 +645,64 @@ const AttendancePage = () => {
               <CalendarDays className="h-6 w-6 text-primary" /> Control de Asistencias
             </h1>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm" className="gap-2" onClick={exportCSV}>
-                <Download className="h-4 w-4" /> CSV
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Settings2 className="h-4 w-4" /> Horario
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" /> Horario de Atención
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4 mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Define el horario de la empresa y los días laborales. Los días no marcados serán "Descanso" (D).
+                    </p>
+                    <div className="space-y-3 p-3 rounded-lg bg-secondary/30">
+                      <p className="text-xs font-semibold">🌅 Turno Mañana</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><Label className="text-xs">Entrada</Label><Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={editHours.morning_start} onChange={e => setEditHours(p => ({ ...p, morning_start: e.target.value }))} /></div>
+                        <div><Label className="text-xs">Salida</Label><Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={editHours.morning_end} onChange={e => setEditHours(p => ({ ...p, morning_end: e.target.value }))} /></div>
+                      </div>
+                    </div>
+                    <div className="space-y-3 p-3 rounded-lg bg-secondary/30">
+                      <p className="text-xs font-semibold">🌇 Turno Tarde</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><Label className="text-xs">Entrada</Label><Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={editHours.afternoon_start} onChange={e => setEditHours(p => ({ ...p, afternoon_start: e.target.value }))} /></div>
+                        <div><Label className="text-xs">Salida</Label><Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={editHours.afternoon_end} onChange={e => setEditHours(p => ({ ...p, afternoon_end: e.target.value }))} /></div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm mb-2 block">Días Laborales</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {DAY_NAMES.map((name, i) => (
+                          <div
+                            key={i}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                              editHours.work_days.includes(i)
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border bg-muted/30 text-muted-foreground opacity-60"
+                            }`}
+                            onClick={() => toggleWorkDay(i)}
+                          >
+                            <Checkbox checked={editHours.work_days.includes(i)} onCheckedChange={() => toggleWorkDay(i)} />
+                            <span className="text-sm font-medium">{name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Button onClick={saveBusinessHours} disabled={savingHours} className="w-full">
+                      {savingHours ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                      Guardar Horario
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <Button variant="outline" size="sm" className="gap-2" onClick={exportExcel}>
+                <FileSpreadsheet className="h-4 w-4" /> Excel
               </Button>
               <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
               <span className="font-semibold text-sm min-w-[160px] text-center">{MONTHS[month]} {year}</span>
@@ -835,13 +983,13 @@ const AttendancePage = () => {
                                         type="time"
                                         value={rec?.check_in_time || ""}
                                         onChange={e => updateTime(s.id, d, "check_in", e.target.value)}
-                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20"
+                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20 [color-scheme:dark] dark:[color-scheme:dark]"
                                       />
                                       <Input
                                         type="time"
                                         value={rec?.check_out_time || ""}
                                         onChange={e => updateTime(s.id, d, "check_out", e.target.value)}
-                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20"
+                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20 [color-scheme:dark] dark:[color-scheme:dark]"
                                       />
                                     </>
                                   ) : (
