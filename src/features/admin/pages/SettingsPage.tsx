@@ -165,66 +165,7 @@ const SettingsPage = () => {
         <Settings className="h-6 w-6 text-primary" /> Configuración
       </h1>
 
-      {/* ─── Business Hours ─── */}
-      <Card className="border-primary/10">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Building2 className="h-5 w-5" /> Horario de Atención y Días Laborales
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Define el horario de la empresa y los días laborales. Los días no marcados se considerarán como días de descanso para el personal sin horario específico asignado.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-3 p-3 rounded-lg bg-secondary/30">
-              <p className="text-xs font-semibold flex items-center gap-1"><span>🌅</span> Turno Mañana</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label className="text-xs">Entrada</Label><Input type="time" value={businessHours.morning_start} onChange={e => setBusinessHours(p => ({ ...p, morning_start: e.target.value }))} /></div>
-                <div><Label className="text-xs">Salida</Label><Input type="time" value={businessHours.morning_end} onChange={e => setBusinessHours(p => ({ ...p, morning_end: e.target.value }))} /></div>
-              </div>
-            </div>
-            <div className="space-y-3 p-3 rounded-lg bg-secondary/30">
-              <p className="text-xs font-semibold flex items-center gap-1"><span>🌇</span> Turno Tarde</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label className="text-xs">Entrada</Label><Input type="time" value={businessHours.afternoon_start} onChange={e => setBusinessHours(p => ({ ...p, afternoon_start: e.target.value }))} /></div>
-                <div><Label className="text-xs">Salida</Label><Input type="time" value={businessHours.afternoon_end} onChange={e => setBusinessHours(p => ({ ...p, afternoon_end: e.target.value }))} /></div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-sm mb-2 block">Días Laborales (marca los que aplican)</Label>
-            <div className="flex flex-wrap gap-2">
-              {DAY_NAMES.map((name, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                    businessHours.work_days.includes(i)
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-muted/30 text-muted-foreground opacity-60"
-                  }`}
-                  onClick={() => toggleWorkDay(i)}
-                >
-                  <Checkbox
-                    checked={businessHours.work_days.includes(i)}
-                    onCheckedChange={() => toggleWorkDay(i)}
-                  />
-                  <span className="text-sm font-medium">{name}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              💡 Los días sin marcar se mostrarán como "Descanso" (D) en el control de asistencias. Si un empleado tiene un horario personalizado asignado en Gestión de Personal, se usará ese en vez del horario general.
-            </p>
-          </div>
-
-          <Button onClick={saveBusinessHours} disabled={savingHours} className="w-full sm:w-auto">
-            {savingHours ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Guardar Horario de Atención
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Business hours moved to Attendance page */}
 
       {/* ─── Company Receipt Info ─── */}
       <Card className="border-primary/10">
