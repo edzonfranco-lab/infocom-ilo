@@ -1156,6 +1156,7 @@ const AccountingPage = () => {
                       const payload = items.map(it => ({
                         transaction_id: tx.id,
                         item_type: it.item_type,
+                        referencia_id: it.referencia_id || null,
                         descripcion: it.descripcion,
                         cantidad: it.cantidad,
                         precio_unitario: it.precio_unitario,
@@ -1165,11 +1166,20 @@ const AccountingPage = () => {
                         diagnostico: it.diagnostico || null,
                       }));
                       await supabase.from("transaction_items").insert(payload);
+
+                      // Reduce stock for product items
+                      await reduceStockForTransaction(tx.id);
+
+                      // Sync customer to customers table
+                      if (form.cliente_nombre) {
+                        await syncCustomer(form.cliente_nombre, form.cliente_telefono || null, itemTotals.total);
+                      }
+
                       await supabase.from("transaction_history").insert({
                         transaction_id: tx.id, accion: "creado_y_emitido", usuario_id: user?.id || null,
                       });
                       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-                      toast.success("Transaccion emitida");
+                      toast.success("Transaccion emitida — Stock actualizado");
                       closeForm();
                     } catch (err: any) {
                       toast.error(err.message || "Error");
