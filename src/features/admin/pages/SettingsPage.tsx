@@ -54,25 +54,9 @@ const SettingsPage = () => {
     },
   });
 
-  const { data: storedBusinessHours } = useQuery({
-    queryKey: ["store_settings", "business_hours"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("store_settings")
-        .select("value")
-        .eq("key", "business_hours")
-        .maybeSingle();
-      return data?.value ? { ...DEFAULT_BUSINESS_HOURS, ...(data.value as any) } : DEFAULT_BUSINESS_HOURS;
-    },
-  });
-
   useEffect(() => {
     if (storedCompanyInfo) setCompanyInfo(storedCompanyInfo);
   }, [storedCompanyInfo]);
-
-  useEffect(() => {
-    if (storedBusinessHours) setBusinessHours(storedBusinessHours);
-  }, [storedBusinessHours]);
 
   const activateThemeMutation = useMutation({
     mutationFn: async (key: string) => {
@@ -106,36 +90,6 @@ const SettingsPage = () => {
       toast.error("Error al guardar: " + e.message);
     }
     setSaving(false);
-  };
-  const saveBusinessHours = async () => {
-    setSavingHours(true);
-    try {
-      const { data: existing } = await supabase
-        .from("store_settings")
-        .select("id")
-        .eq("key", "business_hours")
-        .maybeSingle();
-
-      if (existing) {
-        await supabase.from("store_settings").update({ value: businessHours as any }).eq("key", "business_hours");
-      } else {
-        await supabase.from("store_settings").insert({ key: "business_hours", value: businessHours as any });
-      }
-      queryClient.invalidateQueries({ queryKey: ["store_settings", "business_hours"] });
-      toast.success("✅ Horario de atención guardado correctamente");
-    } catch (e: any) {
-      toast.error("Error al guardar: " + e.message);
-    }
-    setSavingHours(false);
-  };
-
-  const toggleWorkDay = (day: number) => {
-    setBusinessHours(prev => ({
-      ...prev,
-      work_days: prev.work_days.includes(day)
-        ? prev.work_days.filter(d => d !== day)
-        : [...prev.work_days, day].sort(),
-    }));
   };
 
   return (
