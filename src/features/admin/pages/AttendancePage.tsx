@@ -299,30 +299,58 @@ const AttendancePage = () => {
     const currentStaff = staff.find((s: any) => s.user_id === session.session!.user.id);
     if (!currentStaff) { toast.error("Tu usuario no está vinculado a un registro de personal"); return; }
 
-    // Check if it's a rest day
+    const existing = recordMap[currentStaff.id]?.[today];
     const dayOfWeek = new Date().getDay();
-    if (isRestDay(currentStaff.id, dayOfWeek)) {
-      toast.info("Hoy es tu día de descanso 🎉");
+    const rest = isRestDay(currentStaff.id, dayOfWeek);
+
+    // If already checked in and not checked out → mark checkout
+    if (existing?.check_in_time && !existing?.check_out_time) {
+      // Calculate if there are overtime hours
+      const todaySchedules = getScheduleForDay(currentStaff.id, dayOfWeek);
+      let scheduledEnd = "20:00";
+      if (todaySchedules.length > 0) {
+        scheduledEnd = todaySchedules.reduce((max: string, s: any) => s.end_time > max ? s.end_time : max, todaySchedules[0].end_time);
+      }
+      const hasOvertime = nowTime > scheduledEnd;
+      toggleMutation.mutate({ staffId: currentStaff.id, date: today, status: existing.status || "A", check_out: nowTime });
+      toast.success(
+        hasOvertime
+          ? `Salida registrada: ${nowTime} 🔥 ¡Horas extra detectadas!`
+          : `Salida registrada: ${nowTime}`
+      );
       return;
     }
 
-    const existing = recordMap[currentStaff.id]?.[today];
-    if (existing?.check_in_time && !existing?.check_out_time) {
-      toggleMutation.mutate({ staffId: currentStaff.id, date: today, status: "A", check_out: nowTime });
-      toast.success(`Salida registrada: ${nowTime}`);
-    } else if (!existing?.check_in_time) {
-      const todaySchedules = getScheduleForDay(currentStaff.id, dayOfWeek);
-      let isLate = false;
-      if (todaySchedules.length > 0) {
-        const earliest = todaySchedules.reduce((min: string, s: any) => s.start_time < min ? s.start_time : min, todaySchedules[0].start_time);
-        isLate = nowTime > earliest;
-      }
-      const status = isLate ? "T" : "A";
-      toggleMutation.mutate({ staffId: currentStaff.id, date: today, status, check_in: nowTime });
-      toast.success(`Entrada registrada: ${nowTime}${isLate ? " (Tardanza)" : ""}`);
-    } else {
-      toast.info("Ya registraste entrada y salida. Contacta al administrador para registrar doble turno.");
+    // If already checked in AND checked out → allow re-entry (extended shift / came back)
+    if (existing?.check_in_time && existing?.check_out_time) {
+      // Keep original check_in, clear check_out so they can mark a new exit later
+      toggleMutation.mutate({
+        staffId: currentStaff.id, date: today,
+        status: existing.status || "A",
+        check_in: existing.check_in_time,
+        check_out: undefined,
+      });
+      toast.success(`Re-entrada registrada a las ${nowTime}. Tu entrada original (${existing.check_in_time}) se mantiene. Marca salida cuando termines.`);
+      return;
     }
+
+    // No check-in yet
+    if (rest) {
+      // Allow check-in on rest day with notice
+      toggleMutation.mutate({ staffId: currentStaff.id, date: today, status: "A", check_in: nowTime });
+      toast.success(`Entrada en día de descanso registrada: ${nowTime} 💪 ¡Se contará como hora extra!`);
+      return;
+    }
+
+    const todaySchedules = getScheduleForDay(currentStaff.id, dayOfWeek);
+    let isLate = false;
+    if (todaySchedules.length > 0) {
+      const earliest = todaySchedules.reduce((min: string, s: any) => s.start_time < min ? s.start_time : min, todaySchedules[0].start_time);
+      isLate = nowTime > earliest;
+    }
+    const status = isLate ? "T" : "A";
+    toggleMutation.mutate({ staffId: currentStaff.id, date: today, status, check_in: nowTime });
+    toast.success(`Entrada registrada: ${nowTime}${isLate ? " (Tardanza)" : ""}`);
   };
 
   const myStaff = staff.find((s: any) => s.user_id === user?.id);
