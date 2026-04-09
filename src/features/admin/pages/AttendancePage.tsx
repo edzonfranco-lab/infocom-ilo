@@ -645,8 +645,64 @@ const AttendancePage = () => {
               <CalendarDays className="h-6 w-6 text-primary" /> Control de Asistencias
             </h1>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm" className="gap-2" onClick={exportCSV}>
-                <Download className="h-4 w-4" /> CSV
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Settings2 className="h-4 w-4" /> Horario
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" /> Horario de Atención
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4 mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Define el horario de la empresa y los días laborales. Los días no marcados serán "Descanso" (D).
+                    </p>
+                    <div className="space-y-3 p-3 rounded-lg bg-secondary/30">
+                      <p className="text-xs font-semibold">🌅 Turno Mañana</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><Label className="text-xs">Entrada</Label><Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={editHours.morning_start} onChange={e => setEditHours(p => ({ ...p, morning_start: e.target.value }))} /></div>
+                        <div><Label className="text-xs">Salida</Label><Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={editHours.morning_end} onChange={e => setEditHours(p => ({ ...p, morning_end: e.target.value }))} /></div>
+                      </div>
+                    </div>
+                    <div className="space-y-3 p-3 rounded-lg bg-secondary/30">
+                      <p className="text-xs font-semibold">🌇 Turno Tarde</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div><Label className="text-xs">Entrada</Label><Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={editHours.afternoon_start} onChange={e => setEditHours(p => ({ ...p, afternoon_start: e.target.value }))} /></div>
+                        <div><Label className="text-xs">Salida</Label><Input type="time" className="[color-scheme:dark] dark:[color-scheme:dark]" value={editHours.afternoon_end} onChange={e => setEditHours(p => ({ ...p, afternoon_end: e.target.value }))} /></div>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm mb-2 block">Días Laborales</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {DAY_NAMES.map((name, i) => (
+                          <div
+                            key={i}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                              editHours.work_days.includes(i)
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border bg-muted/30 text-muted-foreground opacity-60"
+                            }`}
+                            onClick={() => toggleWorkDay(i)}
+                          >
+                            <Checkbox checked={editHours.work_days.includes(i)} onCheckedChange={() => toggleWorkDay(i)} />
+                            <span className="text-sm font-medium">{name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Button onClick={saveBusinessHours} disabled={savingHours} className="w-full">
+                      {savingHours ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                      Guardar Horario
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <Button variant="outline" size="sm" className="gap-2" onClick={exportExcel}>
+                <FileSpreadsheet className="h-4 w-4" /> Excel
               </Button>
               <Button variant="outline" size="icon" onClick={prevMonth}><ChevronLeft className="h-4 w-4" /></Button>
               <span className="font-semibold text-sm min-w-[160px] text-center">{MONTHS[month]} {year}</span>
