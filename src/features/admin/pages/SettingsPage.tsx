@@ -128,8 +128,37 @@ const SettingsPage = () => {
     }
     setSaving(false);
   };
+  const saveBusinessHours = async () => {
+    setSavingHours(true);
+    try {
+      const { data: existing } = await supabase
+        .from("store_settings")
+        .select("id")
+        .eq("key", "business_hours")
+        .maybeSingle();
 
-  return (
+      if (existing) {
+        await supabase.from("store_settings").update({ value: businessHours as any }).eq("key", "business_hours");
+      } else {
+        await supabase.from("store_settings").insert({ key: "business_hours", value: businessHours as any });
+      }
+      queryClient.invalidateQueries({ queryKey: ["store_settings", "business_hours"] });
+      toast.success("✅ Horario de atención guardado correctamente");
+    } catch (e: any) {
+      toast.error("Error al guardar: " + e.message);
+    }
+    setSavingHours(false);
+  };
+
+  const toggleWorkDay = (day: number) => {
+    setBusinessHours(prev => ({
+      ...prev,
+      work_days: prev.work_days.includes(day)
+        ? prev.work_days.filter(d => d !== day)
+        : [...prev.work_days, day].sort(),
+    }));
+  };
+
     <div className="space-y-6">
       <h1 className="text-2xl font-display font-bold flex items-center gap-2">
         <Settings className="h-6 w-6 text-primary" /> Configuración
