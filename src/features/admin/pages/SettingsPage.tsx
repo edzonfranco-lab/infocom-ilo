@@ -5,11 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useTheme } from "@/features/theme/ThemeProvider";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings, PartyPopper, Sun, Receipt, Save, Loader2, Clock, Building2 } from "lucide-react";
+import { Settings, PartyPopper, Sun, Receipt, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { DEFAULT_COMPANY_INFO, type CompanyReceiptInfo } from "@/features/admin/components/PrintReceipt";
 
@@ -28,31 +27,11 @@ const COMPANY_FIELDS: { key: keyof CompanyReceiptInfo; label: string; placeholde
   { key: "copyright", label: "Nombre en Copyright", placeholder: "INFOCOM SOLUCIONES", icon: "©️" },
 ];
 
-const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-
-interface BusinessHours {
-  morning_start: string;
-  morning_end: string;
-  afternoon_start: string;
-  afternoon_end: string;
-  work_days: number[];
-}
-
-const DEFAULT_BUSINESS_HOURS: BusinessHours = {
-  morning_start: "09:00",
-  morning_end: "13:00",
-  afternoon_start: "15:00",
-  afternoon_end: "20:00",
-  work_days: [1, 2, 3, 4, 5, 6],
-};
-
 const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   const [companyInfo, setCompanyInfo] = useState<CompanyReceiptInfo>(DEFAULT_COMPANY_INFO);
   const [saving, setSaving] = useState(false);
-  const [businessHours, setBusinessHours] = useState<BusinessHours>(DEFAULT_BUSINESS_HOURS);
-  const [savingHours, setSavingHours] = useState(false);
 
   const { data: themeSettings = [] } = useQuery({
     queryKey: ["theme_settings"],
