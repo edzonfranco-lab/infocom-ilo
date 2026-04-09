@@ -147,6 +147,16 @@ const AccountingPage = () => {
     },
   });
 
+  // Existing customers for autocomplete
+  const { data: existingCustomers = [] } = useQuery({
+    queryKey: ["customers_for_accounting"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("customers").select("id, full_name, phone, document_number").order("full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Staff members for dropdowns
   const { data: staffMembers = [] } = useQuery({
     queryKey: ["staff_for_accounting"],
@@ -504,6 +514,67 @@ const AccountingPage = () => {
     const servicios = items.filter(i => i.item_type === "servicio").reduce((a, i) => a + i.cantidad * i.precio_unitario, 0);
     return { productos, servicios, total: productos + servicios };
   }, [items]);
+
+  // ─── Customer sync helper ───────────────────────────────────
+  const syncCustomer = useCallback(async (nombre: string, telefono: string | null, total: number) => {
+    if (!nombre || nombre.trim().length < 2) return;
+    const trimmedName = nombre.trim();
+    try {
+      // Check if customer exists by name (case insensitive)
+      const { data: existing } = await supabase
+        .from("customers")
+        .select("id, total_purchases, total_spent")
+        .ilike("full_name", trimmedName)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing customer
+        await supabase.from("customers").update({
+          total_purchases: (existing.total_purchases || 0) + 1,
+          total_spent: (existing.total_spent || 0) + total,
+          last_purchase_at: new Date().toISOString(),
+          phone: telefono || undefined,
+        }).eq("id", existing.id);
+      } else {
+        // Create new customer
+        await supabase.from("customers").insert({
+          full_name: trimmedName,
+          phone: telefono || null,
+          total_purchases: 1,
+          total_spent: total,
+          last_purchase_at: new Date().toISOString(),
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      qc.invalidateQueries({ queryKey: ["customers_for_accounting"] });
+    } catch (e) {
+      console.error("Error syncing customer:", e);
+    }
+  }, [qc]);
+
+  // ─── Stock reduction helper ───────────────────────────────────
+  const reduceStockForTransaction = useCallback(async (txId: string) => {
+    const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", txId).eq("item_type", "producto");
+    for (const it of txItems || []) {
+      if (it.referencia_id && it.referencia_id !== "service") {
+        const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
+        if (prod) {
+          const stockBefore = prod.stock;
+          const stockAfter = stockBefore - (it.cantidad || 0);
+          await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
+          await supabase.from("inventory_movements").insert({
+            product_id: it.referencia_id, product_name: it.descripcion,
+            movement_type: "salida", quantity: it.cantidad,
+            reference_type: "venta", reference_id: txId,
+            stock_before: stockBefore, stock_after: stockAfter,
+            created_by: user?.id || null,
+          } as any);
+        }
+      }
+    }
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["products_for_accounting"] });
+  }, [user?.id, qc]);
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
