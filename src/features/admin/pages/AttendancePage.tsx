@@ -294,26 +294,91 @@ const AttendancePage = () => {
 
   const filteredStaff = filterStaff === "all" ? staff : staff.filter((s: any) => s.id === filterStaff);
 
-  const exportCSV = () => {
-    const rows = [["Personal","Cargo",...days.map(d => String(d)),"A","F","T","J","%","Horas Trabajadas","Horas Programadas","Horas Extra"].join(",")];
-    filteredStaff.forEach((s: any) => {
+  const exportExcel = () => {
+    // Header row
+    const header = ["Personal", "Cargo", ...days.map(d => {
+      const dow = new Date(year, month, d).getDay();
+      return `${DAY_NAMES_SHORT[dow]} ${d}`;
+    }), "Asistencias", "Faltas", "Tardanzas", "Justificadas", "% Asist.", "Horas Trabajadas", "Horas Programadas", "Horas Extra"];
+
+    const dataRows = filteredStaff.map((s: any) => {
       const st = getStats(s.id);
       const dayCols = days.map(d => {
         const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const rec = recordMap[s.id]?.[date];
         const dayOfWeek = new Date(year, month, d).getDay();
-        if (!rec && isRestDay(s.id, dayOfWeek)) return `"D"`;
+        if (!rec && isRestDay(s.id, dayOfWeek)) return "D";
         let val = rec?.status || "";
-        if (rec?.check_in_time) val += ` ${rec.check_in_time}`;
-        if (rec?.check_out_time) val += `-${rec.check_out_time}`;
-        return `"${val}"`;
+        if (rec?.check_in_time) val += ` ${rec.check_in_time.slice(0,5)}`;
+        if (rec?.check_out_time) val += `-${rec.check_out_time.slice(0,5)}`;
+        return val;
       });
-      rows.push([`"${s.full_name}"`,`"${s.position}"`, ...dayCols, st.a, st.f, st.t, st.j, st.pct + "%", st.totalHours + "h", st.scheduledHours + "h", st.overtime + "h"].join(","));
+      return [s.full_name, s.position, ...dayCols, st.a, st.f, st.t, st.j, `${st.pct}%`, `${st.totalHours}h`, `${st.scheduledHours}h`, `${st.overtime}h`];
     });
-    const blob = new Blob(["\uFEFF" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `asistencias_${MONTHS[month]}_${year}.csv`; a.click();
-    URL.revokeObjectURL(url);
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      [`CONTROL DE ASISTENCIAS — ${MONTHS[month].toUpperCase()} ${year}`],
+      [],
+      header,
+      ...dataRows,
+    ]);
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 22 }, { wch: 16 },
+      ...days.map(() => ({ wch: 14 })),
+      { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
+    ];
+
+    // Merge title row
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Asistencias");
+
+    // Summary sheet
+    const summaryData = [
+      [`RESUMEN DE ASISTENCIAS — ${MONTHS[month].toUpperCase()} ${year}`],
+      [],
+      ["Personal", "Cargo", "Asistencias", "Faltas", "Tardanzas", "Justificadas", "% Asistencia", "Total Horas", "Horas Programadas", "Horas Extra"],
+      ...filteredStaff.map((s: any) => {
+        const st = getStats(s.id);
+        return [s.full_name, s.position, st.a, st.f, st.t, st.j, `${st.pct}%`, `${st.totalHours}h`, `${st.scheduledHours}h`, `${st.overtime}h`];
+      }),
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+    ws2["!cols"] = [{ wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 12 }];
+    ws2["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+    XLSX.utils.book_append_sheet(wb, ws2, "Resumen");
+
+    XLSX.writeFile(wb, `asistencias_${MONTHS[month]}_${year}.xlsx`);
+    toast.success("📊 Excel descargado correctamente");
+  };
+
+  const saveBusinessHours = async () => {
+    setSavingHours(true);
+    try {
+      const { data: existing } = await supabase.from("store_settings").select("id").eq("key", "business_hours").maybeSingle();
+      if (existing) {
+        await supabase.from("store_settings").update({ value: editHours as any }).eq("key", "business_hours");
+      } else {
+        await supabase.from("store_settings").insert({ key: "business_hours", value: editHours as any });
+      }
+      qc.invalidateQueries({ queryKey: ["store_settings", "business_hours"] });
+      toast.success("✅ Horario de atención guardado");
+    } catch (e: any) {
+      toast.error("Error al guardar: " + e.message);
+    }
+    setSavingHours(false);
+  };
+
+  const toggleWorkDay = (day: number) => {
+    setEditHours(prev => ({
+      ...prev,
+      work_days: prev.work_days.includes(day)
+        ? prev.work_days.filter(d => d !== day)
+        : [...prev.work_days, day].sort(),
+    }));
   };
 
   const selfCheckIn = async () => {
