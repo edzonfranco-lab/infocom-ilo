@@ -75,9 +75,25 @@ const SettingsPage = () => {
     },
   });
 
+  const { data: storedBusinessHours } = useQuery({
+    queryKey: ["store_settings", "business_hours"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("store_settings")
+        .select("value")
+        .eq("key", "business_hours")
+        .maybeSingle();
+      return data?.value ? { ...DEFAULT_BUSINESS_HOURS, ...(data.value as any) } : DEFAULT_BUSINESS_HOURS;
+    },
+  });
+
   useEffect(() => {
     if (storedCompanyInfo) setCompanyInfo(storedCompanyInfo);
   }, [storedCompanyInfo]);
+
+  useEffect(() => {
+    if (storedBusinessHours) setBusinessHours(storedBusinessHours);
+  }, [storedBusinessHours]);
 
   const activateThemeMutation = useMutation({
     mutationFn: async (key: string) => {
