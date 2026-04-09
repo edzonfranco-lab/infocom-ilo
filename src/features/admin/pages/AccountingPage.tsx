@@ -313,6 +313,9 @@ const AccountingPage = () => {
 
   const emitirMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Get transaction data for customer sync
+      const { data: txData } = await supabase.from("transactions").select("cliente_nombre, cliente_telefono, total").eq("id", id).single();
+
       const { error } = await supabase.from("transactions").update({
         estado: "emitido" as any,
         emitido_en: new Date().toISOString(),
@@ -320,24 +323,12 @@ const AccountingPage = () => {
       }).eq("id", id);
       if (error) throw error;
 
-      // Reduce stock for product items (salida)
-      const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", id).eq("item_type", "producto");
-      for (const it of txItems || []) {
-        if (it.referencia_id && it.referencia_id !== "service") {
-          const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
-          if (prod) {
-            const stockBefore = prod.stock;
-            const stockAfter = stockBefore - (it.cantidad || 0);
-            await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
-            await supabase.from("inventory_movements").insert({
-              product_id: it.referencia_id, product_name: it.descripcion,
-              movement_type: "salida", quantity: it.cantidad,
-              reference_type: "venta", reference_id: id,
-              stock_before: stockBefore, stock_after: stockAfter,
-              created_by: user?.id || null,
-            } as any);
-          }
-        }
+      // Reduce stock
+      await reduceStockForTransaction(id);
+
+      // Sync customer
+      if (txData?.cliente_nombre) {
+        await syncCustomer(txData.cliente_nombre, txData.cliente_telefono, Number(txData.total || 0));
       }
 
       await supabase.from("transaction_history").insert({
@@ -346,7 +337,6 @@ const AccountingPage = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-      qc.invalidateQueries({ queryKey: ["products"] });
       toast.success("Transacción emitida — Stock actualizado");
     },
   });
@@ -904,7 +894,44 @@ const AccountingPage = () => {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Cliente</Label><Input value={form.cliente_nombre} onChange={e => setForm({ ...form, cliente_nombre: e.target.value })} placeholder="Nombre del cliente" /></div>
+              <div>
+                <Label>Cliente</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-9 text-xs w-full justify-between font-normal">
+                      {form.cliente_nombre || "Buscar o escribir cliente..."}
+                      <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[350px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar cliente..." className="h-9" />
+                      <CommandList className="max-h-[200px] overflow-y-auto">
+                        <CommandEmpty>No encontrado — escribe manualmente abajo</CommandEmpty>
+                        <CommandGroup heading="Clientes registrados">
+                          {existingCustomers.map((c: any) => (
+                            <CommandItem key={c.id} value={`${c.full_name} ${c.phone || ""} ${c.document_number || ""}`} onSelect={() => {
+                              setForm(prev => ({ ...prev, cliente_nombre: c.full_name, cliente_telefono: c.phone || prev.cliente_telefono }));
+                            }}>
+                              <Check className={`h-3 w-3 mr-2 ${form.cliente_nombre === c.full_name ? "opacity-100" : "opacity-0"}`} />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-medium block">{c.full_name}</span>
+                                {c.phone && <span className="text-[10px] text-muted-foreground">{c.phone}</span>}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  value={form.cliente_nombre}
+                  onChange={e => setForm({ ...form, cliente_nombre: e.target.value })}
+                  placeholder="O escribe el nombre manualmente..."
+                  className="h-8 text-xs mt-1"
+                />
+              </div>
               <div><Label>Telefono</Label><Input value={form.cliente_telefono} onChange={e => setForm({ ...form, cliente_telefono: e.target.value })} placeholder="999 999 999" /></div>
             </div>
 
