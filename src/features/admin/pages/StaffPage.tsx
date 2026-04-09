@@ -488,18 +488,23 @@ const StaffPage = () => {
               <Label>Nombre del Turno</Label>
               <Select value={scheduleForm.shift_name} onValueChange={v => {
                 let start = scheduleForm.start_time, end = scheduleForm.end_time;
-                if (v === "Turno Completo") { start = "09:00"; end = "18:00"; }
-                else if (v === "Turno 1") { start = "09:00"; end = "13:00"; }
-                else if (v === "Turno 2") { start = "14:00"; end = "18:00"; }
+                if (v === "Turno Completo") { start = "09:00"; end = "20:00"; }
+                else if (v === "Turno Mañana") { start = "09:00"; end = "13:00"; }
+                else if (v === "Turno Tarde") { start = "15:00"; end = "20:00"; }
+                else if (v === "Turno Partido") { start = "09:00"; end = "20:00"; }
                 setScheduleForm({ ...scheduleForm, shift_name: v, start_time: start, end_time: end });
               }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Turno Completo">Turno Completo (09:00-18:00)</SelectItem>
-                  <SelectItem value="Turno 1">Turno 1 (Mañana)</SelectItem>
-                  <SelectItem value="Turno 2">Turno 2 (Tarde)</SelectItem>
+                  <SelectItem value="Turno Completo">🕐 Turno Completo (09:00-20:00)</SelectItem>
+                  <SelectItem value="Turno Mañana">🌅 Turno Mañana (09:00-13:00)</SelectItem>
+                  <SelectItem value="Turno Tarde">🌇 Turno Tarde (15:00-20:00)</SelectItem>
+                  <SelectItem value="Turno Partido">🔄 Turno Partido (09:00-13:00, 15:00-20:00)</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                💡 Los días que NO se asignen se consideran como día de descanso automáticamente
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -510,6 +515,12 @@ const StaffPage = () => {
                 <Label>Hora Salida</Label>
                 <Input type="time" value={scheduleForm.end_time} onChange={e => setScheduleForm({ ...scheduleForm, end_time: e.target.value })} />
               </div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1">
+              <p className="font-semibold">📋 Resumen de asignación:</p>
+              <p>• Días seleccionados: {scheduleForm.days.length > 0 ? scheduleForm.days.map(d => DAY_NAMES[d]).join(", ") : "Ninguno"}</p>
+              <p>• Turno: {scheduleForm.shift_name} ({scheduleForm.start_time} - {scheduleForm.end_time})</p>
+              <p className="text-muted-foreground">• Los días no seleccionados serán de <strong>descanso</strong></p>
             </div>
             <Button type="submit" className="w-full" disabled={saveScheduleMutation.isPending}>Asignar Horario</Button>
           </form>
