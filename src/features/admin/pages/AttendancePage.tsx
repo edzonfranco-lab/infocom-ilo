@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { toast } from "sonner";
 import { CalendarDays, ChevronLeft, ChevronRight, Download, Clock, UserCheck, Filter, AlertTriangle, UserPlus, Sun, Moon, Settings2, Save, Loader2, FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx-js-style";
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const STATUS_LABELS: Record<string,{ label: string; color: string; full: string }> = {
