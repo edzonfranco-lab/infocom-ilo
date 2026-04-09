@@ -51,6 +51,8 @@ const AttendancePage = () => {
   const [year, setYear] = useState(now.getFullYear());
   const [filterStaff, setFilterStaff] = useState("all");
   const [activeTab, setActiveTab] = useState("grid");
+  const [editHours, setEditHours] = useState<BusinessHours>(DEFAULT_BUSINESS_HOURS);
+  const [savingHours, setSavingHours] = useState(false);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
