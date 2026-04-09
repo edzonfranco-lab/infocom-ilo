@@ -102,7 +102,10 @@ const AttendancePage = () => {
     staleTime: 60000,
   });
 
-  const scheduleMap = useMemo(() => {
+  useEffect(() => {
+    if (businessHours) setEditHours(businessHours);
+  }, [businessHours]);
+
     const m: Record<string, any[]> = {};
     schedules.forEach((s: any) => {
       if (!m[s.staff_id]) m[s.staff_id] = [];
