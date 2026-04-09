@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { CalendarDays, ChevronLeft, ChevronRight, Download, Clock, UserCheck, Filter, AlertTriangle, UserPlus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Clock, UserCheck, Filter, AlertTriangle, UserPlus, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
@@ -17,6 +17,7 @@ const STATUS_LABELS: Record<string,{ label: string; color: string; full: string 
   F: { label: "F", color: "bg-red-500/20 text-red-400", full: "Falta" },
   T: { label: "T", color: "bg-yellow-500/20 text-yellow-400", full: "Tardanza" },
   J: { label: "J", color: "bg-blue-500/20 text-blue-400", full: "Justificada" },
+  D: { label: "D", color: "bg-gray-500/20 text-gray-400", full: "Descanso" },
 };
 
 const DAY_NAMES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
@@ -55,7 +56,6 @@ const AttendancePage = () => {
     },
   });
 
-  // Fetch schedules
   const { data: schedules = [] } = useQuery({
     queryKey: ["staff_schedules"],
     queryFn: async () => {
@@ -63,6 +63,20 @@ const AttendancePage = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Load business hours from store_settings
+  const { data: businessHours } = useQuery({
+    queryKey: ["store_settings", "business_hours"],
+    queryFn: async () => {
+      const { data } = await supabase.from("store_settings").select("value").eq("key", "business_hours").maybeSingle();
+      return data?.value as any || {
+        morning_start: "09:00", morning_end: "13:00",
+        afternoon_start: "15:00", afternoon_end: "20:00",
+        work_days: [1, 2, 3, 4, 5, 6], // Mon-Sat by default
+      };
+    },
+    staleTime: 60000,
   });
 
   const scheduleMap = useMemo(() => {
@@ -76,6 +90,18 @@ const AttendancePage = () => {
 
   const getScheduleForDay = (staffId: string, dayOfWeek: number) => {
     return (scheduleMap[staffId] || []).filter((s: any) => s.day_of_week === dayOfWeek);
+  };
+
+  /** Check if a staff member has a rest day on a given day of the week */
+  const isRestDay = (staffId: string, dayOfWeek: number): boolean => {
+    const staffScheds = scheduleMap[staffId] || [];
+    // If staff has schedules assigned, check if that day is included
+    if (staffScheds.length > 0) {
+      return !staffScheds.some((s: any) => s.day_of_week === dayOfWeek);
+    }
+    // If no schedules assigned, fall back to business hours work_days
+    const workDays = businessHours?.work_days || [1, 2, 3, 4, 5, 6];
+    return !workDays.includes(dayOfWeek);
   };
 
   const getScheduledHours = (staffId: string, dayOfWeek: number) => {
@@ -117,8 +143,31 @@ const AttendancePage = () => {
 
   const cycleStatus = (staffId: string, day: number) => {
     if (!isAdmin) return;
+    const dayOfWeek = new Date(year, month, day).getDay();
+    const rest = isRestDay(staffId, dayOfWeek);
     const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const current = recordMap[staffId]?.[date]?.status;
+
+    // If it's a rest day, only allow toggling between nothing and special statuses
+    if (rest) {
+      // Allow admin to override rest day (e.g., staff worked a Sunday)
+      const restOrder = ["A", "T", "J", ""];
+      const idx = restOrder.indexOf(current || "");
+      const next = restOrder[(idx + 1) % restOrder.length];
+      if (next === "") {
+        // Remove the record
+        const existing = recordMap[staffId]?.[date];
+        if (existing) {
+          supabase.from("attendance_records").delete().eq("id", existing.id).then(() => {
+            qc.invalidateQueries({ queryKey: ["attendance_records", month, year] });
+          });
+        }
+        return;
+      }
+      toggleMutation.mutate({ staffId, date, status: next });
+      return;
+    }
+
     const order = ["A", "T", "J", "F"];
     const next = order[(order.indexOf(current || "") + 1) % order.length];
     toggleMutation.mutate({ staffId, date, status: next });
@@ -153,6 +202,15 @@ const AttendancePage = () => {
     const total = a + f + t + j;
     const pct = total > 0 ? Math.round((a / total) * 100) : 0;
 
+    // Count scheduled work days up to today for attendance %
+    const today = new Date();
+    let workDaysCount = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      if (date > today) break;
+      if (!isRestDay(staffId, date.getDay())) workDaysCount++;
+    }
+
     let totalWorked = 0;
     let totalScheduled = 0;
     recs.forEach((r: any) => {
@@ -167,6 +225,7 @@ const AttendancePage = () => {
 
     return {
       a, f, t, j, pct,
+      workDaysCount,
       totalHours: Math.round(totalWorked * 10) / 10,
       scheduledHours: Math.round(totalScheduled * 10) / 10,
       overtime: Math.round(overtime * 10) / 10,
@@ -212,6 +271,8 @@ const AttendancePage = () => {
       const dayCols = days.map(d => {
         const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
         const rec = recordMap[s.id]?.[date];
+        const dayOfWeek = new Date(year, month, d).getDay();
+        if (!rec && isRestDay(s.id, dayOfWeek)) return `"D"`;
         let val = rec?.status || "";
         if (rec?.check_in_time) val += ` ${rec.check_in_time}`;
         if (rec?.check_out_time) val += `-${rec.check_out_time}`;
@@ -235,13 +296,18 @@ const AttendancePage = () => {
     const currentStaff = staff.find((s: any) => s.user_id === session.session!.user.id);
     if (!currentStaff) { toast.error("Tu usuario no está vinculado a un registro de personal"); return; }
 
+    // Check if it's a rest day
+    const dayOfWeek = new Date().getDay();
+    if (isRestDay(currentStaff.id, dayOfWeek)) {
+      toast.info("Hoy es tu día de descanso 🎉");
+      return;
+    }
+
     const existing = recordMap[currentStaff.id]?.[today];
     if (existing?.check_in_time && !existing?.check_out_time) {
       toggleMutation.mutate({ staffId: currentStaff.id, date: today, status: "A", check_out: nowTime });
       toast.success(`Salida registrada: ${nowTime}`);
     } else if (!existing?.check_in_time) {
-      // Check if late based on schedule
-      const dayOfWeek = new Date().getDay();
       const todaySchedules = getScheduleForDay(currentStaff.id, dayOfWeek);
       let isLate = false;
       if (todaySchedules.length > 0) {
@@ -252,21 +318,31 @@ const AttendancePage = () => {
       toggleMutation.mutate({ staffId: currentStaff.id, date: today, status, check_in: nowTime });
       toast.success(`Entrada registrada: ${nowTime}${isLate ? " (Tardanza)" : ""}`);
     } else {
-      // Already has check-in and check-out - this could be a double shift
       toast.info("Ya registraste entrada y salida. Contacta al administrador para registrar doble turno.");
     }
   };
 
-  // Find current user's staff record and today's status
   const myStaff = staff.find((s: any) => s.user_id === user?.id);
   const today = new Date().toISOString().split("T")[0];
   const myRecord = myStaff ? recordMap[myStaff.id]?.[today] : null;
   const myCheckedIn = !!myRecord?.check_in_time;
   const myCheckedOut = !!myRecord?.check_out_time;
 
+  // Format business hours for display
+  const formatBusinessHours = () => {
+    if (!businessHours) return "9:00 AM - 1:00 PM y 3:00 PM - 8:00 PM";
+    const fmt = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      const ampm = h >= 12 ? "PM" : "AM";
+      const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+    };
+    return `${fmt(businessHours.morning_start)} - ${fmt(businessHours.morning_end)} y ${fmt(businessHours.afternoon_start)} - ${fmt(businessHours.afternoon_end)}`;
+  };
+
   return (
     <div className="space-y-6">
-      {/* Self check-in card for staff users (not admin) */}
+      {/* Self check-in card for staff */}
       {!isAdmin && myStaff && (
         <Card className={`border-2 ${myCheckedIn && !myCheckedOut ? "border-primary/50 bg-primary/5" : myCheckedOut ? "border-success/50 bg-success/5" : "border-warning/50 bg-warning/5"}`}>
           <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -308,7 +384,7 @@ const AttendancePage = () => {
         </Card>
       )}
 
-      {/* ─── Personal view (moderators): read-only summary ──── */}
+      {/* Personal view (non-admin) */}
       {!isAdmin && myStaff && (() => {
         const myStats = getStats(myStaff.id);
         const mySchedules = scheduleMap[myStaff.id] || [];
@@ -325,7 +401,6 @@ const AttendancePage = () => {
               </div>
             </div>
 
-            {/* My stats cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
               <Card className="border-success/20"><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-success">{myStats.a}</p><p className="text-[10px] text-muted-foreground">Asistencias</p></CardContent></Card>
               <Card className="border-destructive/20"><CardContent className="p-3 text-center"><p className="text-2xl font-bold text-destructive">{myStats.f}</p><p className="text-[10px] text-muted-foreground">Faltas</p></CardContent></Card>
@@ -350,7 +425,6 @@ const AttendancePage = () => {
               </Card>
             )}
 
-            {/* My schedule */}
             {mySchedules.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
@@ -367,6 +441,14 @@ const AttendancePage = () => {
                           <p className="text-[10px] text-muted-foreground mt-0.5">{sc.shift_name}</p>
                         </div>
                       ))}
+                  </div>
+                  {/* Show rest days */}
+                  <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Sun className="h-3.5 w-3.5" />
+                    <span>Días de descanso: {
+                      DAY_NAMES.filter((_, i) => !mySchedules.some((s: any) => s.day_of_week === i))
+                        .join(", ") || "Ninguno"
+                    }</span>
                   </div>
                 </CardContent>
               </Card>
@@ -393,16 +475,18 @@ const AttendancePage = () => {
                       {days.map(d => {
                         const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
                         const rec = recordMap[myStaff.id]?.[date];
-                        const dayName = DAY_NAMES[new Date(year, month, d).getDay()];
-                        const isWeekend = [0, 6].includes(new Date(year, month, d).getDay());
+                        const dayOfWeek = new Date(year, month, d).getDay();
+                        const dayName = DAY_NAMES[dayOfWeek];
+                        const rest = isRestDay(myStaff.id, dayOfWeek);
                         const isFuture = new Date(year, month, d) > new Date();
                         if (isFuture && !rec) return null;
-                        const st = rec ? STATUS_LABELS[rec.status] : null;
+                        const st = rec ? STATUS_LABELS[rec.status] : (rest ? STATUS_LABELS["D"] : null);
                         const hours = getActualHours(rec);
                         return (
-                          <tr key={d} className={`border-t border-border/50 ${isWeekend ? "bg-muted/20" : ""}`}>
+                          <tr key={d} className={`border-t border-border/50 ${rest ? "bg-muted/30 opacity-60" : ""}`}>
                             <td className="px-3 py-2 font-medium">
                               <span className="text-muted-foreground mr-1">{dayName.slice(0, 3)}</span> {d}
+                              {rest && <Badge variant="outline" className="ml-2 text-[8px] bg-gray-500/10 text-gray-400">Descanso</Badge>}
                             </td>
                             <td className="px-3 py-2 text-center">
                               {st ? (
@@ -448,12 +532,12 @@ const AttendancePage = () => {
             </div>
           </div>
 
-          {/* Admin quick check-in for any staff */}
+          {/* Admin quick check-in */}
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
                 <UserPlus className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-sm">Marcar Asistencia Rápida</h3>
+                <h3 className="font-semibold text-sm">Marcar Asistencia Rápida — Hoy</h3>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {staff.map((s: any) => {
@@ -462,20 +546,36 @@ const AttendancePage = () => {
                   const hasIn = !!rec?.check_in_time;
                   const hasOut = !!rec?.check_out_time;
                   const nowTime = `${String(new Date().getHours()).padStart(2, "0")}:${String(new Date().getMinutes()).padStart(2, "0")}`;
-                  
+                  const todayDow = new Date().getDay();
+                  const rest = isRestDay(s.id, todayDow);
+                  const todaySchedules = getScheduleForDay(s.id, todayDow);
+
                   return (
-                    <div key={s.id} className={`rounded-lg p-3 text-center border transition-colors ${hasOut ? "bg-success/10 border-success/30" : hasIn ? "bg-primary/10 border-primary/30" : "bg-secondary/30 border-border"}`}>
+                    <div key={s.id} className={`rounded-lg p-3 text-center border transition-colors ${
+                      rest && !hasIn ? "bg-gray-500/5 border-gray-500/20 opacity-60" :
+                      hasOut ? "bg-success/10 border-success/30" : 
+                      hasIn ? "bg-primary/10 border-primary/30" : 
+                      "bg-secondary/30 border-border"
+                    }`}>
                       <p className="text-xs font-semibold truncate">{s.full_name}</p>
                       <p className="text-[10px] text-muted-foreground">{s.position}</p>
+                      {rest && !hasIn && (
+                        <Badge variant="outline" className="text-[9px] mt-1 bg-gray-500/10 text-gray-400 gap-1">
+                          <Sun className="h-2.5 w-2.5" /> Descanso
+                        </Badge>
+                      )}
+                      {todaySchedules.length > 0 && !rest && (
+                        <p className="text-[9px] text-muted-foreground mt-0.5 font-mono">
+                          {todaySchedules[0].start_time?.slice(0,5)}-{todaySchedules[0].end_time?.slice(0,5)}
+                        </p>
+                      )}
                       {hasIn && <p className="text-[10px] font-mono mt-1">🕐 {rec?.check_in_time?.slice(0,5)}{hasOut ? ` → ${rec?.check_out_time?.slice(0,5)}` : ""}</p>}
                       <Button
                         size="sm"
-                        variant={hasOut ? "outline" : hasIn ? "secondary" : "default"}
+                        variant={hasOut ? "outline" : hasIn ? "secondary" : rest ? "ghost" : "default"}
                         className="mt-2 h-7 text-[10px] w-full"
                         disabled={hasOut}
                         onClick={() => {
-                          const dayOfWeek = new Date().getDay();
-                          const todaySchedules = getScheduleForDay(s.id, dayOfWeek);
                           if (hasIn && !hasOut) {
                             toggleMutation.mutate({ staffId: s.id, date: todayDate, status: "A", check_out: nowTime });
                             toast.success(`Salida de ${s.full_name}: ${nowTime}`);
@@ -486,25 +586,33 @@ const AttendancePage = () => {
                               isLate = nowTime > earliest;
                             }
                             toggleMutation.mutate({ staffId: s.id, date: todayDate, status: isLate ? "T" : "A", check_in: nowTime });
-                            toast.success(`Entrada de ${s.full_name}: ${nowTime}${isLate ? " (Tardanza)" : ""}`);
+                            toast.success(`Entrada de ${s.full_name}: ${nowTime}${isLate ? " (Tardanza)" : ""}${rest ? " (Día de descanso)" : ""}`);
                           }
                         }}
                       >
-                        {hasOut ? "✅ Completo" : hasIn ? "Marcar Salida" : "Marcar Entrada"}
+                        {hasOut ? "✅ Completo" : hasIn ? "Marcar Salida" : rest ? "☀️ Descanso" : "Marcar Entrada"}
                       </Button>
                     </div>
                   );
                 })}
               </div>
-              <div className="mt-3 p-2 bg-secondary/30 rounded-lg">
-                <p className="text-[10px] text-muted-foreground text-center">
-                  🏢 Horario de la empresa: <strong>9:00 AM - 1:00 PM</strong> y <strong>3:00 PM - 8:00 PM</strong> · Haz clic en cada personal para registrar entrada/salida
+              <div className="mt-3 p-2 bg-secondary/30 rounded-lg flex items-center justify-between flex-wrap gap-2">
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Horario empresa: <strong>{formatBusinessHours()}</strong>
                 </p>
+                <div className="flex gap-2">
+                  <Badge variant="outline" className="text-[9px] bg-gray-500/10 text-gray-400 gap-1">
+                    <Sun className="h-2.5 w-2.5" /> = Día de descanso
+                  </Badge>
+                  <Badge variant="outline" className="text-[9px] bg-green-500/10 text-green-400">
+                    ✅ = Jornada completa
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Filters */}
+          {/* Filters & legend */}
           <div className="flex gap-3 flex-wrap items-center">
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
@@ -516,7 +624,7 @@ const AttendancePage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {Object.entries(STATUS_LABELS).map(([k, v]) => (
                 <Badge key={k} variant="outline" className={`${v.color} text-xs`}>{v.label} = {v.full}</Badge>
               ))}
@@ -540,12 +648,16 @@ const AttendancePage = () => {
                     <thead>
                       <tr className="bg-muted/50">
                         <th className="sticky left-0 bg-muted/50 z-10 px-3 py-2 text-left font-semibold min-w-[150px]">Personal</th>
-                        {days.map(d => (
-                          <th key={d} className="px-1 py-1 text-center min-w-[32px]">
-                            <div className="text-muted-foreground">{getDayOfWeek(d)}</div>
-                            <div>{d}</div>
-                          </th>
-                        ))}
+                        {days.map(d => {
+                          const dow = new Date(year, month, d).getDay();
+                          const isSunday = dow === 0;
+                          return (
+                            <th key={d} className={`px-1 py-1 text-center min-w-[32px] ${isSunday ? "bg-orange-500/5" : ""}`}>
+                              <div className={`text-muted-foreground ${isSunday ? "text-orange-400 font-bold" : ""}`}>{getDayOfWeek(d)}</div>
+                              <div className={isSunday ? "text-orange-400" : ""}>{d}</div>
+                            </th>
+                          );
+                        })}
                         <th className="px-2 py-2 text-center">A</th>
                         <th className="px-2 py-2 text-center">F</th>
                         <th className="px-2 py-2 text-center">T</th>
@@ -563,12 +675,33 @@ const AttendancePage = () => {
                             {days.map(d => {
                               const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
                               const rec = recordMap[s.id]?.[date];
+                              const dayOfWeek = new Date(year, month, d).getDay();
+                              const rest = isRestDay(s.id, dayOfWeek);
                               const st = rec ? STATUS_LABELS[rec.status] : null;
-                              const isWeekend = [0, 6].includes(new Date(year, month, d).getDay());
+                              const isFuture = new Date(year, month, d) > new Date();
+
+                              // Rest day without attendance record
+                              if (rest && !rec) {
+                                return (
+                                  <td key={d} className="px-1 py-1 text-center bg-gray-500/5 cursor-pointer hover:bg-gray-500/10 transition-colors"
+                                    onClick={() => cycleStatus(s.id, d)}
+                                    title={`Descanso — Clic para registrar asistencia extra`}>
+                                    <span className="inline-flex items-center justify-center h-6 w-6 rounded text-[10px] font-bold bg-gray-500/15 text-gray-500">D</span>
+                                  </td>
+                                );
+                              }
+
                               return (
-                                <td key={d} className={`px-1 py-1 text-center cursor-pointer hover:bg-primary/10 transition-colors ${isWeekend ? "bg-muted/30" : ""}`}
+                                <td key={d} className={`px-1 py-1 text-center cursor-pointer hover:bg-primary/10 transition-colors ${rest ? "bg-gray-500/5" : ""}`}
                                   onClick={() => cycleStatus(s.id, d)}>
-                                  {st ? <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-[10px] font-bold ${st.color}`}>{st.label}</span> : <span className="text-muted-foreground/30">·</span>}
+                                  {st ? (
+                                    <span className={`inline-flex items-center justify-center h-6 w-6 rounded text-[10px] font-bold ${st.color} ${rest ? "ring-1 ring-orange-400/50" : ""}`} 
+                                      title={rest ? `${st.full} (trabajó en día de descanso)` : st.full}>
+                                      {st.label}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/30">{isFuture ? "" : "·"}</span>
+                                  )}
                                 </td>
                               );
                             })}
@@ -598,12 +731,13 @@ const AttendancePage = () => {
                   const stats = getStats(s.id);
                   const weeks = getWeeklyStats(s.id);
                   const staffSchedules = scheduleMap[s.id] || [];
+                  const restDays = DAY_NAMES.filter((_, i) => isRestDay(s.id, i));
                   return (
                     <Card key={s.id} className="border-primary/10">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm flex items-center justify-between flex-wrap gap-2">
                           <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" />{s.full_name}</span>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <Badge variant="outline" className="text-xs">{stats.totalHours}h trabajadas</Badge>
                             <Badge variant="outline" className="text-xs bg-muted">{stats.scheduledHours}h programadas</Badge>
                             {stats.overtime > 0 && (
@@ -615,18 +749,31 @@ const AttendancePage = () => {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        {staffSchedules.length > 0 && (
-                          <div className="bg-secondary/30 rounded-lg p-2">
-                            <p className="text-[10px] font-semibold text-muted-foreground mb-1">📋 Horario Asignado:</p>
-                            <div className="flex gap-2 flex-wrap">
-                              {staffSchedules.map((sc: any) => (
-                                <Badge key={sc.id} variant="outline" className="text-[10px]">
-                                  {DAY_NAMES[sc.day_of_week]?.slice(0, 3)}: {sc.start_time?.slice(0,5)}-{sc.end_time?.slice(0,5)} ({sc.shift_name})
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {/* Schedule + rest days info */}
+                        <div className="bg-secondary/30 rounded-lg p-3 space-y-2">
+                          {staffSchedules.length > 0 ? (
+                            <>
+                              <p className="text-[10px] font-semibold text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Horario Asignado:</p>
+                              <div className="flex gap-2 flex-wrap">
+                                {staffSchedules
+                                  .sort((a: any, b: any) => a.day_of_week - b.day_of_week)
+                                  .map((sc: any) => (
+                                  <Badge key={sc.id} variant="outline" className="text-[10px]">
+                                    {DAY_NAMES[sc.day_of_week]?.slice(0, 3)}: {sc.start_time?.slice(0,5)}-{sc.end_time?.slice(0,5)}
+                                    <span className="ml-1 text-muted-foreground">({sc.shift_name})</span>
+                                  </Badge>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground italic">⚠️ Sin horario asignado — se usa el horario general de la empresa</p>
+                          )}
+                          {restDays.length > 0 && (
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Sun className="h-3 w-3 text-orange-400" /> Descanso: <strong className="text-orange-400">{restDays.join(", ")}</strong>
+                            </p>
+                          )}
+                        </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                           {weeks.map(w => (
@@ -645,11 +792,14 @@ const AttendancePage = () => {
                             {days.map(d => {
                               const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
                               const rec = recordMap[s.id]?.[date];
-                              const isWeekend = [0, 6].includes(new Date(year, month, d).getDay());
+                              const dayOfWeek = new Date(year, month, d).getDay();
+                              const rest = isRestDay(s.id, dayOfWeek);
                               return (
-                                <div key={d} className={`flex flex-col items-center min-w-[50px] p-1 rounded text-[10px] ${isWeekend ? "bg-muted/30" : ""}`}>
-                                  <span className="text-muted-foreground">{getDayOfWeek(d)} {d}</span>
-                                  {rec?.status === "A" || rec?.status === "T" ? (
+                                <div key={d} className={`flex flex-col items-center min-w-[50px] p-1 rounded text-[10px] ${rest ? "bg-orange-500/5 border border-orange-500/10" : ""}`}>
+                                  <span className={`text-muted-foreground ${rest ? "text-orange-400 font-bold" : ""}`}>{getDayOfWeek(d)} {d}</span>
+                                  {rest && !rec ? (
+                                    <span className="text-gray-500 py-2 text-[9px]">🌙</span>
+                                  ) : rec?.status === "A" || rec?.status === "T" ? (
                                     <>
                                       <Input
                                         type="time"
@@ -687,6 +837,7 @@ const AttendancePage = () => {
                     <tr className="bg-muted/50">
                       <th className="px-4 py-3 text-left font-semibold">Personal</th>
                       <th className="px-3 py-3 text-center">Cargo</th>
+                      <th className="px-3 py-3 text-center">Horario</th>
                       <th className="px-3 py-3 text-center text-success">A</th>
                       <th className="px-3 py-3 text-center text-destructive">F</th>
                       <th className="px-3 py-3 text-center text-warning">T</th>
@@ -695,15 +846,24 @@ const AttendancePage = () => {
                       <th className="px-3 py-3 text-center">Trabajadas</th>
                       <th className="px-3 py-3 text-center">Programadas</th>
                       <th className="px-3 py-3 text-center text-orange-400">Extras</th>
+                      <th className="px-3 py-3 text-center text-gray-400">Descansos</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredStaff.map((s: any) => {
                       const stats = getStats(s.id);
+                      const staffScheds = scheduleMap[s.id] || [];
+                      const restDays = DAY_NAMES.filter((_, i) => isRestDay(s.id, i));
+                      const shiftName = staffScheds.length > 0
+                        ? [...new Set(staffScheds.map((sc: any) => sc.shift_name))].join(", ")
+                        : "General";
                       return (
                         <tr key={s.id} className="border-t border-border hover:bg-muted/30">
                           <td className="px-4 py-3 font-medium">{s.full_name}</td>
                           <td className="px-3 py-3 text-center text-xs text-muted-foreground">{s.position}</td>
+                          <td className="px-3 py-3 text-center">
+                            <Badge variant="outline" className="text-[10px]">{shiftName}</Badge>
+                          </td>
                           <td className="px-3 py-3 text-center font-bold text-success">{stats.a}</td>
                           <td className="px-3 py-3 text-center font-bold text-destructive">{stats.f}</td>
                           <td className="px-3 py-3 text-center font-bold text-warning">{stats.t}</td>
@@ -714,6 +874,7 @@ const AttendancePage = () => {
                           <td className="px-3 py-3 text-center font-bold text-primary">{stats.totalHours}h</td>
                           <td className="px-3 py-3 text-center text-muted-foreground">{stats.scheduledHours}h</td>
                           <td className="px-3 py-3 text-center font-bold text-orange-400">{stats.overtime > 0 ? `${stats.overtime}h` : "—"}</td>
+                          <td className="px-3 py-3 text-center text-xs text-gray-400">{restDays.map(d => d.slice(0,3)).join(", ")}</td>
                         </tr>
                       );
                     })}
