@@ -983,7 +983,7 @@ const AccountingPage = () => {
                                 <PopoverContent className="w-[350px] p-0" align="start">
                                   <Command>
                                     <CommandInput placeholder="Buscar producto..." className="h-9" />
-                                    <CommandList>
+                                    <CommandList className="max-h-[220px] overflow-y-auto">
                                       <CommandEmpty>No encontrado</CommandEmpty>
                                       <CommandGroup heading="Inventario">
                                         {products.map((p: any) => (
