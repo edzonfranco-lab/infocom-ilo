@@ -401,7 +401,6 @@ const AttendancePage = () => {
               <UserCheck className="h-5 w-5" />
               {myCheckedOut ? "🔄 Re-entrar (Turno Extra)" : myCheckedIn ? "Marcar Salida" : "Marcar Entrada"}
             </Button>
-            </Button>
           </CardContent>
         </Card>
       )}
