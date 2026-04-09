@@ -385,7 +385,7 @@ const AttendancePage = () => {
                 <p className="font-semibold">{myStaff.full_name}</p>
                 <p className="text-sm text-muted-foreground">
                   {myCheckedOut
-                    ? `✅ Jornada completada — Entrada: ${myRecord?.check_in_time} | Salida: ${myRecord?.check_out_time}`
+                    ? `✅ Jornada completada — Entrada: ${myRecord?.check_in_time} | Salida: ${myRecord?.check_out_time}. ¿Necesitas volver? Presiona Re-entrar.`
                     : myCheckedIn
                     ? `🟢 En turno desde las ${myRecord?.check_in_time} — Presiona para marcar salida`
                     : "⚠️ Aún no has marcado tu entrada hoy"}
@@ -395,12 +395,12 @@ const AttendancePage = () => {
             <Button
               size="lg"
               className="gap-2 min-w-[200px]"
-              variant={myCheckedOut ? "outline" : "default"}
+              variant={myCheckedOut ? "secondary" : "default"}
               onClick={selfCheckIn}
-              disabled={myCheckedOut}
             >
               <UserCheck className="h-5 w-5" />
-              {myCheckedOut ? "Asistencia Completada" : myCheckedIn ? "Marcar Salida" : "Marcar Entrada"}
+              {myCheckedOut ? "🔄 Re-entrar (Turno Extra)" : myCheckedIn ? "Marcar Salida" : "Marcar Entrada"}
+            </Button>
             </Button>
           </CardContent>
         </Card>
