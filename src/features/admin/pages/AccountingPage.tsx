@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -142,6 +142,16 @@ const AccountingPage = () => {
     queryKey: ["products_for_accounting"],
     queryFn: async () => {
       const { data, error } = await supabase.from("products").select("id, name, price, stock, sku").eq("is_active", true).order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Existing customers for autocomplete
+  const { data: existingCustomers = [] } = useQuery({
+    queryKey: ["customers_for_accounting"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("customers").select("id, full_name, phone, document_number").order("full_name");
       if (error) throw error;
       return data;
     },
@@ -303,6 +313,9 @@ const AccountingPage = () => {
 
   const emitirMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Get transaction data for customer sync
+      const { data: txData } = await supabase.from("transactions").select("cliente_nombre, cliente_telefono, total").eq("id", id).single();
+
       const { error } = await supabase.from("transactions").update({
         estado: "emitido" as any,
         emitido_en: new Date().toISOString(),
@@ -310,24 +323,12 @@ const AccountingPage = () => {
       }).eq("id", id);
       if (error) throw error;
 
-      // Reduce stock for product items (salida)
-      const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", id).eq("item_type", "producto");
-      for (const it of txItems || []) {
-        if (it.referencia_id && it.referencia_id !== "service") {
-          const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
-          if (prod) {
-            const stockBefore = prod.stock;
-            const stockAfter = stockBefore - (it.cantidad || 0);
-            await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
-            await supabase.from("inventory_movements").insert({
-              product_id: it.referencia_id, product_name: it.descripcion,
-              movement_type: "salida", quantity: it.cantidad,
-              reference_type: "venta", reference_id: id,
-              stock_before: stockBefore, stock_after: stockAfter,
-              created_by: user?.id || null,
-            } as any);
-          }
-        }
+      // Reduce stock
+      await reduceStockForTransaction(id);
+
+      // Sync customer
+      if (txData?.cliente_nombre) {
+        await syncCustomer(txData.cliente_nombre, txData.cliente_telefono, Number(txData.total || 0));
       }
 
       await supabase.from("transaction_history").insert({
@@ -336,7 +337,6 @@ const AccountingPage = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-      qc.invalidateQueries({ queryKey: ["products"] });
       toast.success("Transacción emitida — Stock actualizado");
     },
   });
@@ -504,6 +504,67 @@ const AccountingPage = () => {
     const servicios = items.filter(i => i.item_type === "servicio").reduce((a, i) => a + i.cantidad * i.precio_unitario, 0);
     return { productos, servicios, total: productos + servicios };
   }, [items]);
+
+  // ─── Customer sync helper ───────────────────────────────────
+  const syncCustomer = useCallback(async (nombre: string, telefono: string | null, total: number) => {
+    if (!nombre || nombre.trim().length < 2) return;
+    const trimmedName = nombre.trim();
+    try {
+      // Check if customer exists by name (case insensitive)
+      const { data: existing } = await supabase
+        .from("customers")
+        .select("id, total_purchases, total_spent")
+        .ilike("full_name", trimmedName)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing customer
+        await supabase.from("customers").update({
+          total_purchases: (existing.total_purchases || 0) + 1,
+          total_spent: (existing.total_spent || 0) + total,
+          last_purchase_at: new Date().toISOString(),
+          phone: telefono || undefined,
+        }).eq("id", existing.id);
+      } else {
+        // Create new customer
+        await supabase.from("customers").insert({
+          full_name: trimmedName,
+          phone: telefono || null,
+          total_purchases: 1,
+          total_spent: total,
+          last_purchase_at: new Date().toISOString(),
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["customers"] });
+      qc.invalidateQueries({ queryKey: ["customers_for_accounting"] });
+    } catch (e) {
+      console.error("Error syncing customer:", e);
+    }
+  }, [qc]);
+
+  // ─── Stock reduction helper ───────────────────────────────────
+  const reduceStockForTransaction = useCallback(async (txId: string) => {
+    const { data: txItems } = await supabase.from("transaction_items").select("*").eq("transaction_id", txId).eq("item_type", "producto");
+    for (const it of txItems || []) {
+      if (it.referencia_id && it.referencia_id !== "service") {
+        const { data: prod } = await supabase.from("products").select("stock").eq("id", it.referencia_id).single();
+        if (prod) {
+          const stockBefore = prod.stock;
+          const stockAfter = stockBefore - (it.cantidad || 0);
+          await supabase.from("products").update({ stock: stockAfter } as any).eq("id", it.referencia_id);
+          await supabase.from("inventory_movements").insert({
+            product_id: it.referencia_id, product_name: it.descripcion,
+            movement_type: "salida", quantity: it.cantidad,
+            reference_type: "venta", reference_id: txId,
+            stock_before: stockBefore, stock_after: stockAfter,
+            created_by: user?.id || null,
+          } as any);
+        }
+      }
+    }
+    qc.invalidateQueries({ queryKey: ["products"] });
+    qc.invalidateQueries({ queryKey: ["products_for_accounting"] });
+  }, [user?.id, qc]);
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -833,7 +894,44 @@ const AccountingPage = () => {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Cliente</Label><Input value={form.cliente_nombre} onChange={e => setForm({ ...form, cliente_nombre: e.target.value })} placeholder="Nombre del cliente" /></div>
+              <div>
+                <Label>Cliente</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-9 text-xs w-full justify-between font-normal">
+                      {form.cliente_nombre || "Buscar o escribir cliente..."}
+                      <ChevronsUpDown className="h-3 w-3 ml-1 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[350px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar cliente..." className="h-9" />
+                      <CommandList className="max-h-[200px] overflow-y-auto">
+                        <CommandEmpty>No encontrado — escribe manualmente abajo</CommandEmpty>
+                        <CommandGroup heading="Clientes registrados">
+                          {existingCustomers.map((c: any) => (
+                            <CommandItem key={c.id} value={`${c.full_name} ${c.phone || ""} ${c.document_number || ""}`} onSelect={() => {
+                              setForm(prev => ({ ...prev, cliente_nombre: c.full_name, cliente_telefono: c.phone || prev.cliente_telefono }));
+                            }}>
+                              <Check className={`h-3 w-3 mr-2 ${form.cliente_nombre === c.full_name ? "opacity-100" : "opacity-0"}`} />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-medium block">{c.full_name}</span>
+                                {c.phone && <span className="text-[10px] text-muted-foreground">{c.phone}</span>}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <Input
+                  value={form.cliente_nombre}
+                  onChange={e => setForm({ ...form, cliente_nombre: e.target.value })}
+                  placeholder="O escribe el nombre manualmente..."
+                  className="h-8 text-xs mt-1"
+                />
+              </div>
               <div><Label>Telefono</Label><Input value={form.cliente_telefono} onChange={e => setForm({ ...form, cliente_telefono: e.target.value })} placeholder="999 999 999" /></div>
             </div>
 
@@ -885,7 +983,7 @@ const AccountingPage = () => {
                                 <PopoverContent className="w-[350px] p-0" align="start">
                                   <Command>
                                     <CommandInput placeholder="Buscar producto..." className="h-9" />
-                                    <CommandList>
+                                    <CommandList className="max-h-[220px] overflow-y-auto">
                                       <CommandEmpty>No encontrado</CommandEmpty>
                                       <CommandGroup heading="Inventario">
                                         {products.map((p: any) => (
@@ -931,7 +1029,7 @@ const AccountingPage = () => {
                                 <PopoverContent className="w-[350px] p-0" align="start">
                                   <Command>
                                     <CommandInput placeholder="Buscar servicio..." className="h-9" />
-                                    <CommandList>
+                                    <CommandList className="max-h-[220px] overflow-y-auto">
                                       <CommandEmpty>No encontrado</CommandEmpty>
                                       <CommandGroup heading="Servicios">
                                         {SERVICE_TYPES.map(st => (
@@ -1058,6 +1156,7 @@ const AccountingPage = () => {
                       const payload = items.map(it => ({
                         transaction_id: tx.id,
                         item_type: it.item_type,
+                        referencia_id: it.referencia_id || null,
                         descripcion: it.descripcion,
                         cantidad: it.cantidad,
                         precio_unitario: it.precio_unitario,
@@ -1067,11 +1166,20 @@ const AccountingPage = () => {
                         diagnostico: it.diagnostico || null,
                       }));
                       await supabase.from("transaction_items").insert(payload);
+
+                      // Reduce stock for product items
+                      await reduceStockForTransaction(tx.id);
+
+                      // Sync customer to customers table
+                      if (form.cliente_nombre) {
+                        await syncCustomer(form.cliente_nombre, form.cliente_telefono || null, itemTotals.total);
+                      }
+
                       await supabase.from("transaction_history").insert({
                         transaction_id: tx.id, accion: "creado_y_emitido", usuario_id: user?.id || null,
                       });
                       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-                      toast.success("Transaccion emitida");
+                      toast.success("Transaccion emitida — Stock actualizado");
                       closeForm();
                     } catch (err: any) {
                       toast.error(err.message || "Error");
