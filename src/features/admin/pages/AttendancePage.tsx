@@ -25,6 +25,23 @@ const STATUS_LABELS: Record<string,{ label: string; color: string; full: string 
 };
 
 const DAY_NAMES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const DAY_NAMES_SHORT = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+interface BusinessHours {
+  morning_start: string;
+  morning_end: string;
+  afternoon_start: string;
+  afternoon_end: string;
+  work_days: number[];
+}
+
+const DEFAULT_BUSINESS_HOURS: BusinessHours = {
+  morning_start: "09:00",
+  morning_end: "13:00",
+  afternoon_start: "15:00",
+  afternoon_end: "20:00",
+  work_days: [1, 2, 3, 4, 5, 6],
+};
 
 const AttendancePage = () => {
   const qc = useQueryClient();
