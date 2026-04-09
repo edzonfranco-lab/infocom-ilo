@@ -983,13 +983,13 @@ const AttendancePage = () => {
                                         type="time"
                                         value={rec?.check_in_time || ""}
                                         onChange={e => updateTime(s.id, d, "check_in", e.target.value)}
-                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20"
+                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20 [color-scheme:dark] dark:[color-scheme:dark]"
                                       />
                                       <Input
                                         type="time"
                                         value={rec?.check_out_time || ""}
                                         onChange={e => updateTime(s.id, d, "check_out", e.target.value)}
-                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20"
+                                        className="h-5 w-full text-[10px] p-0.5 text-center border-primary/20 [color-scheme:dark] dark:[color-scheme:dark]"
                                       />
                                     </>
                                   ) : (
