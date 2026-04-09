@@ -106,6 +106,7 @@ const AttendancePage = () => {
     if (businessHours) setEditHours(businessHours);
   }, [businessHours]);
 
+  const scheduleMap = useMemo(() => {
     const m: Record<string, any[]> = {};
     schedules.forEach((s: any) => {
       if (!m[s.staff_id]) m[s.staff_id] = [];
