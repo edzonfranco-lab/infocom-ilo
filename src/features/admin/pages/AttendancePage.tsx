@@ -188,7 +188,10 @@ const AttendancePage = () => {
     if (rec?.check_in_time && rec?.check_out_time) {
       const [inH, inM] = rec.check_in_time.split(":").map(Number);
       const [outH, outM] = rec.check_out_time.split(":").map(Number);
-      return (outH + outM / 60) - (inH + inM / 60);
+      let diff = (outH + outM / 60) - (inH + inM / 60);
+      // Handle overnight shifts (e.g., 15:00 → 01:00 next day)
+      if (diff < 0) diff += 24;
+      return diff;
     }
     return 0;
   };
