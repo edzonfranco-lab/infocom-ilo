@@ -37,6 +37,12 @@ interface TransactionItem {
   responsable?: string;
   tipo_equipo?: string;
   diagnostico?: string;
+  // Combo fields
+  combo_id?: string | null;            // present on combo header AND its children
+  combo_parent_local_id?: string | null; // local link for children → parent (UI only)
+  is_combo_header?: boolean;            // true for the main combo line
+  is_combo_child?: boolean;             // true for sub-items belonging to a combo
+  precio_original?: number;             // for child items: original (non-promo) price
 }
 
 interface Transaction {
