@@ -439,6 +439,11 @@ const ReceptionPage = () => {
                   <div className="pt-2 border-t border-border space-y-3">
                     <div className="flex gap-2 flex-wrap">
                       <PrintReceipt order={selectedOrder} />
+                      {selectedOrder.customer_name && (
+                        <Button variant="outline" size="sm" className="gap-2" onClick={() => setViewCustomerName(selectedOrder.customer_name)}>
+                          <User className="h-4 w-4" /> Ver Cliente
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" className="gap-2" onClick={() => openEdit(selectedOrder)}>
                         <Pencil className="h-4 w-4" /> Editar Orden
                       </Button>
