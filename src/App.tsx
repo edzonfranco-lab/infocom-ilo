@@ -50,6 +50,7 @@ import SuppliersPage from "@/features/admin/pages/SuppliersPage";
 import PurchasesPage from "@/features/admin/pages/PurchasesPage";
 import KardexPage from "@/features/admin/pages/KardexPage";
 import PermissionsConfigPage from "@/features/admin/pages/PermissionsConfigPage";
+import CombosPage from "@/features/admin/pages/CombosPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -117,6 +118,7 @@ const App = () => (
                   <Route path="vitrinas" element={<AdminOnlyRoute><VitrinasPage /></AdminOnlyRoute>} />
                   <Route path="marcas" element={<AdminOnlyRoute><BrandsPage /></AdminOnlyRoute>} />
                   <Route path="kardex" element={<KardexPage />} />
+                  <Route path="combos" element={<CombosPage />} />
                   <Route path="compras" element={<PurchasesPage />} />
                   <Route path="proveedores" element={<AdminOnlyRoute><SuppliersPage /></AdminOnlyRoute>} />
                   <Route path="banners" element={<AdminOnlyRoute><BannersPage /></AdminOnlyRoute>} />
