@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
-  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw
+  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw, Sparkles
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
@@ -37,6 +37,12 @@ interface TransactionItem {
   responsable?: string;
   tipo_equipo?: string;
   diagnostico?: string;
+  // Combo metadata (UI-only flags; persisted via combo_id / combo_parent_item_id in DB)
+  is_combo_parent?: boolean;
+  is_combo_child?: boolean;
+  combo_id?: string | null;
+  combo_parent_idx?: number | null;
+  original_price?: number;
 }
 
 interface Transaction {
