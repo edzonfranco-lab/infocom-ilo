@@ -1,0 +1,270 @@
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  User, Phone, Mail, IdCard, MapPin, Star, Calendar, ShoppingCart,
+  Wrench, TrendingUp, Award, Receipt, ClipboardList, Crown
+} from "lucide-react";
+
+interface Props {
+  customerId: string | null;
+  customerName?: string | null;
+  onClose: () => void;
+}
+
+const CURRENCY = "S/. ";
+
+export const CustomerDetailDialog = ({ customerId, customerName, onClose }: Props) => {
+  const open = !!(customerId || customerName);
+
+  // Fetch customer record (by id, fallback to name)
+  const { data: customer } = useQuery({
+    queryKey: ["customer_detail", customerId, customerName],
+    queryFn: async () => {
+      if (customerId) {
+        const { data } = await supabase.from("customers").select("*").eq("id", customerId).maybeSingle();
+        return data;
+      }
+      if (customerName) {
+        const { data } = await supabase.from("customers").select("*").ilike("full_name", customerName).maybeSingle();
+        return data;
+      }
+      return null;
+    },
+    enabled: open,
+  });
+
+  const matchName = customer?.full_name || customerName || "";
+
+  // Fetch transactions by customer name (case-insensitive)
+  const { data: transactions = [] } = useQuery({
+    queryKey: ["customer_transactions", matchName],
+    queryFn: async () => {
+      if (!matchName) return [];
+      const { data } = await supabase
+        .from("transactions")
+        .select("*")
+        .ilike("cliente_nombre", matchName)
+        .order("fecha", { ascending: false });
+      return data || [];
+    },
+    enabled: !!matchName && open,
+  });
+
+  // Fetch service orders by customer name
+  const { data: serviceOrders = [] } = useQuery({
+    queryKey: ["customer_service_orders", matchName],
+    queryFn: async () => {
+      if (!matchName) return [];
+      const { data } = await supabase
+        .from("service_orders")
+        .select("*")
+        .ilike("customer_name", matchName)
+        .order("received_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!matchName && open,
+  });
+
+  // Fetch all transaction items for emitted ones (for spending breakdown)
+  const emitted = transactions.filter((t: any) => t.estado === "emitido");
+
+  const metrics = useMemo(() => {
+    const totalSpent = emitted.reduce((a: number, t: any) => a + Number(t.total || 0), 0);
+    const totalProductos = emitted.reduce((a: number, t: any) => a + Number(t.subtotal_productos || 0), 0);
+    const totalServicios = emitted.reduce((a: number, t: any) => a + Number(t.subtotal_servicios || 0), 0);
+    const numCompras = emitted.length;
+    const ticketPromedio = numCompras > 0 ? totalSpent / numCompras : 0;
+    const ultimaCompra = emitted[0]?.fecha || null;
+    const techOrders = serviceOrders.length;
+    return { totalSpent, totalProductos, totalServicios, numCompras, ticketPromedio, ultimaCompra, techOrders };
+  }, [emitted, serviceOrders]);
+
+  // Loyalty tier
+  const tier = metrics.numCompras >= 20
+    ? { label: "Premium", icon: Crown, className: "bg-primary/20 text-primary border-primary/40" }
+    : metrics.numCompras >= 10
+    ? { label: "Fiel", icon: Award, className: "bg-yellow-500/20 text-yellow-600 border-yellow-500/40" }
+    : metrics.numCompras >= 5
+    ? { label: "Frecuente", icon: Star, className: "bg-blue-500/20 text-blue-500 border-blue-500/40" }
+    : { label: "Nuevo", icon: User, className: "bg-muted text-muted-foreground" };
+  const TierIcon = tier.icon;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${customer?.is_vip ? "bg-yellow-500/20" : "bg-primary/10"}`}>
+              {customer?.is_vip ? <Star className="h-5 w-5 text-yellow-500" /> : <User className="h-5 w-5 text-primary" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold truncate">{matchName || "Cliente"}</span>
+                {customer?.is_vip && <Badge className="bg-yellow-500/20 text-yellow-600 text-[10px]">VIP</Badge>}
+                <Badge variant="outline" className={`text-[10px] gap-1 ${tier.className}`}>
+                  <TierIcon className="h-3 w-3" /> {tier.label}
+                </Badge>
+              </div>
+              {!customer && matchName && (
+                <p className="text-[10px] text-muted-foreground font-normal mt-0.5">
+                  Cliente no registrado en el directorio
+                </p>
+              )}
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Personal data */}
+        {customer && (
+          <Card className="border-primary/10">
+            <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {customer.phone && (
+                <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-primary" /><span className="text-muted-foreground">Tel:</span> <span className="font-medium">{customer.phone}</span></div>
+              )}
+              {customer.email && (
+                <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-primary" /><span className="text-muted-foreground">Email:</span> <span className="font-medium truncate">{customer.email}</span></div>
+              )}
+              {customer.document_number && (
+                <div className="flex items-center gap-2"><IdCard className="h-3.5 w-3.5 text-primary" /><span className="text-muted-foreground">DNI:</span> <span className="font-medium">{customer.document_number}</span></div>
+              )}
+              {customer.address && (
+                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-primary" /><span className="text-muted-foreground">Dir:</span> <span className="font-medium truncate">{customer.address}</span></div>
+              )}
+              {customer.notes && (
+                <div className="col-span-full text-muted-foreground italic">📝 {customer.notes}</div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Metrics grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Card className="border-success/20">
+            <CardContent className="p-3 text-center">
+              <TrendingUp className="h-4 w-4 mx-auto mb-1 text-success" />
+              <p className="text-lg font-bold text-success">{CURRENCY}{metrics.totalSpent.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">Total gastado</p>
+            </CardContent>
+          </Card>
+          <Card className="border-primary/20">
+            <CardContent className="p-3 text-center">
+              <Receipt className="h-4 w-4 mx-auto mb-1 text-primary" />
+              <p className="text-lg font-bold">{metrics.numCompras}</p>
+              <p className="text-[10px] text-muted-foreground">Transacciones</p>
+            </CardContent>
+          </Card>
+          <Card className="border-info/20">
+            <CardContent className="p-3 text-center">
+              <ShoppingCart className="h-4 w-4 mx-auto mb-1 text-info" />
+              <p className="text-lg font-bold">{CURRENCY}{metrics.ticketPromedio.toFixed(2)}</p>
+              <p className="text-[10px] text-muted-foreground">Ticket promedio</p>
+            </CardContent>
+          </Card>
+          <Card className="border-amber-500/20">
+            <CardContent className="p-3 text-center">
+              <Calendar className="h-4 w-4 mx-auto mb-1 text-amber-500" />
+              <p className="text-xs font-bold">{metrics.ultimaCompra ? new Date(metrics.ultimaCompra + "T12:00:00").toLocaleDateString("es-PE") : "—"}</p>
+              <p className="text-[10px] text-muted-foreground">Última compra</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs: transactions + service orders */}
+        <Tabs defaultValue="transactions">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="transactions" className="gap-1 text-xs">
+              <Receipt className="h-3 w-3" /> Transacciones ({transactions.length})
+            </TabsTrigger>
+            <TabsTrigger value="services" className="gap-1 text-xs">
+              <Wrench className="h-3 w-3" /> Órdenes Técnicas ({serviceOrders.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="transactions" className="mt-3">
+            {transactions.length === 0 ? (
+              <p className="text-center text-muted-foreground text-xs py-6">Sin transacciones registradas</p>
+            ) : (
+              <div className="border border-border rounded-lg overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Fecha</TableHead>
+                      <TableHead className="text-xs">Tipo</TableHead>
+                      <TableHead className="text-xs">Estado</TableHead>
+                      <TableHead className="text-xs text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((t: any) => (
+                      <TableRow key={t.id} className={t.estado !== "emitido" ? "opacity-60" : ""}>
+                        <TableCell className="text-xs whitespace-nowrap">
+                          {new Date(t.fecha + "T12:00:00").toLocaleDateString("es-PE")}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px] capitalize">{t.tipo_general}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={t.estado === "emitido" ? "default" : t.estado === "anulado" ? "destructive" : "secondary"} className="text-[10px] capitalize">
+                            {t.estado}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-xs">{CURRENCY}{Number(t.total).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="services" className="mt-3">
+            {serviceOrders.length === 0 ? (
+              <p className="text-center text-muted-foreground text-xs py-6">Sin órdenes técnicas registradas</p>
+            ) : (
+              <div className="border border-border rounded-lg overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">N°</TableHead>
+                      <TableHead className="text-xs">Fecha</TableHead>
+                      <TableHead className="text-xs">Equipo</TableHead>
+                      <TableHead className="text-xs">Estado</TableHead>
+                      <TableHead className="text-xs text-right">Costo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {serviceOrders.map((o: any) => (
+                      <TableRow key={o.id}>
+                        <TableCell className="text-xs font-mono">#{o.order_number}</TableCell>
+                        <TableCell className="text-xs whitespace-nowrap">
+                          {new Date(o.received_at).toLocaleDateString("es-PE")}
+                        </TableCell>
+                        <TableCell className="text-xs max-w-[150px] truncate">
+                          {o.device_type} {o.device_brand} {o.device_model}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px]">{o.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-bold">
+                          {o.final_cost ? `${CURRENCY}${Number(o.final_cost).toFixed(2)}` : (o.estimated_cost ? `~${CURRENCY}${Number(o.estimated_cost).toFixed(2)}` : "—")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default CustomerDetailDialog;

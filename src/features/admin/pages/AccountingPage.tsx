@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
-  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw
+  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw, Gift
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
@@ -37,6 +37,12 @@ interface TransactionItem {
   responsable?: string;
   tipo_equipo?: string;
   diagnostico?: string;
+  // Combo fields
+  combo_id?: string | null;            // present on combo header AND its children
+  combo_parent_local_id?: string | null; // local link for children → parent (UI only)
+  is_combo_header?: boolean;            // true for the main combo line
+  is_combo_child?: boolean;             // true for sub-items belonging to a combo
+  precio_original?: number;             // for child items: original (non-promo) price
 }
 
 interface Transaction {
@@ -147,7 +153,19 @@ const AccountingPage = () => {
     },
   });
 
-  // Existing customers for autocomplete
+  // Active combos
+  const { data: combos = [] } = useQuery({
+    queryKey: ["combos_for_accounting"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("combos")
+        .select("id, name, description, promo_price, combo_type, stock, combo_items(id, product_id, product_name, quantity, unit_price)")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
   const { data: existingCustomers = [] } = useQuery({
     queryKey: ["customers_for_accounting"],
     queryFn: async () => {
@@ -488,6 +506,44 @@ const AccountingPage = () => {
     setItems([...items, { item_type: type, descripcion: "", cantidad: 1, precio_unitario: 0, subtotal: 0, responsable: "", tipo_equipo: "", diagnostico: "" }]);
   };
 
+  const addCombo = (combo: any) => {
+    const localId = `combo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const childItems = combo.combo_items || [];
+    const sumOriginal = childItems.reduce((a: number, ci: any) => a + Number(ci.unit_price || 0) * Number(ci.quantity || 1), 0);
+    const promo = Number(combo.promo_price || 0);
+
+    // Header line: shows the combo name and the promo price
+    const header: TransactionItem = {
+      item_type: "producto",
+      referencia_id: null,
+      descripcion: `🎁 COMBO: ${combo.name}`,
+      cantidad: 1,
+      precio_unitario: promo,
+      subtotal: promo,
+      combo_id: combo.id,
+      combo_parent_local_id: localId,
+      is_combo_header: true,
+      precio_original: sumOriginal,
+    };
+
+    // Child lines (informational, price 0 to not double-charge; original price kept for display)
+    const children: TransactionItem[] = childItems.map((ci: any) => ({
+      item_type: "producto" as const,
+      referencia_id: ci.product_id || null,
+      descripcion: `   ↳ ${ci.product_name}`,
+      cantidad: Number(ci.quantity || 1),
+      precio_unitario: 0,
+      subtotal: 0,
+      combo_id: combo.id,
+      combo_parent_local_id: localId,
+      is_combo_child: true,
+      precio_original: Number(ci.unit_price || 0),
+    }));
+
+    setItems([...items, header, ...children]);
+    toast.success(`Combo "${combo.name}" agregado — Ahorro: S/. ${(sumOriginal - promo).toFixed(2)}`);
+  };
+
   const updateItem = (index: number, partial: Partial<TransactionItem>) => {
     setItems(prev => prev.map((it, i) => {
       if (i !== index) return it;
@@ -497,7 +553,16 @@ const AccountingPage = () => {
     }));
   };
 
-  const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
+  const removeItem = (index: number) => {
+    setItems(prev => {
+      const target = prev[index];
+      // If removing a combo header, also remove its children
+      if (target?.is_combo_header && target.combo_parent_local_id) {
+        return prev.filter(it => it.combo_parent_local_id !== target.combo_parent_local_id);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const itemTotals = useMemo(() => {
     const productos = items.filter(i => i.item_type === "producto").reduce((a, i) => a + i.cantidad * i.precio_unitario, 0);
@@ -939,13 +1004,50 @@ const AccountingPage = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-bold">Items</Label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => addItem("producto")}>
                     <Package className="h-3 w-3" /> Producto
                   </Button>
                   <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => addItem("servicio")}>
                     <Wrench className="h-3 w-3" /> Servicio
                   </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="default" size="sm" className="gap-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-90 text-white">
+                        <Gift className="h-3 w-3" /> Combo
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[380px] p-0" align="end">
+                      <Command>
+                        <CommandInput placeholder="Buscar combo / promoción..." className="h-9" />
+                        <CommandList className="max-h-[280px]">
+                          <CommandEmpty>No hay combos activos. Créalos en /admin/combos</CommandEmpty>
+                          <CommandGroup heading={`Combos disponibles (${combos.length})`}>
+                            {combos.map((c: any) => {
+                              const childCount = (c.combo_items || []).length;
+                              const sumOriginal = (c.combo_items || []).reduce((a: number, ci: any) => a + Number(ci.unit_price || 0) * Number(ci.quantity || 1), 0);
+                              const ahorro = sumOriginal - Number(c.promo_price || 0);
+                              return (
+                                <CommandItem key={c.id} value={c.name} onSelect={() => addCombo(c)}>
+                                  <Gift className="h-3 w-3 mr-2 text-pink-500" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-medium truncate">{c.name}</span>
+                                      <Badge variant="outline" className="text-[9px] px-1">{childCount} items</Badge>
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground">
+                                      Original: <span className="line-through">S/. {sumOriginal.toFixed(2)}</span> · Ahorro: <span className="text-success font-bold">S/. {ahorro.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-bold text-primary ml-2">S/. {Number(c.promo_price).toFixed(2)}</span>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
