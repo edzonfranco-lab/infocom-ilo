@@ -506,6 +506,44 @@ const AccountingPage = () => {
     setItems([...items, { item_type: type, descripcion: "", cantidad: 1, precio_unitario: 0, subtotal: 0, responsable: "", tipo_equipo: "", diagnostico: "" }]);
   };
 
+  const addCombo = (combo: any) => {
+    const localId = `combo_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const childItems = combo.combo_items || [];
+    const sumOriginal = childItems.reduce((a: number, ci: any) => a + Number(ci.unit_price || 0) * Number(ci.quantity || 1), 0);
+    const promo = Number(combo.promo_price || 0);
+
+    // Header line: shows the combo name and the promo price
+    const header: TransactionItem = {
+      item_type: "producto",
+      referencia_id: null,
+      descripcion: `🎁 COMBO: ${combo.name}`,
+      cantidad: 1,
+      precio_unitario: promo,
+      subtotal: promo,
+      combo_id: combo.id,
+      combo_parent_local_id: localId,
+      is_combo_header: true,
+      precio_original: sumOriginal,
+    };
+
+    // Child lines (informational, price 0 to not double-charge; original price kept for display)
+    const children: TransactionItem[] = childItems.map((ci: any) => ({
+      item_type: "producto" as const,
+      referencia_id: ci.product_id || null,
+      descripcion: `   ↳ ${ci.product_name}`,
+      cantidad: Number(ci.quantity || 1),
+      precio_unitario: 0,
+      subtotal: 0,
+      combo_id: combo.id,
+      combo_parent_local_id: localId,
+      is_combo_child: true,
+      precio_original: Number(ci.unit_price || 0),
+    }));
+
+    setItems([...items, header, ...children]);
+    toast.success(`Combo "${combo.name}" agregado — Ahorro: S/. ${(sumOriginal - promo).toFixed(2)}`);
+  };
+
   const updateItem = (index: number, partial: Partial<TransactionItem>) => {
     setItems(prev => prev.map((it, i) => {
       if (i !== index) return it;
@@ -515,7 +553,16 @@ const AccountingPage = () => {
     }));
   };
 
-  const removeItem = (index: number) => setItems(prev => prev.filter((_, i) => i !== index));
+  const removeItem = (index: number) => {
+    setItems(prev => {
+      const target = prev[index];
+      // If removing a combo header, also remove its children
+      if (target?.is_combo_header && target.combo_parent_local_id) {
+        return prev.filter(it => it.combo_parent_local_id !== target.combo_parent_local_id);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   const itemTotals = useMemo(() => {
     const productos = items.filter(i => i.item_type === "producto").reduce((a, i) => a + i.cantidad * i.precio_unitario, 0);
