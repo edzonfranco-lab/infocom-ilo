@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { ClipboardList, Plus, Search, Clock, CheckCircle, Wrench, Package, AlertTriangle, Phone, User, Monitor, Pencil } from "lucide-react";
 import PrintReceipt from "@/features/admin/components/PrintReceipt";
 import DataImportExport from "@/features/admin/components/DataImportExport";
+import CustomerSelector, { type CustomerLite } from "@/features/admin/components/CustomerSelector";
+import CustomerDetailDialog from "@/features/admin/components/CustomerDetailDialog";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { notifyAllStaff } from "@/lib/notifications";
 import { usePersistentDraft } from "@/hooks/use-persistent-draft";
