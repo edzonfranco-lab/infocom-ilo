@@ -43,7 +43,7 @@ serve(async (req) => {
           console.error("apis.net.pe error:", res.status, txt);
         }
       } catch (e) {
-        console.error("apis.net.pe fetch error:", e.message);
+        console.error("apis.net.pe fetch error:", (e as Error)?.message);
       }
     }
 
@@ -70,7 +70,7 @@ serve(async (req) => {
         console.error("dniruc.com error:", res2.status, txt2);
       }
     } catch (e) {
-      console.error("dniruc.com fetch error:", e.message);
+      console.error("dniruc.com fetch error:", (e as Error)?.message);
     }
 
     // Fallback 3: randomuser-style mock for development (remove in production)
@@ -82,8 +82,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("General error:", e.message);
-    return new Response(JSON.stringify({ error: e.message }), {
+    const msg = (e as Error)?.message || "Error";
+    console.error("General error:", msg);
+    return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

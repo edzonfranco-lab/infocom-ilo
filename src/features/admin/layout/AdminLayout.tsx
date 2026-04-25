@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Package, FolderTree, Tags, ShoppingBag, Image, CreditCard, Settings,
   ArrowLeft, Menu, Building2, ClipboardList, Shield, Users, CalendarDays, DollarSign,
   Wrench, ChevronDown, ShoppingCart, Store, LayoutGrid, UserCheck, CalendarClock, Bell,
-  Truck, PackagePlus, History, Lock
+  Truck, PackagePlus, History, Lock, Sparkles
 } from "lucide-react";
 import NotificationBell from "@/features/admin/components/NotificationBell";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ const allNavItems: NavItem[] = [
     to: "/admin/productos", icon: Package, label: "Productos",
     children: [
       { to: "/admin/productos", icon: Package, label: "Inventario", end: true, module: "inventario" },
+      { to: "/admin/combos", icon: Sparkles, label: "Combos & Promos", module: "combos" },
       { to: "/admin/vitrinas", icon: LayoutGrid, label: "Vitrinas", module: "vitrinas" },
       { to: "/admin/categorias", icon: FolderTree, label: "Categorías", module: "categorias" },
       { to: "/admin/marcas", icon: Tags, label: "Marcas", module: "marcas" },

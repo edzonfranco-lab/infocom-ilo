@@ -7,6 +7,7 @@ export const ALL_MODULES = [
   { key: "recepcion", label: "Recepción Técnica", icon: "📋", group: "Servicios" },
   { key: "soporte", label: "Soporte Técnico", icon: "🔧", group: "Servicios" },
   { key: "inventario", label: "Inventario", icon: "📦", group: "Productos" },
+  { key: "combos", label: "Combos & Promos", icon: "✨", group: "Productos" },
   { key: "vitrinas", label: "Vitrinas", icon: "🏪", group: "Productos" },
   { key: "categorias", label: "Categorías", icon: "📂", group: "Productos" },
   { key: "marcas", label: "Marcas", icon: "🏷️", group: "Productos" },
