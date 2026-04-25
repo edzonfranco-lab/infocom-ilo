@@ -153,7 +153,19 @@ const AccountingPage = () => {
     },
   });
 
-  // Existing customers for autocomplete
+  // Active combos
+  const { data: combos = [] } = useQuery({
+    queryKey: ["combos_for_accounting"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("combos")
+        .select("id, name, description, promo_price, combo_type, stock, combo_items(id, product_id, product_name, quantity, unit_price)")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
   const { data: existingCustomers = [] } = useQuery({
     queryKey: ["customers_for_accounting"],
     queryFn: async () => {
