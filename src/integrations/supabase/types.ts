@@ -318,6 +318,102 @@ export type Database = {
           },
         ]
       }
+      combo_items: {
+        Row: {
+          combo_id: string
+          created_at: string
+          id: string
+          product_id: string | null
+          product_name: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          combo_id: string
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name: string
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          combo_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          product_name?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_items_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "combo_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combos: {
+        Row: {
+          combo_type: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          min_stock: number | null
+          name: string
+          notes: string | null
+          promo_price: number
+          stock: number
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          combo_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          min_stock?: number | null
+          name: string
+          notes?: string | null
+          promo_price?: number
+          stock?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          combo_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          min_stock?: number | null
+          name?: string
+          notes?: string | null
+          promo_price?: number
+          stock?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       company_certifications: {
         Row: {
           created_at: string | null
@@ -1323,6 +1419,8 @@ export type Database = {
       transaction_items: {
         Row: {
           cantidad: number
+          combo_id: string | null
+          combo_parent_item_id: string | null
           created_at: string
           descripcion: string
           diagnostico: string | null
@@ -1337,6 +1435,8 @@ export type Database = {
         }
         Insert: {
           cantidad?: number
+          combo_id?: string | null
+          combo_parent_item_id?: string | null
           created_at?: string
           descripcion: string
           diagnostico?: string | null
@@ -1351,6 +1451,8 @@ export type Database = {
         }
         Update: {
           cantidad?: number
+          combo_id?: string | null
+          combo_parent_item_id?: string | null
           created_at?: string
           descripcion?: string
           diagnostico?: string | null
@@ -1364,6 +1466,20 @@ export type Database = {
           transaction_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transaction_items_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_items_combo_parent_item_id_fkey"
+            columns: ["combo_parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transaction_items_transaction_id_fkey"
             columns: ["transaction_id"]
