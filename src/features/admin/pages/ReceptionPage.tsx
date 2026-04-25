@@ -59,6 +59,7 @@ const ReceptionPage = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewCustomerName, setViewCustomerName] = useState<string | null>(null);
 
   const restoreDraft = useCallback((draft: { editingId: string | null; form: typeof emptyForm }) => {
     if (!draft?.form) return;
