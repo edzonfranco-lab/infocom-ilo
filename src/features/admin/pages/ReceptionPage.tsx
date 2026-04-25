@@ -471,6 +471,13 @@ const ReceptionPage = () => {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Customer Detail Dialog */}
+      <CustomerDetailDialog
+        customerId={null}
+        customerName={viewCustomerName}
+        onClose={() => setViewCustomerName(null)}
+      />
     </div>
   );
 };
