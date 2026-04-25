@@ -1004,13 +1004,50 @@ const AccountingPage = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label className="text-base font-bold">Items</Label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => addItem("producto")}>
                     <Package className="h-3 w-3" /> Producto
                   </Button>
                   <Button type="button" variant="outline" size="sm" className="gap-1" onClick={() => addItem("servicio")}>
                     <Wrench className="h-3 w-3" /> Servicio
                   </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="default" size="sm" className="gap-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:opacity-90 text-white">
+                        <Gift className="h-3 w-3" /> Combo
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[380px] p-0" align="end">
+                      <Command>
+                        <CommandInput placeholder="Buscar combo / promoción..." className="h-9" />
+                        <CommandList className="max-h-[280px]">
+                          <CommandEmpty>No hay combos activos. Créalos en /admin/combos</CommandEmpty>
+                          <CommandGroup heading={`Combos disponibles (${combos.length})`}>
+                            {combos.map((c: any) => {
+                              const childCount = (c.combo_items || []).length;
+                              const sumOriginal = (c.combo_items || []).reduce((a: number, ci: any) => a + Number(ci.unit_price || 0) * Number(ci.quantity || 1), 0);
+                              const ahorro = sumOriginal - Number(c.promo_price || 0);
+                              return (
+                                <CommandItem key={c.id} value={c.name} onSelect={() => addCombo(c)}>
+                                  <Gift className="h-3 w-3 mr-2 text-pink-500" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-medium truncate">{c.name}</span>
+                                      <Badge variant="outline" className="text-[9px] px-1">{childCount} items</Badge>
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground">
+                                      Original: <span className="line-through">S/. {sumOriginal.toFixed(2)}</span> · Ahorro: <span className="text-success font-bold">S/. {ahorro.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-xs font-bold text-primary ml-2">S/. {Number(c.promo_price).toFixed(2)}</span>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
