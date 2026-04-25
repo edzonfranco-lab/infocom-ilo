@@ -237,6 +237,17 @@ const ReceptionPage = () => {
             <form onSubmit={(e) => { e.preventDefault(); saveMutation.mutate(form); }} className="space-y-6">
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-primary flex items-center gap-2"><User className="h-4 w-4" /> Datos del Cliente</h3>
+                <CustomerSelector
+                  value={form.customer_name ? { full_name: form.customer_name, phone: form.customer_phone, email: form.customer_email } as CustomerLite : null}
+                  onChange={(c) => {
+                    if (c) {
+                      setForm({ ...form, customer_name: c.full_name, customer_phone: c.phone || "", customer_email: c.email || "" });
+                    } else {
+                      setForm({ ...form, customer_name: "", customer_phone: "", customer_email: "" });
+                    }
+                  }}
+                  label="Buscar en directorio o crear nuevo"
+                />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><Label>Nombre *</Label><Input required value={form.customer_name} onChange={e => setForm({...form, customer_name: e.target.value})} placeholder="Nombre completo" /></div>
                   <div><Label>Teléfono</Label><Input value={form.customer_phone} onChange={e => setForm({...form, customer_phone: e.target.value})} placeholder="+51 999 999 999" /></div>
