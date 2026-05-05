@@ -251,10 +251,50 @@ const AccountingPage = () => {
         }).eq("id", editingId);
         if (error) throw error;
 
-        // Delete old items, insert new — combos: header first then children with parent FK
+        // Delete old items, insert new — header first, then children with parent FK
         await supabase.from("transaction_items").delete().eq("transaction_id", editingId);
-        const ie = await insertItemsWithCombos(editingId, items);
+        // Insert headers + standalones first, capture local→db id map
+        const localIdMap: Record<string, string> = {};
+        const headerPayload = items
+          .filter(it => !it.is_combo_child)
+          .map(it => ({
+            transaction_id: editingId,
+            item_type: it.item_type,
+            referencia_id: it.referencia_id && it.referencia_id !== "service" ? it.referencia_id : null,
+            descripcion: it.descripcion,
+            cantidad: it.cantidad,
+            precio_unitario: it.precio_unitario,
+            subtotal: it.cantidad * it.precio_unitario,
+            responsable: it.responsable || null,
+            tipo_equipo: it.tipo_equipo || null,
+            diagnostico: it.diagnostico || null,
+            combo_id: it.combo_id || null,
+          }));
+        const { data: hdrRows, error: ie } = await supabase.from("transaction_items").insert(headerPayload as any).select("id, descripcion, combo_id");
         if (ie) throw ie;
+        // Map local combo_parent_local_id → db id (by combo_id + descripcion match for the header)
+        items.filter(it => it.is_combo_header).forEach(h => {
+          const found = (hdrRows || []).find((r: any) => r.combo_id === h.combo_id && r.descripcion === h.descripcion);
+          if (found && h.combo_parent_local_id) localIdMap[h.combo_parent_local_id] = found.id;
+        });
+        // Children
+        const childPayload = items
+          .filter(it => it.is_combo_child)
+          .map(it => ({
+            transaction_id: editingId,
+            item_type: it.item_type,
+            referencia_id: it.referencia_id && it.referencia_id !== "service" ? it.referencia_id : null,
+            descripcion: it.descripcion,
+            cantidad: it.cantidad,
+            precio_unitario: it.precio_unitario,
+            subtotal: it.cantidad * it.precio_unitario,
+            combo_id: it.combo_id || null,
+            combo_parent_item_id: it.combo_parent_local_id ? (localIdMap[it.combo_parent_local_id] || null) : null,
+          }));
+        if (childPayload.length > 0) {
+          const { error: ce } = await supabase.from("transaction_items").insert(childPayload as any);
+          if (ce) throw ce;
+        }
 
         // Log history
         await supabase.from("transaction_history").insert({
