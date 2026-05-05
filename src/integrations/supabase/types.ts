@@ -155,6 +155,7 @@ export type Database = {
           check_out_time: string | null
           created_at: string | null
           date: string
+          extra_punches: Json
           id: string
           marked_by: string | null
           notes: string | null
@@ -166,6 +167,7 @@ export type Database = {
           check_out_time?: string | null
           created_at?: string | null
           date?: string
+          extra_punches?: Json
           id?: string
           marked_by?: string | null
           notes?: string | null
@@ -177,6 +179,7 @@ export type Database = {
           check_out_time?: string | null
           created_at?: string | null
           date?: string
+          extra_punches?: Json
           id?: string
           marked_by?: string | null
           notes?: string | null
@@ -1250,6 +1253,39 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_positions: {
+        Row: {
+          base_role: Database["public"]["Enums"]["app_role"]
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_role?: Database["public"]["Enums"]["app_role"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff_schedules: {
         Row: {
           created_at: string
@@ -1641,7 +1677,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "asistente"
       item_type: "producto" | "servicio"
       order_status:
         | "pending"
@@ -1788,7 +1824,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "asistente"],
       item_type: ["producto", "servicio"],
       order_status: [
         "pending",
