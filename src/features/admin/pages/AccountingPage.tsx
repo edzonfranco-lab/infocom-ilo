@@ -251,21 +251,9 @@ const AccountingPage = () => {
         }).eq("id", editingId);
         if (error) throw error;
 
-        // Delete old items, insert new
+        // Delete old items, insert new — combos: header first then children with parent FK
         await supabase.from("transaction_items").delete().eq("transaction_id", editingId);
-        const itemPayload = items.map(it => ({
-          transaction_id: editingId,
-          item_type: it.item_type,
-          referencia_id: it.referencia_id || null,
-          descripcion: it.descripcion,
-          cantidad: it.cantidad,
-          precio_unitario: it.precio_unitario,
-          subtotal: it.cantidad * it.precio_unitario,
-          responsable: it.responsable || null,
-          tipo_equipo: it.tipo_equipo || null,
-          diagnostico: it.diagnostico || null,
-        }));
-        const { error: ie } = await supabase.from("transaction_items").insert(itemPayload as any);
+        const ie = await insertItemsWithCombos(editingId, items);
         if (ie) throw ie;
 
         // Log history
