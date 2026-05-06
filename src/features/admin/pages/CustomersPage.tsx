@@ -183,6 +183,7 @@ const CustomersPage = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Metrics */}
