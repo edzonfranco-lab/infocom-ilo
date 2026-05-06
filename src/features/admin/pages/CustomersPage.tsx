@@ -147,6 +147,95 @@ const CustomersPage = () => {
     })).filter(r => r.clientes > 0);
   }, [customers]);
 
+  // ─── Export to Excel (for raffles & marketing) ───
+  const exportExcel = () => {
+    const data = filtered.length > 0 ? filtered : customers;
+    if (data.length === 0) return;
+    const headers = ["#", "Nombre Completo", "DNI", "Teléfono", "Email", "Dirección", "VIP", "Compras", "Total Gastado (S/)", "Última Compra", "Notas"];
+    const rows = data.map((c: any, i: number) => [
+      i + 1,
+      c.full_name || "",
+      c.document_number || "",
+      c.phone || "",
+      c.email || "",
+      c.address || "",
+      c.is_vip ? "SÍ" : "",
+      Number(c.total_purchases || 0),
+      Number(c.total_spent || 0),
+      c.last_purchase_at ? new Date(c.last_purchase_at).toLocaleDateString("es-PE") : "",
+      c.notes || "",
+    ]);
+    const title = [`DIRECTORIO DE CLIENTES — INFOCOM SOLUCIONES`];
+    const subtitle = [`Generado: ${new Date().toLocaleString("es-PE")}  •  Total: ${data.length} clientes`];
+    const aoa: any[][] = [title, subtitle, [], headers, ...rows];
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [
+      { wch: 5 }, { wch: 30 }, { wch: 12 }, { wch: 14 }, { wch: 28 },
+      { wch: 30 }, { wch: 6 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 30 },
+    ];
+    ws["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
+    ];
+
+    // Title styles
+    const titleCell = ws[XLSX.utils.encode_cell({ r: 0, c: 0 })];
+    if (titleCell) titleCell.s = { font: { bold: true, sz: 16, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "0E7C3A" } }, alignment: { horizontal: "center", vertical: "center" } };
+    const subCell = ws[XLSX.utils.encode_cell({ r: 1, c: 0 })];
+    if (subCell) subCell.s = { font: { italic: true, sz: 10, color: { rgb: "555555" } }, alignment: { horizontal: "center" } };
+
+    // Header row styles
+    headers.forEach((_, c) => {
+      const ref = XLSX.utils.encode_cell({ r: 3, c });
+      if (!ws[ref]) return;
+      ws[ref].s = {
+        font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+        fill: { fgColor: { rgb: "16A34A" } },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        border: { top: { style: "thin", color: { rgb: "0E7C3A" } }, bottom: { style: "thin", color: { rgb: "0E7C3A" } }, left: { style: "thin", color: { rgb: "0E7C3A" } }, right: { style: "thin", color: { rgb: "0E7C3A" } } },
+      };
+    });
+
+    // Body styling
+    rows.forEach((_, ri) => {
+      const r = ri + 4;
+      const isVip = data[ri].is_vip;
+      headers.forEach((_, c) => {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        if (!ws[ref]) ws[ref] = { v: "", t: "s" };
+        ws[ref].s = {
+          font: { sz: 10, color: { rgb: isVip ? "9A6B00" : "111111" }, bold: isVip },
+          fill: { fgColor: { rgb: ri % 2 === 0 ? (isVip ? "FFF8DC" : "F7FAF7") : (isVip ? "FFF1B8" : "FFFFFF") } },
+          alignment: { horizontal: c === 1 || c === 4 || c === 5 || c === 10 ? "left" : "center", vertical: "center", wrapText: true },
+          border: { top: { style: "hair", color: { rgb: "CCCCCC" } }, bottom: { style: "hair", color: { rgb: "CCCCCC" } }, left: { style: "hair", color: { rgb: "CCCCCC" } }, right: { style: "hair", color: { rgb: "CCCCCC" } } },
+          numFmt: c === 8 ? '"S/. "#,##0.00' : undefined,
+        };
+      });
+    });
+
+    ws["!rows"] = [{ hpt: 28 }, { hpt: 18 }, { hpt: 6 }, { hpt: 26 }];
+
+    // Sheet 2: just names for raffles
+    const aoa2: any[][] = [["SORTEO — LISTADO DE NOMBRES"], [`Total: ${data.length} participantes`], [], ["#", "Nombre", "DNI", "Teléfono"]];
+    data.forEach((c: any, i: number) => aoa2.push([i + 1, c.full_name || "", c.document_number || "", c.phone || ""]));
+    const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+    ws2["!cols"] = [{ wch: 5 }, { wch: 32 }, { wch: 14 }, { wch: 14 }];
+    ws2["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } }];
+    const t2 = ws2[XLSX.utils.encode_cell({ r: 0, c: 0 })];
+    if (t2) t2.s = { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "0E7C3A" } }, alignment: { horizontal: "center" } };
+    [0, 1, 2, 3].forEach(c => {
+      const ref = XLSX.utils.encode_cell({ r: 3, c });
+      if (ws2[ref]) ws2[ref].s = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "16A34A" } }, alignment: { horizontal: "center" } };
+    });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Directorio");
+    XLSX.utils.book_append_sheet(wb, ws2, "Sorteos");
+    XLSX.writeFile(wb, `clientes_infocom_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Excel descargado correctamente");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
