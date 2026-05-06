@@ -145,6 +145,12 @@ export interface CompanyReceiptInfo {
   web: string;
   email: string;
   copyright: string;
+  saleFooterTitle?: string;       // e.g. "¡Gracias por su compra!"
+  saleFooterMessage?: string;     // multi-line, supports \n
+  saleFooterShowEmail?: boolean;
+  saleFooterShowPhone?: boolean;
+  saleFooterShowSocial?: boolean;
+  saleFooterSocial?: string;      // e.g. "@infocom.ilo"
 }
 
 export const DEFAULT_COMPANY_INFO: CompanyReceiptInfo = {
@@ -155,6 +161,12 @@ export const DEFAULT_COMPANY_INFO: CompanyReceiptInfo = {
   web: "www.infocomilo.com",
   email: "infocomcotizaciones@gmail.com",
   copyright: "INFOCOM SOLUCIONES",
+  saleFooterTitle: "¡Gracias por su compra!",
+  saleFooterMessage: "Su confianza es nuestro mayor orgullo.\nSi tiene alguna pregunta sobre este ticket,\nno dude en comunicarse con nosotros:",
+  saleFooterShowEmail: true,
+  saleFooterShowPhone: true,
+  saleFooterShowSocial: true,
+  saleFooterSocial: "@infocom.ilo",
 };
 
 let _cachedCompanyInfo: CompanyReceiptInfo | null = null;
@@ -179,8 +191,15 @@ export const getCachedCompanyInfo = (): CompanyReceiptInfo => _cachedCompanyInfo
 export const buildCompanyInfoBlock = (ci: CompanyReceiptInfo) =>
   `R.U.C. :${ci.ruc}<br>${ci.ciudad.toUpperCase()}<br>Tel. :${ci.telefono}<br>DIRECCION: ${ci.direccion}<br>${ci.ciudad}<br>${ci.web}`;
 
-export const buildSaleFooter = (ci: CompanyReceiptInfo) =>
-  `¡Gracias!<br>Si tiene alguna pregunta sobre este ticket,<br>no dude en comunicarse con nosotros:<br>${ci.email}<br>${ci.telefono}`;
+export const buildSaleFooter = (ci: CompanyReceiptInfo) => {
+  const title = ci.saleFooterTitle || "¡Gracias!";
+  const msg = (ci.saleFooterMessage || "").replace(/\n/g, "<br>");
+  const lines: string[] = [];
+  if (ci.saleFooterShowEmail !== false && ci.email) lines.push(`✉ ${ci.email}`);
+  if (ci.saleFooterShowPhone !== false && ci.telefono) lines.push(`☏ ${ci.telefono}`);
+  if (ci.saleFooterShowSocial && ci.saleFooterSocial) lines.push(`📱 ${ci.saleFooterSocial}`);
+  return `<div style="font-weight:700;font-size:1.05em;margin-bottom:2px">${title}</div>${msg ? `<div style="opacity:.85">${msg}</div>` : ""}${lines.length ? `<div style="margin-top:3px;font-weight:600">${lines.join("<br>")}</div>` : ""}`;
+};
 
 export const buildCopyright = (ci: CompanyReceiptInfo) =>
   `© ${new Date().getFullYear()} ${ci.copyright}.`;

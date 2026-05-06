@@ -1112,15 +1112,32 @@ const AccountingPage = () => {
               ) : (
                 <div className="space-y-2">
                   {items.map((item, idx) => (
-                    <div key={idx} className="border border-border rounded-lg p-3 space-y-2">
+                    <div
+                      key={idx}
+                      className={`border rounded-lg p-3 space-y-2 ${
+                        item.is_combo_header
+                          ? "border-primary/40 bg-primary/5 shadow-sm"
+                          : item.is_combo_child
+                          ? "border-dashed border-primary/20 bg-muted/30 ml-6 border-l-4 border-l-primary/40"
+                          : "border-border"
+                      }`}
+                    >
                       <div className="flex items-center gap-2">
-                        <Badge variant={item.item_type === "producto" ? "default" : "secondary"} className="text-xs shrink-0">
-                          {item.item_type === "producto" ? "Producto" : "Servicio"}
-                        </Badge>
+                        {item.is_combo_header ? (
+                          <Badge className="text-xs shrink-0 bg-primary/20 text-primary border-primary/30">🎁 COMBO</Badge>
+                        ) : item.is_combo_child ? (
+                          <Badge variant="outline" className="text-[10px] shrink-0">↳ incluido</Badge>
+                        ) : (
+                          <Badge variant={item.item_type === "producto" ? "default" : "secondary"} className="text-xs shrink-0">
+                            {item.item_type === "producto" ? "Producto" : "Servicio"}
+                          </Badge>
+                        )}
                         <div className="flex-1" />
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(idx)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        {!item.is_combo_child && (
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(idx)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px_90px] gap-2 items-end">
@@ -1391,18 +1408,24 @@ const AccountingPage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingTx.items.map((it, i) => (
+                      {viewingTx.items.map((it: any, i: number) => (
                         <React.Fragment key={i}>
-                          <TableRow>
+                          <TableRow className={it.combo_id && !it.combo_parent_item_id ? "bg-primary/5" : it.combo_parent_item_id ? "bg-muted/30" : ""}>
                             <TableCell>
-                              <Badge variant={it.item_type === "producto" ? "default" : "secondary"} className="text-xs">
-                                {it.item_type === "producto" ? "Prod." : "Serv."}
-                              </Badge>
+                              {it.combo_id && !it.combo_parent_item_id ? (
+                                <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">🎁 COMBO</Badge>
+                              ) : it.combo_parent_item_id ? (
+                                <Badge variant="outline" className="text-[10px]">↳</Badge>
+                              ) : (
+                                <Badge variant={it.item_type === "producto" ? "default" : "secondary"} className="text-xs">
+                                  {it.item_type === "producto" ? "Prod." : "Serv."}
+                                </Badge>
+                              )}
                             </TableCell>
-                            <TableCell className="font-medium">{it.descripcion}</TableCell>
+                            <TableCell className={`font-medium ${it.combo_parent_item_id ? "pl-8 text-muted-foreground italic text-xs" : ""}`}>{it.descripcion}</TableCell>
                             <TableCell className="text-right">{it.cantidad}</TableCell>
-                            <TableCell className="text-right">S/. {Number(it.precio_unitario).toFixed(2)}</TableCell>
-                            <TableCell className="text-right font-bold">S/. {Number(it.subtotal).toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{it.combo_parent_item_id ? "—" : `S/. ${Number(it.precio_unitario).toFixed(2)}`}</TableCell>
+                            <TableCell className="text-right font-bold">{it.combo_parent_item_id ? "—" : `S/. ${Number(it.subtotal).toFixed(2)}`}</TableCell>
                           </TableRow>
                           {it.item_type === "servicio" && (it.responsable || it.tipo_equipo || it.diagnostico) && (
                             <TableRow className="bg-secondary/10">

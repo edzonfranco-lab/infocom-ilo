@@ -45,7 +45,9 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
 
 const AttendancePage = () => {
   const qc = useQueryClient();
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, roles } = useAuth();
+  // Asistente puede marcar por otros (igual que admin); user/practicante solo lo suyo
+  const canMarkOthers = isAdmin || roles.includes("moderator" as any) || roles.includes("asistente" as any);
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
@@ -150,11 +152,12 @@ const AttendancePage = () => {
   }, [records]);
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ staffId, date, status, check_in, check_out }: { staffId: string; date: string; status: string; check_in?: string; check_out?: string }) => {
+    mutationFn: async ({ staffId, date, status, check_in, check_out, extra_punches }: { staffId: string; date: string; status: string; check_in?: string; check_out?: string; extra_punches?: any[] }) => {
       const existing = recordMap[staffId]?.[date];
       const payload: any = { status };
       if (check_in !== undefined) payload.check_in_time = check_in || null;
       if (check_out !== undefined) payload.check_out_time = check_out || null;
+      if (extra_punches !== undefined) payload.extra_punches = extra_punches;
 
       if (existing) {
         const { error } = await supabase.from("attendance_records").update(payload).eq("id", existing.id);
@@ -212,15 +215,21 @@ const AttendancePage = () => {
   };
 
   const getActualHours = (rec: any) => {
-    if (rec?.check_in_time && rec?.check_out_time) {
-      const [inH, inM] = rec.check_in_time.split(":").map(Number);
-      const [outH, outM] = rec.check_out_time.split(":").map(Number);
+    let total = 0;
+    const addPair = (i: string, o: string) => {
+      const [inH, inM] = i.split(":").map(Number);
+      const [outH, outM] = o.split(":").map(Number);
       let diff = (outH + outM / 60) - (inH + inM / 60);
-      // Handle overnight shifts (e.g., 15:00 → 01:00 next day)
       if (diff < 0) diff += 24;
-      return diff;
+      total += diff;
+    };
+    if (rec?.check_in_time && rec?.check_out_time) addPair(rec.check_in_time, rec.check_out_time);
+    if (Array.isArray(rec?.extra_punches)) {
+      rec.extra_punches.forEach((p: any) => {
+        if (p?.in && p?.out) addPair(p.in, p.out);
+      });
     }
-    return 0;
+    return total;
   };
 
   const getStats = (staffId: string) => {
@@ -460,16 +469,20 @@ const AttendancePage = () => {
       return;
     }
 
-    // If already checked in AND checked out → allow re-entry (extended shift / came back)
+    // If already checked in AND checked out → start NEW shift (double turno)
+    // Push completed pair to extra_punches and reset check_in/check_out for the new shift
     if (existing?.check_in_time && existing?.check_out_time) {
-      // Keep original check_in, clear check_out so they can mark a new exit later
+      const prevExtras = Array.isArray(existing.extra_punches) ? existing.extra_punches : [];
+      const newExtras = [...prevExtras, { in: existing.check_in_time, out: existing.check_out_time, label: "Turno previo" }];
       toggleMutation.mutate({
         staffId: currentStaff.id, date: today,
         status: existing.status || "A",
-        check_in: existing.check_in_time,
-        check_out: undefined,
+        check_in: nowTime,
+        check_out: "",
+        extra_punches: newExtras,
       });
-      toast.success(`Re-entrada registrada a las ${nowTime}. Tu entrada original (${existing.check_in_time}) se mantiene. Marca salida cuando termines.`);
+      const completed = prevExtras.length + 1;
+      toast.success(`🔄 Nuevo turno iniciado a las ${nowTime}. Turnos completados hoy: ${completed}. Marca salida cuando termines.`);
       return;
     }
 
@@ -684,8 +697,8 @@ const AttendancePage = () => {
         );
       })()}
 
-      {/* ─── Admin view: full control ──────────────────────── */}
-      {isAdmin && (
+      {/* ─── Admin / Asistente view: control total o marcado por otros ──── */}
+      {canMarkOthers && (
         <>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-2xl font-display font-bold flex items-center gap-2">
