@@ -213,15 +213,21 @@ const AttendancePage = () => {
   };
 
   const getActualHours = (rec: any) => {
-    if (rec?.check_in_time && rec?.check_out_time) {
-      const [inH, inM] = rec.check_in_time.split(":").map(Number);
-      const [outH, outM] = rec.check_out_time.split(":").map(Number);
+    let total = 0;
+    const addPair = (i: string, o: string) => {
+      const [inH, inM] = i.split(":").map(Number);
+      const [outH, outM] = o.split(":").map(Number);
       let diff = (outH + outM / 60) - (inH + inM / 60);
-      // Handle overnight shifts (e.g., 15:00 → 01:00 next day)
       if (diff < 0) diff += 24;
-      return diff;
+      total += diff;
+    };
+    if (rec?.check_in_time && rec?.check_out_time) addPair(rec.check_in_time, rec.check_out_time);
+    if (Array.isArray(rec?.extra_punches)) {
+      rec.extra_punches.forEach((p: any) => {
+        if (p?.in && p?.out) addPair(p.in, p.out);
+      });
     }
-    return 0;
+    return total;
   };
 
   const getStats = (staffId: string) => {
