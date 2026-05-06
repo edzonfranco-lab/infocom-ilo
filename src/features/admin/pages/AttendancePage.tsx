@@ -697,8 +697,8 @@ const AttendancePage = () => {
         );
       })()}
 
-      {/* ─── Admin view: full control ──────────────────────── */}
-      {isAdmin && (
+      {/* ─── Admin / Asistente view: control total o marcado por otros ──── */}
+      {canMarkOthers && (
         <>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-2xl font-display font-bold flex items-center gap-2">
