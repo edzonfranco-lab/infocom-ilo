@@ -467,16 +467,20 @@ const AttendancePage = () => {
       return;
     }
 
-    // If already checked in AND checked out → allow re-entry (extended shift / came back)
+    // If already checked in AND checked out → start NEW shift (double turno)
+    // Push completed pair to extra_punches and reset check_in/check_out for the new shift
     if (existing?.check_in_time && existing?.check_out_time) {
-      // Keep original check_in, clear check_out so they can mark a new exit later
+      const prevExtras = Array.isArray(existing.extra_punches) ? existing.extra_punches : [];
+      const newExtras = [...prevExtras, { in: existing.check_in_time, out: existing.check_out_time, label: "Turno previo" }];
       toggleMutation.mutate({
         staffId: currentStaff.id, date: today,
         status: existing.status || "A",
-        check_in: existing.check_in_time,
-        check_out: undefined,
+        check_in: nowTime,
+        check_out: "",
+        extra_punches: newExtras,
       });
-      toast.success(`Re-entrada registrada a las ${nowTime}. Tu entrada original (${existing.check_in_time}) se mantiene. Marca salida cuando termines.`);
+      const completed = prevExtras.length + 1;
+      toast.success(`🔄 Nuevo turno iniciado a las ${nowTime}. Turnos completados hoy: ${completed}. Marca salida cuando termines.`);
       return;
     }
 
