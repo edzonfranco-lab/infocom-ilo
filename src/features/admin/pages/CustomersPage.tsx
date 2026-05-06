@@ -156,6 +156,10 @@ const CustomersPage = () => {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Gestiona tus clientes recurrentes para sorteos, regalos y fidelización</p>
         </div>
+        <div className="flex items-center gap-2 flex-wrap">
+        <Button variant="outline" className="gap-2" onClick={() => exportExcel()} disabled={customers.length === 0}>
+          <Download className="h-4 w-4" /> Exportar Excel
+        </Button>
         <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setEditingId(null); setForm(emptyForm); } }}>
           <DialogTrigger asChild>
             <Button className="gap-2"><Plus className="h-4 w-4" /> Nuevo Cliente</Button>
