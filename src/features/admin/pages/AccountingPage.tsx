@@ -1408,18 +1408,24 @@ const AccountingPage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingTx.items.map((it, i) => (
+                      {viewingTx.items.map((it: any, i: number) => (
                         <React.Fragment key={i}>
-                          <TableRow>
+                          <TableRow className={it.combo_id && !it.combo_parent_item_id ? "bg-primary/5" : it.combo_parent_item_id ? "bg-muted/30" : ""}>
                             <TableCell>
-                              <Badge variant={it.item_type === "producto" ? "default" : "secondary"} className="text-xs">
-                                {it.item_type === "producto" ? "Prod." : "Serv."}
-                              </Badge>
+                              {it.combo_id && !it.combo_parent_item_id ? (
+                                <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">🎁 COMBO</Badge>
+                              ) : it.combo_parent_item_id ? (
+                                <Badge variant="outline" className="text-[10px]">↳</Badge>
+                              ) : (
+                                <Badge variant={it.item_type === "producto" ? "default" : "secondary"} className="text-xs">
+                                  {it.item_type === "producto" ? "Prod." : "Serv."}
+                                </Badge>
+                              )}
                             </TableCell>
-                            <TableCell className="font-medium">{it.descripcion}</TableCell>
+                            <TableCell className={`font-medium ${it.combo_parent_item_id ? "pl-8 text-muted-foreground italic text-xs" : ""}`}>{it.descripcion}</TableCell>
                             <TableCell className="text-right">{it.cantidad}</TableCell>
-                            <TableCell className="text-right">S/. {Number(it.precio_unitario).toFixed(2)}</TableCell>
-                            <TableCell className="text-right font-bold">S/. {Number(it.subtotal).toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{it.combo_parent_item_id ? "—" : `S/. ${Number(it.precio_unitario).toFixed(2)}`}</TableCell>
+                            <TableCell className="text-right font-bold">{it.combo_parent_item_id ? "—" : `S/. ${Number(it.subtotal).toFixed(2)}`}</TableCell>
                           </TableRow>
                           {it.item_type === "servicio" && (it.responsable || it.tipo_equipo || it.diagnostico) && (
                             <TableRow className="bg-secondary/10">
