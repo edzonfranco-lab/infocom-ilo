@@ -150,11 +150,12 @@ const AttendancePage = () => {
   }, [records]);
 
   const toggleMutation = useMutation({
-    mutationFn: async ({ staffId, date, status, check_in, check_out }: { staffId: string; date: string; status: string; check_in?: string; check_out?: string }) => {
+    mutationFn: async ({ staffId, date, status, check_in, check_out, extra_punches }: { staffId: string; date: string; status: string; check_in?: string; check_out?: string; extra_punches?: any[] }) => {
       const existing = recordMap[staffId]?.[date];
       const payload: any = { status };
       if (check_in !== undefined) payload.check_in_time = check_in || null;
       if (check_out !== undefined) payload.check_out_time = check_out || null;
+      if (extra_punches !== undefined) payload.extra_punches = extra_punches;
 
       if (existing) {
         const { error } = await supabase.from("attendance_records").update(payload).eq("id", existing.id);
