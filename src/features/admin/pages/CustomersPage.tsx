@@ -11,9 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Users, Plus, Search, Star, Phone, Mail, IdCard, Gift, TrendingUp, BarChart3, Crown, Award } from "lucide-react";
+import { Users, Plus, Search, Star, Phone, Mail, IdCard, Gift, TrendingUp, BarChart3, Crown, Award, Download } from "lucide-react";
 import { CURRENCY } from "@/lib/types";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
+import XLSX from "xlsx-js-style";
 
 const emptyForm = {
   full_name: "", phone: "", email: "", document_number: "", address: "", notes: "", is_vip: false,
