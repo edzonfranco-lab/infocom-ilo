@@ -45,7 +45,9 @@ const DEFAULT_BUSINESS_HOURS: BusinessHours = {
 
 const AttendancePage = () => {
   const qc = useQueryClient();
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, roles } = useAuth();
+  // Asistente puede marcar por otros (igual que admin); user/practicante solo lo suyo
+  const canMarkOthers = isAdmin || roles.includes("moderator" as any) || roles.includes("asistente" as any);
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
