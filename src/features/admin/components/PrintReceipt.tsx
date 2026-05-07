@@ -666,6 +666,23 @@ ${bodyContent}
 
             {/* Per-order settings */}
             <TabsContent value="order" className="space-y-4 mt-3">
+              {type === "sale" && (
+                <div className="space-y-2">
+                  <Label className="font-bold">Tipo de Comprobante</Label>
+                  <Select
+                    value={currentDocKind}
+                    onValueChange={(v: DocumentKind) => updateOrderOverride({ documentKind: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_KINDS.map(d => (
+                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">El título del comprobante cambiará al imprimir. Los textos por tipo se editan en "Plantilla General".</p>
+                </div>
+              )}
               {type === "reception" && (
                 <div className="space-y-3">
                   <div className="space-y-2">
