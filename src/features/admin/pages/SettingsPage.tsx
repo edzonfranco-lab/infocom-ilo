@@ -12,7 +12,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Settings, PartyPopper, Sun, Receipt, Save, Loader2, Building2, Sparkles, MessageSquareHeart, Database, Lock } from "lucide-react";
 import { toast } from "sonner";
-import { DEFAULT_COMPANY_INFO, type CompanyReceiptInfo } from "@/features/admin/components/PrintReceipt";
+import {
+  DEFAULT_COMPANY_INFO,
+  DEFAULT_TEMPLATE,
+  DOCUMENT_KINDS,
+  loadTemplateFromDb,
+  saveTemplateToDb,
+  type CompanyReceiptInfo,
+  type ReceiptTemplate,
+} from "@/features/admin/components/PrintReceipt";
+import { FileText } from "lucide-react";
 
 const THEME_EMOJIS: Record<string, string> = {
   default: "🎮", san_valentin: "❤️", halloween: "🎃", navidad: "🎄",
@@ -37,6 +46,24 @@ const SettingsPage = () => {
   const queryClient = useQueryClient();
   const [companyInfo, setCompanyInfo] = useState<CompanyReceiptInfo>(DEFAULT_COMPANY_INFO);
   const [saving, setSaving] = useState(false);
+  const [template, setTemplate] = useState<ReceiptTemplate>(DEFAULT_TEMPLATE);
+  const [savingTpl, setSavingTpl] = useState(false);
+
+  useEffect(() => {
+    loadTemplateFromDb().then(setTemplate);
+  }, []);
+
+  const updateTpl = (patch: Partial<ReceiptTemplate>) => setTemplate(p => ({ ...p, ...patch }));
+  const saveTpl = async () => {
+    setSavingTpl(true);
+    try {
+      await saveTemplateToDb(template);
+      toast.success("✅ Plantilla de tickets guardada — se aplica en todos los módulos");
+    } catch (e: any) {
+      toast.error("Error: " + e.message);
+    }
+    setSavingTpl(false);
+  };
 
   const { data: themeSettings = [] } = useQuery({
     queryKey: ["theme_settings"],
@@ -249,6 +276,53 @@ const SettingsPage = () => {
                   <p className="mt-3 text-[10px] text-muted-foreground">© {new Date().getFullYear()} {companyInfo.copyright}.</p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* ─── Plantilla global de comprobantes ─── */}
+          <Card className="border-primary/10">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" /> Tipos de Comprobante y Títulos
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Estos títulos se aplican automáticamente al imprimir el comprobante seleccionado en POS, Ventas y Contabilidad.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Recepción Técnica</Label>
+                  <Input value={template.receptionTitle} onChange={e => updateTpl({ receptionTitle: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Ticket de Servicio</Label>
+                  <Input value={template.serviceTitle} onChange={e => updateTpl({ serviceTitle: e.target.value })} />
+                </div>
+                {DOCUMENT_KINDS.map(d => (
+                  <div key={d.value} className="space-y-1.5">
+                    <Label className="text-xs">📑 {d.label}</Label>
+                    <Input
+                      value={(template[d.templateKey] as string) || ""}
+                      placeholder={d.label.toUpperCase()}
+                      onChange={e => updateTpl({ [d.templateKey]: e.target.value } as any)}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pie / Mensaje genérico (Recepción y Servicio)</Label>
+                <Textarea
+                  rows={2}
+                  value={template.footerText}
+                  onChange={e => updateTpl({ footerText: e.target.value })}
+                />
+                <p className="text-[11px] text-muted-foreground">El pie de las ventas usa el "Mensaje de despedida" definido arriba.</p>
+              </div>
+              <Button onClick={saveTpl} disabled={savingTpl} size="sm">
+                {savingTpl ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Guardar Plantilla de Comprobantes
+              </Button>
             </CardContent>
           </Card>
 

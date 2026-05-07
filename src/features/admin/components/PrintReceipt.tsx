@@ -43,7 +43,25 @@ export interface ReceiptTemplate {
   signatureRight: string;
   saleTitle: string;
   serviceTitle: string;
+  // Per-document-type titles (all editable globally)
+  boletaTitle?: string;
+  facturaTitle?: string;
+  proformaTitle?: string;
+  cotizacionTitle?: string;
+  notaVentaTitle?: string;
+  ticketInternoTitle?: string;
 }
+
+export type DocumentKind = "boleta" | "factura" | "proforma" | "cotizacion" | "nota_venta" | "ticket_interno";
+
+export const DOCUMENT_KINDS: { value: DocumentKind; label: string; short: string; templateKey: keyof ReceiptTemplate }[] = [
+  { value: "boleta",         label: "Boleta de Venta",       short: "Boleta",     templateKey: "boletaTitle" },
+  { value: "factura",        label: "Factura",                short: "Factura",    templateKey: "facturaTitle" },
+  { value: "proforma",       label: "Proforma",               short: "Proforma",   templateKey: "proformaTitle" },
+  { value: "cotizacion",     label: "Cotización",             short: "Cotización", templateKey: "cotizacionTitle" },
+  { value: "nota_venta",     label: "Nota de Venta",          short: "Nota Venta", templateKey: "notaVentaTitle" },
+  { value: "ticket_interno", label: "Ticket Interno (sin valor fiscal)", short: "Interno", templateKey: "ticketInternoTitle" },
+];
 
 export const DEFAULT_TEMPLATE: ReceiptTemplate = {
   paperSize: "58mm",
@@ -66,6 +84,12 @@ export const DEFAULT_TEMPLATE: ReceiptTemplate = {
   signatureRight: "Firma del Tecnico",
   saleTitle: "BOLETA DE VENTA",
   serviceTitle: "TICKET DE SERVICIO",
+  boletaTitle: "BOLETA DE VENTA",
+  facturaTitle: "FACTURA",
+  proformaTitle: "PROFORMA",
+  cotizacionTitle: "COTIZACIÓN",
+  notaVentaTitle: "NOTA DE VENTA",
+  ticketInternoTitle: "TICKET INTERNO",
 };
 
 const STORE_KEY = "receipt_template";
@@ -124,6 +148,7 @@ export const saveTemplate = (t: ReceiptTemplate) => {
 
 interface OrderOverrides {
   issueLabel?: string;
+  documentKind?: DocumentKind;
 }
 
 const loadOrderOverrides = (orderId: string): OrderOverrides => {
@@ -221,9 +246,10 @@ export const buildHeaderHtml = (t: ReceiptTemplate, includeCompanyInfo = false, 
 interface PrintReceiptProps {
   order: any;
   type?: "reception" | "sale" | "service";
+  defaultDocumentKind?: DocumentKind;
 }
 
-const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
+const PrintReceipt = ({ order, type = "reception", defaultDocumentKind }: PrintReceiptProps) => {
   const [configOpen, setConfigOpen] = useState(false);
   const [template, setTemplate] = useState<ReceiptTemplate>(loadTemplate);
   const [orderOverrides, setOrderOverrides] = useState<OrderOverrides>(() =>
@@ -281,6 +307,15 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
     let bodyContent = "";
     const issueLabel = orderOverrides.issueLabel || t.receptionSectionIssueLabel;
     const headerHtml = buildHeaderHtml(t);
+
+    // Resolve title for sale/service depending on selected document kind
+    const docKind: DocumentKind | undefined = orderOverrides.documentKind || defaultDocumentKind;
+    const resolvedSaleTitle = (() => {
+      if (type !== "sale") return t.saleTitle;
+      if (!docKind) return t.saleTitle;
+      const def = DOCUMENT_KINDS.find(d => d.value === docKind);
+      return (def && (t[def.templateKey] as string)) || t.saleTitle;
+    })();
 
     // Helper to build items table rows
     const buildItemsRows = () => {
@@ -365,7 +400,7 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
 </div>`;
       } else {
         // ─── A4 FORMAL BOLETA FORMAT (sale/service) ───
-        const ticketType = type === "service" ? t.serviceTitle : t.saleTitle;
+        const ticketType = type === "service" ? t.serviceTitle : resolvedSaleTitle;
         const ticketNum = order.ticket_number || "------";
         const hora = order.created_at ? new Date(order.created_at).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }) : "";
         const a4Header = t.headerMode === "logo" && t.logoUrl
@@ -426,7 +461,7 @@ const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
       }
 
       const a4Html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${type === "reception" ? t.receptionTitle : (type === "service" ? t.serviceTitle : t.saleTitle)}</title>
+<html><head><meta charset="utf-8"><title>${type === "reception" ? t.receptionTitle : (type === "service" ? t.serviceTitle : resolvedSaleTitle)}</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#000;padding:20px}
@@ -495,7 +530,7 @@ ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top
       bodyContent = `
 ${buildHeaderHtml(t, true, companyInfo)}
 <div class="line"></div>
-<div class="center receipt-title">${t.saleTitle}</div>
+<div class="center receipt-title">${resolvedSaleTitle}</div>
 <div class="center" style="font-size:${fs}px;font-weight:900">N° ${ticketNum}</div>
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
@@ -587,8 +622,25 @@ ${bodyContent}
     if (order?.id) saveOrderOverrides(order.id, next);
   };
 
+  const currentDocKind: DocumentKind = (orderOverrides.documentKind || defaultDocumentKind || "boleta");
+
   return (
-    <div className="flex gap-1 items-center">
+    <div className="flex flex-wrap gap-1 items-center">
+      {type === "sale" && (
+        <Select
+          value={currentDocKind}
+          onValueChange={(v: DocumentKind) => updateOrderOverride({ documentKind: v })}
+        >
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DOCUMENT_KINDS.map(d => (
+              <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handlePrint()}>
         <Printer className="h-4 w-4" /> Boletera
       </Button>
@@ -612,6 +664,23 @@ ${bodyContent}
 
             {/* Per-order settings */}
             <TabsContent value="order" className="space-y-4 mt-3">
+              {type === "sale" && (
+                <div className="space-y-2">
+                  <Label className="font-bold">Tipo de Comprobante</Label>
+                  <Select
+                    value={currentDocKind}
+                    onValueChange={(v: DocumentKind) => updateOrderOverride({ documentKind: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {DOCUMENT_KINDS.map(d => (
+                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">El título del comprobante cambiará al imprimir. Los textos por tipo se editan en "Plantilla General".</p>
+                </div>
+              )}
               {type === "reception" && (
                 <div className="space-y-3">
                   <div className="space-y-2">
@@ -757,6 +826,20 @@ ${bodyContent}
                 <div className="space-y-2">
                   <Label>Título - Ticket de Servicio</Label>
                   <Input value={template.serviceTitle} onChange={e => updateTemplate({ serviceTitle: e.target.value })} />
+                </div>
+                <div className="border-t border-dashed border-border/60 pt-3 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">📑 Comprobantes de Venta</p>
+                  {DOCUMENT_KINDS.map(d => (
+                    <div key={d.value} className="space-y-1">
+                      <Label className="text-xs">{d.label}</Label>
+                      <Input
+                        value={(template[d.templateKey] as string) || ""}
+                        placeholder={d.label.toUpperCase()}
+                        onChange={e => updateTemplate({ [d.templateKey]: e.target.value } as any)}
+                      />
+                    </div>
+                  ))}
+                  <p className="text-[11px] text-muted-foreground">Estos títulos se aplican según el tipo de comprobante seleccionado en cada venta.</p>
                 </div>
               </div>
 
