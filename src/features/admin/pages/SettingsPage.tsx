@@ -279,6 +279,53 @@ const SettingsPage = () => {
             </CardContent>
           </Card>
 
+          {/* ─── Plantilla global de comprobantes ─── */}
+          <Card className="border-primary/10">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" /> Tipos de Comprobante y Títulos
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Estos títulos se aplican automáticamente al imprimir el comprobante seleccionado en POS, Ventas y Contabilidad.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Recepción Técnica</Label>
+                  <Input value={template.receptionTitle} onChange={e => updateTpl({ receptionTitle: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Ticket de Servicio</Label>
+                  <Input value={template.serviceTitle} onChange={e => updateTpl({ serviceTitle: e.target.value })} />
+                </div>
+                {DOCUMENT_KINDS.map(d => (
+                  <div key={d.value} className="space-y-1.5">
+                    <Label className="text-xs">📑 {d.label}</Label>
+                    <Input
+                      value={(template[d.templateKey] as string) || ""}
+                      placeholder={d.label.toUpperCase()}
+                      onChange={e => updateTpl({ [d.templateKey]: e.target.value } as any)}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pie / Mensaje genérico (Recepción y Servicio)</Label>
+                <Textarea
+                  rows={2}
+                  value={template.footerText}
+                  onChange={e => updateTpl({ footerText: e.target.value })}
+                />
+                <p className="text-[11px] text-muted-foreground">El pie de las ventas usa el "Mensaje de despedida" definido arriba.</p>
+              </div>
+              <Button onClick={saveTpl} disabled={savingTpl} size="sm">
+                {savingTpl ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Guardar Plantilla de Comprobantes
+              </Button>
+            </CardContent>
+          </Card>
+
           <Button onClick={saveCompanyInfo} disabled={saving} size="lg" className="w-full sm:w-auto">
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
             Guardar cambios de Tickets
