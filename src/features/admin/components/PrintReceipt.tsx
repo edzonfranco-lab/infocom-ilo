@@ -624,8 +624,25 @@ ${bodyContent}
     if (order?.id) saveOrderOverrides(order.id, next);
   };
 
+  const currentDocKind: DocumentKind = (orderOverrides.documentKind || defaultDocumentKind || "boleta");
+
   return (
-    <div className="flex gap-1 items-center">
+    <div className="flex flex-wrap gap-1 items-center">
+      {type === "sale" && (
+        <Select
+          value={currentDocKind}
+          onValueChange={(v: DocumentKind) => updateOrderOverride({ documentKind: v })}
+        >
+          <SelectTrigger className="h-8 w-[160px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DOCUMENT_KINDS.map(d => (
+              <SelectItem key={d.value} value={d.value} className="text-xs">{d.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handlePrint()}>
         <Printer className="h-4 w-4" /> Boletera
       </Button>
