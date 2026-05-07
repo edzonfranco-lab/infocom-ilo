@@ -46,6 +46,24 @@ const SettingsPage = () => {
   const queryClient = useQueryClient();
   const [companyInfo, setCompanyInfo] = useState<CompanyReceiptInfo>(DEFAULT_COMPANY_INFO);
   const [saving, setSaving] = useState(false);
+  const [template, setTemplate] = useState<ReceiptTemplate>(DEFAULT_TEMPLATE);
+  const [savingTpl, setSavingTpl] = useState(false);
+
+  useEffect(() => {
+    loadTemplateFromDb().then(setTemplate);
+  }, []);
+
+  const updateTpl = (patch: Partial<ReceiptTemplate>) => setTemplate(p => ({ ...p, ...patch }));
+  const saveTpl = async () => {
+    setSavingTpl(true);
+    try {
+      await saveTemplateToDb(template);
+      toast.success("✅ Plantilla de tickets guardada — se aplica en todos los módulos");
+    } catch (e: any) {
+      toast.error("Error: " + e.message);
+    }
+    setSavingTpl(false);
+  };
 
   const { data: themeSettings = [] } = useQuery({
     queryKey: ["theme_settings"],
