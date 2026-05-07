@@ -308,6 +308,17 @@ const PrintReceipt = ({ order, type = "reception", defaultDocumentKind }: PrintR
     const issueLabel = orderOverrides.issueLabel || t.receptionSectionIssueLabel;
     const headerHtml = buildHeaderHtml(t);
 
+    // Resolve title for sale/service depending on selected document kind
+    const docKind: DocumentKind | undefined = orderOverrides.documentKind || defaultDocumentKind;
+    const resolvedSaleTitle = (() => {
+      if (type !== "sale") return t.saleTitle;
+      if (!docKind) return t.saleTitle;
+      const def = DOCUMENT_KINDS.find(d => d.value === docKind);
+      return (def && (t[def.templateKey] as string)) || t.saleTitle;
+    })();
+    // Override the template title used in the rest of the function via local alias
+    const tt = { ...t, saleTitle: resolvedSaleTitle };
+
     // Helper to build items table rows
     const buildItemsRows = () => {
       const items = order.items || [];
