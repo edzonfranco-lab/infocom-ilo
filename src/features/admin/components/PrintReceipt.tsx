@@ -246,9 +246,10 @@ export const buildHeaderHtml = (t: ReceiptTemplate, includeCompanyInfo = false, 
 interface PrintReceiptProps {
   order: any;
   type?: "reception" | "sale" | "service";
+  defaultDocumentKind?: DocumentKind;
 }
 
-const PrintReceipt = ({ order, type = "reception" }: PrintReceiptProps) => {
+const PrintReceipt = ({ order, type = "reception", defaultDocumentKind }: PrintReceiptProps) => {
   const [configOpen, setConfigOpen] = useState(false);
   const [template, setTemplate] = useState<ReceiptTemplate>(loadTemplate);
   const [orderOverrides, setOrderOverrides] = useState<OrderOverrides>(() =>
