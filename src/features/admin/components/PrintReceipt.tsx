@@ -316,8 +316,6 @@ const PrintReceipt = ({ order, type = "reception", defaultDocumentKind }: PrintR
       const def = DOCUMENT_KINDS.find(d => d.value === docKind);
       return (def && (t[def.templateKey] as string)) || t.saleTitle;
     })();
-    // Override the template title used in the rest of the function via local alias
-    const tt = { ...t, saleTitle: resolvedSaleTitle };
 
     // Helper to build items table rows
     const buildItemsRows = () => {
