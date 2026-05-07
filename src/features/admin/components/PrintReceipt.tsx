@@ -829,6 +829,20 @@ ${bodyContent}
                   <Label>Título - Ticket de Servicio</Label>
                   <Input value={template.serviceTitle} onChange={e => updateTemplate({ serviceTitle: e.target.value })} />
                 </div>
+                <div className="border-t border-dashed border-border/60 pt-3 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">📑 Comprobantes de Venta</p>
+                  {DOCUMENT_KINDS.map(d => (
+                    <div key={d.value} className="space-y-1">
+                      <Label className="text-xs">{d.label}</Label>
+                      <Input
+                        value={(template[d.templateKey] as string) || ""}
+                        placeholder={d.label.toUpperCase()}
+                        onChange={e => updateTemplate({ [d.templateKey]: e.target.value } as any)}
+                      />
+                    </div>
+                  ))}
+                  <p className="text-[11px] text-muted-foreground">Estos títulos se aplican según el tipo de comprobante seleccionado en cada venta.</p>
+                </div>
               </div>
 
               {type === "reception" && (
