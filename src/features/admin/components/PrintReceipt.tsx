@@ -148,6 +148,7 @@ export const saveTemplate = (t: ReceiptTemplate) => {
 
 interface OrderOverrides {
   issueLabel?: string;
+  documentKind?: DocumentKind;
 }
 
 const loadOrderOverrides = (orderId: string): OrderOverrides => {
