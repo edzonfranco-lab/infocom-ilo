@@ -12,7 +12,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Settings, PartyPopper, Sun, Receipt, Save, Loader2, Building2, Sparkles, MessageSquareHeart, Database, Lock } from "lucide-react";
 import { toast } from "sonner";
-import { DEFAULT_COMPANY_INFO, type CompanyReceiptInfo } from "@/features/admin/components/PrintReceipt";
+import {
+  DEFAULT_COMPANY_INFO,
+  DEFAULT_TEMPLATE,
+  DOCUMENT_KINDS,
+  loadTemplateFromDb,
+  saveTemplateToDb,
+  type CompanyReceiptInfo,
+  type ReceiptTemplate,
+} from "@/features/admin/components/PrintReceipt";
+import { FileText } from "lucide-react";
 
 const THEME_EMOJIS: Record<string, string> = {
   default: "🎮", san_valentin: "❤️", halloween: "🎃", navidad: "🎄",
