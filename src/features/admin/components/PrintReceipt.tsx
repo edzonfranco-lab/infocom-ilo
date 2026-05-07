@@ -532,7 +532,7 @@ ${t.showSignatures ? `<div class="line"></div><div class="row" style="margin-top
       bodyContent = `
 ${buildHeaderHtml(t, true, companyInfo)}
 <div class="line"></div>
-<div class="center receipt-title">${t.saleTitle}</div>
+<div class="center receipt-title">${resolvedSaleTitle}</div>
 <div class="center" style="font-size:${fs}px;font-weight:900">N° ${ticketNum}</div>
 <div class="line"></div>
 <div class="row"><span>Fecha:</span><span>${order.date}</span></div>
