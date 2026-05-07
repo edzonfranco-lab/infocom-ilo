@@ -43,7 +43,25 @@ export interface ReceiptTemplate {
   signatureRight: string;
   saleTitle: string;
   serviceTitle: string;
+  // Per-document-type titles (all editable globally)
+  boletaTitle?: string;
+  facturaTitle?: string;
+  proformaTitle?: string;
+  cotizacionTitle?: string;
+  notaVentaTitle?: string;
+  ticketInternoTitle?: string;
 }
+
+export type DocumentKind = "boleta" | "factura" | "proforma" | "cotizacion" | "nota_venta" | "ticket_interno";
+
+export const DOCUMENT_KINDS: { value: DocumentKind; label: string; short: string; templateKey: keyof ReceiptTemplate }[] = [
+  { value: "boleta",         label: "Boleta de Venta",       short: "Boleta",     templateKey: "boletaTitle" },
+  { value: "factura",        label: "Factura",                short: "Factura",    templateKey: "facturaTitle" },
+  { value: "proforma",       label: "Proforma",               short: "Proforma",   templateKey: "proformaTitle" },
+  { value: "cotizacion",     label: "Cotización",             short: "Cotización", templateKey: "cotizacionTitle" },
+  { value: "nota_venta",     label: "Nota de Venta",          short: "Nota Venta", templateKey: "notaVentaTitle" },
+  { value: "ticket_interno", label: "Ticket Interno (sin valor fiscal)", short: "Interno", templateKey: "ticketInternoTitle" },
+];
 
 export const DEFAULT_TEMPLATE: ReceiptTemplate = {
   paperSize: "58mm",
