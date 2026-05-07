@@ -84,6 +84,12 @@ export const DEFAULT_TEMPLATE: ReceiptTemplate = {
   signatureRight: "Firma del Tecnico",
   saleTitle: "BOLETA DE VENTA",
   serviceTitle: "TICKET DE SERVICIO",
+  boletaTitle: "BOLETA DE VENTA",
+  facturaTitle: "FACTURA",
+  proformaTitle: "PROFORMA",
+  cotizacionTitle: "COTIZACIÓN",
+  notaVentaTitle: "NOTA DE VENTA",
+  ticketInternoTitle: "TICKET INTERNO",
 };
 
 const STORE_KEY = "receipt_template";
