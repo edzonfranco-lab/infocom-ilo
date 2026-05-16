@@ -44,9 +44,6 @@ const SupportPage = () => {
   // Send to accounting dialog
   const [sendToAccOpen, setSendToAccOpen] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<any>(null);
-  const [accType, setAccType] = useState<"servicio" | "venta">("servicio");
-  const [accCost, setAccCost] = useState("");
-  const [sendingToAcc, setSendingToAcc] = useState(false);
 
   // Fetch all service orders
   const { data: orders = [], isLoading } = useQuery({
