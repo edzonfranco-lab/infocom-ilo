@@ -156,12 +156,14 @@ const SupportPage = () => {
             </div>
             {nextStatus && (
               <Button
-                variant="ghost"
+                variant={nextStatus === "completed" ? "default" : "ghost"}
                 size="sm"
                 className="h-6 text-xs gap-1"
                 onClick={() => handleStatusChange(order, nextStatus)}
               >
-                <ArrowRight className="h-3 w-3" /> {STATUS_CONFIG[nextStatus]?.label}
+                {nextStatus === "completed"
+                  ? <><Send className="h-3 w-3" /> Mandar a Contabilidad</>
+                  : <><ArrowRight className="h-3 w-3" /> {STATUS_CONFIG[nextStatus]?.label}</>}
               </Button>
             )}
           </div>
