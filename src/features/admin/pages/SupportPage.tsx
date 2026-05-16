@@ -88,86 +88,14 @@ const SupportPage = () => {
     },
   });
 
-  // Handle status change with accounting prompt
+  // Handle status change — when completing, open the rich "send to accounting" dialog
   const handleStatusChange = (order: any, nextStatus: string) => {
     if (nextStatus === "completed") {
-      // When completing, ask if they want to send to accounting
-      setPendingOrder({ ...order, _nextStatus: nextStatus });
-      setAccCost(order.final_cost ? String(order.final_cost) : order.estimated_cost ? String(order.estimated_cost) : "");
-      setAccType("servicio");
+      setPendingOrder(order);
       setSendToAccOpen(true);
     } else {
       updateStatusMutation.mutate({ id: order.id, status: nextStatus });
     }
-  };
-
-  // Send to accounting
-  const handleSendToAccounting = async () => {
-    if (!pendingOrder) return;
-    const cost = parseFloat(accCost);
-    if (!cost || cost <= 0) {
-      toast.error("Ingresa un monto válido");
-      return;
-    }
-    setSendingToAcc(true);
-    try {
-      // First update the service order status
-      const updates: any = { status: pendingOrder._nextStatus, completed_at: new Date().toISOString() };
-      if (cost) updates.final_cost = cost;
-      await supabase.from("service_orders").update(updates).eq("id", pendingOrder.id);
-
-      // Create transaction in accounting
-      const techName = pendingOrder.assigned_technician_id ? profilesMap[pendingOrder.assigned_technician_id] : (user?.email || "Técnico");
-      const { data: tx, error: txErr } = await supabase.from("transactions").insert({
-        fecha: new Date().toISOString().split("T")[0],
-        cliente_nombre: pendingOrder.customer_name || null,
-        cliente_telefono: pendingOrder.customer_phone || null,
-        notas: `Orden de servicio #${pendingOrder.order_number} | ${pendingOrder.device_type} ${pendingOrder.device_brand || ""} ${pendingOrder.device_model || ""}`.trim(),
-        estado: "borrador" as any,
-        created_by: user?.id || null,
-      }).select("id").single();
-      if (txErr) throw txErr;
-
-      // Create the item
-      const itemPayload = {
-        transaction_id: tx.id,
-        item_type: accType as any,
-        descripcion: accType === "servicio"
-          ? `${pendingOrder.reported_issue || "Servicio técnico"} - ${pendingOrder.device_type} ${pendingOrder.device_brand || ""}`.trim()
-          : `Venta - ${pendingOrder.device_type} ${pendingOrder.device_brand || ""} ${pendingOrder.device_model || ""}`.trim(),
-        cantidad: 1,
-        precio_unitario: cost,
-        subtotal: cost,
-        responsable: accType === "servicio" ? (techName || null) : null,
-        tipo_equipo: accType === "servicio" ? (`${pendingOrder.device_type} ${pendingOrder.device_brand || ""}`.trim() || null) : null,
-        diagnostico: accType === "servicio" ? (pendingOrder.diagnosis || pendingOrder.reported_issue || null) : null,
-      };
-      await supabase.from("transaction_items").insert(itemPayload);
-
-      // Log history
-      await supabase.from("transaction_history").insert({
-        transaction_id: tx.id,
-        accion: "creado_desde_soporte",
-        detalles: { service_order_id: pendingOrder.id, order_number: pendingOrder.order_number } as any,
-        usuario_id: user?.id || null,
-      });
-
-      qc.invalidateQueries({ queryKey: ["support_orders"] });
-      toast.success("Orden completada y enviada a contabilidad como borrador");
-      setSendToAccOpen(false);
-      setPendingOrder(null);
-    } catch (e: any) {
-      toast.error(e.message || "Error al enviar a contabilidad");
-    }
-    setSendingToAcc(false);
-  };
-
-  // Complete without sending to accounting
-  const handleCompleteOnly = () => {
-    if (!pendingOrder) return;
-    updateStatusMutation.mutate({ id: pendingOrder.id, status: pendingOrder._nextStatus });
-    setSendToAccOpen(false);
-    setPendingOrder(null);
   };
 
   // Technician list for filter
