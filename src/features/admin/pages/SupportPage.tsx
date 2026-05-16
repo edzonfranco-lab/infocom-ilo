@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import SendToAccountingDialog from "@/features/admin/components/SendToAccountingDialog";
 import {
   Wrench, Clock, CheckCircle, Package, AlertTriangle, Search,
   LayoutGrid, List, BarChart3, User, Phone, Monitor, ArrowRight,
-  Receipt, ShoppingCart, Send
+  Receipt, Send
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; kanbanOrder: number }> = {
