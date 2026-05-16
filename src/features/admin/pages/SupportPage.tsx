@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import SendToAccountingDialog from "@/features/admin/components/SendToAccountingDialog";
 import {
   Wrench, Clock, CheckCircle, Package, AlertTriangle, Search,
   LayoutGrid, List, BarChart3, User, Phone, Monitor, ArrowRight,
-  Receipt, ShoppingCart, Send
+  Receipt, Send
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; kanbanOrder: number }> = {
@@ -44,9 +44,6 @@ const SupportPage = () => {
   // Send to accounting dialog
   const [sendToAccOpen, setSendToAccOpen] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<any>(null);
-  const [accType, setAccType] = useState<"servicio" | "venta">("servicio");
-  const [accCost, setAccCost] = useState("");
-  const [sendingToAcc, setSendingToAcc] = useState(false);
 
   // Fetch all service orders
   const { data: orders = [], isLoading } = useQuery({
@@ -91,86 +88,14 @@ const SupportPage = () => {
     },
   });
 
-  // Handle status change with accounting prompt
+  // Handle status change — when completing, open the rich "send to accounting" dialog
   const handleStatusChange = (order: any, nextStatus: string) => {
     if (nextStatus === "completed") {
-      // When completing, ask if they want to send to accounting
-      setPendingOrder({ ...order, _nextStatus: nextStatus });
-      setAccCost(order.final_cost ? String(order.final_cost) : order.estimated_cost ? String(order.estimated_cost) : "");
-      setAccType("servicio");
+      setPendingOrder(order);
       setSendToAccOpen(true);
     } else {
       updateStatusMutation.mutate({ id: order.id, status: nextStatus });
     }
-  };
-
-  // Send to accounting
-  const handleSendToAccounting = async () => {
-    if (!pendingOrder) return;
-    const cost = parseFloat(accCost);
-    if (!cost || cost <= 0) {
-      toast.error("Ingresa un monto válido");
-      return;
-    }
-    setSendingToAcc(true);
-    try {
-      // First update the service order status
-      const updates: any = { status: pendingOrder._nextStatus, completed_at: new Date().toISOString() };
-      if (cost) updates.final_cost = cost;
-      await supabase.from("service_orders").update(updates).eq("id", pendingOrder.id);
-
-      // Create transaction in accounting
-      const techName = pendingOrder.assigned_technician_id ? profilesMap[pendingOrder.assigned_technician_id] : (user?.email || "Técnico");
-      const { data: tx, error: txErr } = await supabase.from("transactions").insert({
-        fecha: new Date().toISOString().split("T")[0],
-        cliente_nombre: pendingOrder.customer_name || null,
-        cliente_telefono: pendingOrder.customer_phone || null,
-        notas: `Orden de servicio #${pendingOrder.order_number} | ${pendingOrder.device_type} ${pendingOrder.device_brand || ""} ${pendingOrder.device_model || ""}`.trim(),
-        estado: "borrador" as any,
-        created_by: user?.id || null,
-      }).select("id").single();
-      if (txErr) throw txErr;
-
-      // Create the item
-      const itemPayload = {
-        transaction_id: tx.id,
-        item_type: accType as any,
-        descripcion: accType === "servicio"
-          ? `${pendingOrder.reported_issue || "Servicio técnico"} - ${pendingOrder.device_type} ${pendingOrder.device_brand || ""}`.trim()
-          : `Venta - ${pendingOrder.device_type} ${pendingOrder.device_brand || ""} ${pendingOrder.device_model || ""}`.trim(),
-        cantidad: 1,
-        precio_unitario: cost,
-        subtotal: cost,
-        responsable: accType === "servicio" ? (techName || null) : null,
-        tipo_equipo: accType === "servicio" ? (`${pendingOrder.device_type} ${pendingOrder.device_brand || ""}`.trim() || null) : null,
-        diagnostico: accType === "servicio" ? (pendingOrder.diagnosis || pendingOrder.reported_issue || null) : null,
-      };
-      await supabase.from("transaction_items").insert(itemPayload);
-
-      // Log history
-      await supabase.from("transaction_history").insert({
-        transaction_id: tx.id,
-        accion: "creado_desde_soporte",
-        detalles: { service_order_id: pendingOrder.id, order_number: pendingOrder.order_number } as any,
-        usuario_id: user?.id || null,
-      });
-
-      qc.invalidateQueries({ queryKey: ["support_orders"] });
-      toast.success("Orden completada y enviada a contabilidad como borrador");
-      setSendToAccOpen(false);
-      setPendingOrder(null);
-    } catch (e: any) {
-      toast.error(e.message || "Error al enviar a contabilidad");
-    }
-    setSendingToAcc(false);
-  };
-
-  // Complete without sending to accounting
-  const handleCompleteOnly = () => {
-    if (!pendingOrder) return;
-    updateStatusMutation.mutate({ id: pendingOrder.id, status: pendingOrder._nextStatus });
-    setSendToAccOpen(false);
-    setPendingOrder(null);
   };
 
   // Technician list for filter
@@ -231,12 +156,14 @@ const SupportPage = () => {
             </div>
             {nextStatus && (
               <Button
-                variant="ghost"
+                variant={nextStatus === "completed" ? "default" : "ghost"}
                 size="sm"
                 className="h-6 text-xs gap-1"
                 onClick={() => handleStatusChange(order, nextStatus)}
               >
-                <ArrowRight className="h-3 w-3" /> {STATUS_CONFIG[nextStatus]?.label}
+                {nextStatus === "completed"
+                  ? <><Send className="h-3 w-3" /> Mandar a Contabilidad</>
+                  : <><ArrowRight className="h-3 w-3" /> {STATUS_CONFIG[nextStatus]?.label}</>}
               </Button>
             )}
           </div>
@@ -421,73 +348,15 @@ const SupportPage = () => {
         </>
       )}
 
-      {/* ─── Send to Accounting Dialog ─── */}
-      <Dialog open={sendToAccOpen} onOpenChange={(o) => { if (!o) { setSendToAccOpen(false); setPendingOrder(null); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-primary" /> Completar y Enviar a Contabilidad
-            </DialogTitle>
-          </DialogHeader>
-          {pendingOrder && (
-            <div className="space-y-4">
-              <div className="bg-secondary/30 rounded-lg p-3 text-sm space-y-1">
-                <p><span className="text-muted-foreground">Orden:</span> <span className="font-bold">#{pendingOrder.order_number}</span></p>
-                <p><span className="text-muted-foreground">Cliente:</span> <span className="font-bold">{pendingOrder.customer_name}</span></p>
-                <p><span className="text-muted-foreground">Equipo:</span> <span className="font-bold">{pendingOrder.device_type} {pendingOrder.device_brand || ""}</span></p>
-                <p><span className="text-muted-foreground">Falla:</span> <span>{pendingOrder.reported_issue}</span></p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="font-bold">¿A dónde enviar?</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={accType === "servicio" ? "default" : "outline"}
-                    className="gap-2"
-                    onClick={() => setAccType("servicio")}
-                  >
-                    <Wrench className="h-4 w-4" /> Servicio
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={accType === "venta" ? "default" : "outline"}
-                    className="gap-2"
-                    onClick={() => setAccType("venta")}
-                  >
-                    <ShoppingCart className="h-4 w-4" /> Venta
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Monto (S/.)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={accCost}
-                  onChange={e => setAccCost(e.target.value)}
-                  placeholder="0.00"
-                />
-                {pendingOrder.estimated_cost && (
-                  <p className="text-xs text-muted-foreground">Costo estimado original: S/ {Number(pendingOrder.estimated_cost).toFixed(2)}</p>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleCompleteOnly} className="flex-1">
-                  Solo Completar
-                </Button>
-                <Button onClick={handleSendToAccounting} disabled={sendingToAcc} className="flex-1 gap-2">
-                  {sendingToAcc ? <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Receipt className="h-4 w-4" />}
-                  Enviar a Contabilidad
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* ─── Send to Accounting Dialog (rich, multi-item) ─── */}
+      <SendToAccountingDialog
+        open={sendToAccOpen}
+        onOpenChange={(o) => { setSendToAccOpen(o); if (!o) setPendingOrder(null); }}
+        order={pendingOrder}
+        userId={user?.id}
+        technicianName={pendingOrder?.assigned_technician_id ? profilesMap[pendingOrder.assigned_technician_id] : (user?.email || "")}
+        onCompleted={() => qc.invalidateQueries({ queryKey: ["support_orders"] })}
+      />
     </div>
   );
 };
