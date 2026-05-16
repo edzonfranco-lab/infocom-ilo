@@ -346,73 +346,15 @@ const SupportPage = () => {
         </>
       )}
 
-      {/* ─── Send to Accounting Dialog ─── */}
-      <Dialog open={sendToAccOpen} onOpenChange={(o) => { if (!o) { setSendToAccOpen(false); setPendingOrder(null); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5 text-primary" /> Completar y Enviar a Contabilidad
-            </DialogTitle>
-          </DialogHeader>
-          {pendingOrder && (
-            <div className="space-y-4">
-              <div className="bg-secondary/30 rounded-lg p-3 text-sm space-y-1">
-                <p><span className="text-muted-foreground">Orden:</span> <span className="font-bold">#{pendingOrder.order_number}</span></p>
-                <p><span className="text-muted-foreground">Cliente:</span> <span className="font-bold">{pendingOrder.customer_name}</span></p>
-                <p><span className="text-muted-foreground">Equipo:</span> <span className="font-bold">{pendingOrder.device_type} {pendingOrder.device_brand || ""}</span></p>
-                <p><span className="text-muted-foreground">Falla:</span> <span>{pendingOrder.reported_issue}</span></p>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="font-bold">¿A dónde enviar?</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={accType === "servicio" ? "default" : "outline"}
-                    className="gap-2"
-                    onClick={() => setAccType("servicio")}
-                  >
-                    <Wrench className="h-4 w-4" /> Servicio
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={accType === "venta" ? "default" : "outline"}
-                    className="gap-2"
-                    onClick={() => setAccType("venta")}
-                  >
-                    <ShoppingCart className="h-4 w-4" /> Venta
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Monto (S/.)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={accCost}
-                  onChange={e => setAccCost(e.target.value)}
-                  placeholder="0.00"
-                />
-                {pendingOrder.estimated_cost && (
-                  <p className="text-xs text-muted-foreground">Costo estimado original: S/ {Number(pendingOrder.estimated_cost).toFixed(2)}</p>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleCompleteOnly} className="flex-1">
-                  Solo Completar
-                </Button>
-                <Button onClick={handleSendToAccounting} disabled={sendingToAcc} className="flex-1 gap-2">
-                  {sendingToAcc ? <div className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" /> : <Receipt className="h-4 w-4" />}
-                  Enviar a Contabilidad
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* ─── Send to Accounting Dialog (rich, multi-item) ─── */}
+      <SendToAccountingDialog
+        open={sendToAccOpen}
+        onOpenChange={(o) => { setSendToAccOpen(o); if (!o) setPendingOrder(null); }}
+        order={pendingOrder}
+        userId={user?.id}
+        technicianName={pendingOrder?.assigned_technician_id ? profilesMap[pendingOrder.assigned_technician_id] : (user?.email || "")}
+        onCompleted={() => qc.invalidateQueries({ queryKey: ["support_orders"] })}
+      />
     </div>
   );
 };
