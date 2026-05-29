@@ -1057,11 +1057,18 @@ const AccountingPage = () => {
                   const isPorCobrar = tx.por_cobrar && !tx.cobrado_en && tx.estado === "emitido";
                   const rowClass = [
                     tx.estado === "anulado" || tx.estado === "devuelto" ? "opacity-60" : "",
-                    isPorCobrar ? "bg-amber-500/10 hover:bg-amber-500/15 border-l-4 border-l-amber-500" : "",
+                    isPorCobrar ? "font-medium" : "",
                   ].join(" ");
+                  const rowStyle: React.CSSProperties | undefined = isPorCobrar
+                    ? {
+                        backgroundColor: highlight.bg,
+                        borderLeft: `4px solid ${highlight.border}`,
+                        boxShadow: `inset 0 0 0 1px ${highlight.border}33`,
+                      }
+                    : undefined;
 
                   return (
-                    <TableRow key={tx.id} className={rowClass}>
+                    <TableRow key={tx.id} className={rowClass} style={rowStyle}>
                       <TableCell className="whitespace-nowrap text-xs">
                         {new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE")}
                       </TableCell>
@@ -1071,7 +1078,10 @@ const AccountingPage = () => {
                           {isPorCobrar && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Badge className="text-[9px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 px-1.5 py-0 h-4 shrink-0">
+                                <Badge
+                                  className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-bold border text-white"
+                                  style={{ background: highlight.border, borderColor: highlight.border }}
+                                >
                                   POR COBRAR
                                 </Badge>
                               </TooltipTrigger>
