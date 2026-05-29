@@ -23,10 +23,10 @@ import {
 
 // ─── Highlight color presets for "Por Cobrar" rows ──────────────
 const HIGHLIGHT_PRESETS = [
-  { key: "amber",   label: "Ámbar",     bg: "rgba(245, 158, 11, 0.28)",  border: "#f59e0b" },
+  { key: "amber",   label: "INFOCOM #F0BA00", bg: "hsl(47 100% 47% / 0.48)", border: "hsl(47 100% 47%)" },
   { key: "rose",    label: "Rosa",      bg: "rgba(244, 63, 94, 0.28)",   border: "#f43f5e" },
   { key: "orange",  label: "Naranja",   bg: "rgba(249, 115, 22, 0.30)",  border: "#f97316" },
-  { key: "yellow",  label: "Amarillo",  bg: "rgba(234, 179, 8, 0.32)",   border: "#eab308" },
+  { key: "yellow",  label: "Amarillo",  bg: "hsl(47 100% 47% / 0.36)",   border: "hsl(47 100% 47%)" },
   { key: "red",     label: "Rojo",      bg: "rgba(239, 68, 68, 0.25)",   border: "#ef4444" },
   { key: "fuchsia", label: "Fucsia",    bg: "rgba(217, 70, 239, 0.25)",  border: "#d946ef" },
   { key: "sky",     label: "Celeste",   bg: "rgba(14, 165, 233, 0.25)",  border: "#0ea5e9" },
@@ -1062,8 +1062,8 @@ const AccountingPage = () => {
                   const rowStyle: React.CSSProperties | undefined = isPorCobrar
                     ? {
                         backgroundColor: highlight.bg,
-                        borderLeft: `4px solid ${highlight.border}`,
-                        boxShadow: `inset 0 0 0 1px ${highlight.border}33`,
+                        borderLeft: `6px solid ${highlight.border}`,
+                        boxShadow: `inset 0 0 0 2px ${highlight.border}, 0 0 18px ${highlight.border}`,
                       }
                     : undefined;
 
