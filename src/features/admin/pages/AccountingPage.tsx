@@ -226,11 +226,33 @@ const AccountingPage = () => {
     },
   });
 
+  // ─── Items summary (descripción breve por transacción) ───────
+  const txIds = transactions.map(t => t.id);
+  const { data: itemsSummary = {} } = useQuery({
+    queryKey: ["tx_items_summary", txIds.join(",")],
+    enabled: txIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transaction_items")
+        .select("transaction_id, descripcion, item_type, cantidad")
+        .in("transaction_id", txIds)
+        .is("combo_parent_item_id", null);
+      if (error) throw error;
+      const map: Record<string, { descripcion: string; count: number; total: number }> = {};
+      (data || []).forEach((it: any) => {
+        if (!map[it.transaction_id]) map[it.transaction_id] = { descripcion: it.descripcion, count: 1, total: 1 };
+        else { map[it.transaction_id].count += 1; map[it.transaction_id].total += 1; }
+      });
+      return map;
+    },
+  });
+
   // ─── Filtered views ───────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = transactions;
     if (activeTab === "ventas") list = list.filter(t => Number(t.subtotal_productos || 0) > 0);
     if (activeTab === "servicios") list = list.filter(t => Number(t.subtotal_servicios || 0) > 0);
+    if (activeTab === "por_cobrar") list = list.filter(t => t.por_cobrar && !t.cobrado_en && t.estado === "emitido");
     if (searchClient.trim()) {
       const q = searchClient.toLowerCase();
       list = list.filter(t => t.cliente_nombre?.toLowerCase().includes(q));
@@ -238,11 +260,14 @@ const AccountingPage = () => {
     return list;
   }, [transactions, activeTab, searchClient]);
 
-  // ─── Metrics (only emitido) ───────────────────────────────────
+  // ─── Metrics ───────────────────────────────────────────────────
   const emitidos = transactions.filter(t => t.estado === "emitido");
-  const totalProductos = emitidos.reduce((a, t) => a + Number(t.subtotal_productos || 0), 0);
-  const totalServicios = emitidos.reduce((a, t) => a + Number(t.subtotal_servicios || 0), 0);
-  const totalGeneral = emitidos.reduce((a, t) => a + Number(t.total || 0), 0);
+  const cobrados = emitidos.filter(t => !t.por_cobrar || t.cobrado_en);
+  const porCobrar = emitidos.filter(t => t.por_cobrar && !t.cobrado_en);
+  const totalProductos = cobrados.reduce((a, t) => a + Number(t.subtotal_productos || 0), 0);
+  const totalServicios = cobrados.reduce((a, t) => a + Number(t.subtotal_servicios || 0), 0);
+  const totalGeneral = cobrados.reduce((a, t) => a + Number(t.total || 0), 0);
+  const totalPorCobrar = porCobrar.reduce((a, t) => a + Number(t.total || 0), 0);
 
   // ─── Mutations ────────────────────────────────────────────────
   const saveMutation = useMutation({
