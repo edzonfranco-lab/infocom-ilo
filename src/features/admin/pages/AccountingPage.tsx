@@ -527,7 +527,7 @@ const AccountingPage = () => {
   const closeForm = () => {
     setFormOpen(false);
     setEditingId(null);
-    setForm({ fecha: new Date().toISOString().split("T")[0], cliente_nombre: "", cliente_telefono: "", notas: "", emitido_por: "Personal de Infocom" });
+    setForm({ fecha: new Date().toISOString().split("T")[0], cliente_nombre: "", cliente_telefono: "", notas: "", emitido_por: "Personal de Infocom", por_cobrar: false, tipo_cliente: "publico" });
     setItems([]);
   };
 
@@ -538,6 +538,8 @@ const AccountingPage = () => {
       cliente_telefono: tx.cliente_telefono || "",
       notas: tx.notas || "",
       emitido_por: tx.emitido_por || "",
+      por_cobrar: !!tx.por_cobrar,
+      tipo_cliente: (tx.tipo_cliente as any) || "publico",
     });
     setEditingId(tx.id);
     // Load items
