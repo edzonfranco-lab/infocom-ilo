@@ -1427,15 +1427,44 @@ const AccountingPage = () => {
 
             <div><Label>Notas</Label><Input value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
 
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1" disabled={saveMutation.isPending || items.length === 0}>
+            {/* Pendiente por cobrar (crédito a entidades) */}
+            <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="por_cobrar"
+                  checked={form.por_cobrar}
+                  onCheckedChange={(v) => setForm({ ...form, por_cobrar: !!v })}
+                />
+                <Label htmlFor="por_cobrar" className="flex items-center gap-1 cursor-pointer font-semibold text-amber-700 dark:text-amber-300">
+                  <Clock className="h-4 w-4" /> Marcar como PENDIENTE POR COBRAR
+                </Label>
+              </div>
+              <p className="text-[11px] text-muted-foreground pl-6">
+                Use esta opción solo para entidades privadas o públicas a crédito. No aplica al público en general.
+              </p>
+              {form.por_cobrar && (
+                <div className="pl-6">
+                  <Label className="text-xs">Tipo de cliente</Label>
+                  <Select value={form.tipo_cliente} onValueChange={(v: any) => setForm({ ...form, tipo_cliente: v })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="publico">Entidad Pública</SelectItem>
+                      <SelectItem value="privado">Entidad Privada</SelectItem>
+                      <SelectItem value="corporativo">Corporativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <Button type="submit" className="flex-1 min-w-[140px]" disabled={saveMutation.isPending || items.length === 0}>
                 {editingId ? "Guardar Cambios" : "Guardar como Borrador"}
               </Button>
               {!editingId && (
-                <Button type="button" variant="secondary" className="flex-1 gap-1" disabled={saveMutation.isPending || items.length === 0}
+                <Button type="button" variant="secondary" className="flex-1 min-w-[140px] gap-1" disabled={saveMutation.isPending || items.length === 0}
                   onClick={async () => {
                     if (items.length === 0) return;
-                    // Save then emit
                     try {
                       const { data: tx, error } = await supabase.from("transactions").insert({
                         fecha: form.fecha,
@@ -1445,8 +1474,10 @@ const AccountingPage = () => {
                         emitido_por: form.emitido_por || user?.email || "Admin",
                         estado: "emitido" as any,
                         emitido_en: new Date().toISOString(),
+                        por_cobrar: form.por_cobrar,
+                        tipo_cliente: form.tipo_cliente,
                         created_by: user?.id || null,
-                      }).select("id").single();
+                      } as any).select("id").single();
                       if (error) throw error;
                       const payload = items.map(it => ({
                         transaction_id: tx.id,
@@ -1461,20 +1492,15 @@ const AccountingPage = () => {
                         diagnostico: it.diagnostico || null,
                       }));
                       await supabase.from("transaction_items").insert(payload);
-
-                      // Reduce stock for product items
                       await reduceStockForTransaction(tx.id);
-
-                      // Sync customer to customers table
                       if (form.cliente_nombre) {
                         await syncCustomer(form.cliente_nombre, form.cliente_telefono || null, itemTotals.total);
                       }
-
                       await supabase.from("transaction_history").insert({
                         transaction_id: tx.id, accion: "creado_y_emitido", usuario_id: user?.id || null,
                       });
                       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-                      toast.success("Transaccion emitida — Stock actualizado");
+                      toast.success(form.por_cobrar ? "Transacción emitida como PENDIENTE POR COBRAR" : "Transaccion emitida — Stock actualizado");
                       closeForm();
                     } catch (err: any) {
                       toast.error(err.message || "Error");
@@ -1484,6 +1510,15 @@ const AccountingPage = () => {
                   <FileText className="h-4 w-4" /> Emitir Comprobante
                 </Button>
               )}
+              {/* SUNAT — En implementación */}
+              <Button type="button" variant="outline" className="gap-1 border-blue-500/40 text-blue-600 hover:bg-blue-500/10"
+                onClick={() => toast.info("📄 Emisión de BOLETA electrónica en implementación con SUNAT", { description: "Próximamente podrás emitir boletas electrónicas oficiales." })}>
+                <FileCheck2 className="h-4 w-4" /> Emitir Boleta
+              </Button>
+              <Button type="button" variant="outline" className="gap-1 border-violet-500/40 text-violet-600 hover:bg-violet-500/10"
+                onClick={() => toast.info("📄 Emisión de FACTURA electrónica en implementación con SUNAT", { description: "Próximamente podrás emitir facturas electrónicas oficiales." })}>
+                <FileBadge className="h-4 w-4" /> Emitir Factura
+              </Button>
             </div>
           </form>
         </DialogContent>
