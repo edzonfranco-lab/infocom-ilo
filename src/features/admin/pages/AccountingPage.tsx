@@ -1073,6 +1073,15 @@ const AccountingPage = () => {
                     </div>
                   </div>
 
+                  <a
+                    href="https://htmlcolorcodes.com/es/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 flex items-center justify-center gap-1.5 h-8 w-full rounded-md border border-primary/40 bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition"
+                  >
+                    <Palette className="h-3.5 w-3.5" />
+                    Buscar más colores en línea
+                  </a>
                   <p className="text-[10px] text-muted-foreground mt-2">Se guarda automáticamente en este navegador.</p>
                 </PopoverContent>
               </Popover>
