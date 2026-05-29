@@ -18,8 +18,21 @@ import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
   Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw, Gift,
-  Clock, CheckCircle2, FileBadge, FileCheck2
+  Clock, CheckCircle2, FileBadge, FileCheck2, Palette
 } from "lucide-react";
+
+// ─── Highlight color presets for "Por Cobrar" rows ──────────────
+const HIGHLIGHT_PRESETS = [
+  { key: "amber",   label: "Ámbar",     bg: "rgba(245, 158, 11, 0.28)",  border: "#f59e0b" },
+  { key: "rose",    label: "Rosa",      bg: "rgba(244, 63, 94, 0.28)",   border: "#f43f5e" },
+  { key: "orange",  label: "Naranja",   bg: "rgba(249, 115, 22, 0.30)",  border: "#f97316" },
+  { key: "yellow",  label: "Amarillo",  bg: "rgba(234, 179, 8, 0.32)",   border: "#eab308" },
+  { key: "red",     label: "Rojo",      bg: "rgba(239, 68, 68, 0.25)",   border: "#ef4444" },
+  { key: "fuchsia", label: "Fucsia",    bg: "rgba(217, 70, 239, 0.25)",  border: "#d946ef" },
+  { key: "sky",     label: "Celeste",   bg: "rgba(14, 165, 233, 0.25)",  border: "#0ea5e9" },
+  { key: "lime",    label: "Lima",      bg: "rgba(132, 204, 22, 0.30)",  border: "#84cc16" },
+] as const;
+const HIGHLIGHT_LS_KEY = "infocom_por_cobrar_highlight";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
 import PrintReceipt from "@/features/admin/components/PrintReceipt";
@@ -106,6 +119,12 @@ const AccountingPage = () => {
   const [year, setYear] = useState(now.getFullYear());
   const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios" | "por_cobrar">("todos");
   const [searchClient, setSearchClient] = useState("");
+  const [highlightKey, setHighlightKey] = useState<string>(() => {
+    if (typeof window === "undefined") return "amber";
+    return localStorage.getItem(HIGHLIGHT_LS_KEY) || "amber";
+  });
+  const highlight = HIGHLIGHT_PRESETS.find(h => h.key === highlightKey) || HIGHLIGHT_PRESETS[0];
+  useEffect(() => { try { localStorage.setItem(HIGHLIGHT_LS_KEY, highlightKey); } catch {} }, [highlightKey]);
 
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
@@ -942,6 +961,34 @@ const AccountingPage = () => {
                   <Settings2 className="h-3.5 w-3.5" /> Tipos de Servicio
                 </Button>
               )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" title="Color de resaltado para Por Cobrar">
+                    <Palette className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Resaltado</span>
+                    <span
+                      className="inline-block h-3.5 w-3.5 rounded-full border-2"
+                      style={{ background: highlight.bg, borderColor: highlight.border }}
+                    />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-3" align="start">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Color para "Por Cobrar"</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {HIGHLIGHT_PRESETS.map(h => (
+                      <button
+                        key={h.key}
+                        type="button"
+                        onClick={() => setHighlightKey(h.key)}
+                        title={h.label}
+                        className={`h-9 w-full rounded-md border-2 transition ${highlightKey === h.key ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-105" : "hover:scale-105"}`}
+                        style={{ background: h.bg, borderColor: h.border }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2">Se guarda automáticamente en este navegador.</p>
+                </PopoverContent>
+              </Popover>
             </div>
             <DataImportExport
               columns={IMPORT_COLUMNS}
@@ -1010,11 +1057,18 @@ const AccountingPage = () => {
                   const isPorCobrar = tx.por_cobrar && !tx.cobrado_en && tx.estado === "emitido";
                   const rowClass = [
                     tx.estado === "anulado" || tx.estado === "devuelto" ? "opacity-60" : "",
-                    isPorCobrar ? "bg-amber-500/10 hover:bg-amber-500/15 border-l-4 border-l-amber-500" : "",
+                    isPorCobrar ? "font-medium" : "",
                   ].join(" ");
+                  const rowStyle: React.CSSProperties | undefined = isPorCobrar
+                    ? {
+                        backgroundColor: highlight.bg,
+                        borderLeft: `4px solid ${highlight.border}`,
+                        boxShadow: `inset 0 0 0 1px ${highlight.border}33`,
+                      }
+                    : undefined;
 
                   return (
-                    <TableRow key={tx.id} className={rowClass}>
+                    <TableRow key={tx.id} className={rowClass} style={rowStyle}>
                       <TableCell className="whitespace-nowrap text-xs">
                         {new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE")}
                       </TableCell>
@@ -1024,7 +1078,10 @@ const AccountingPage = () => {
                           {isPorCobrar && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Badge className="text-[9px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 px-1.5 py-0 h-4 shrink-0">
+                                <Badge
+                                  className="text-[9px] px-1.5 py-0 h-4 shrink-0 font-bold border text-white"
+                                  style={{ background: highlight.border, borderColor: highlight.border }}
+                                >
                                   POR COBRAR
                                 </Badge>
                               </TooltipTrigger>
