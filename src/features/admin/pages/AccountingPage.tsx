@@ -68,6 +68,9 @@ interface Transaction {
   devuelto_en: string | null;
   devuelto_por: string | null;
   motivo_devolucion: string | null;
+  por_cobrar?: boolean;
+  cobrado_en?: string | null;
+  tipo_cliente?: string | null;
   created_at: string;
   items?: TransactionItem[];
 }
@@ -80,17 +83,18 @@ const IMPORT_COLUMNS = [
   { key: "precio_unitario", label: "Precio Unitario" },
 ];
 
-const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  borrador: { label: "📝 Borrador", variant: "secondary" },
-  emitido: { label: "🟢 Emitido", variant: "default" },
-  anulado: { label: "🔴 Anulado", variant: "destructive" },
-  devuelto: { label: "🟡 Devuelto", variant: "outline" },
+// Colored-dot status (compact). label used in tooltip.
+const STATUS_MAP: Record<string, { label: string; dot: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  borrador: { label: "Borrador", dot: "bg-muted-foreground", variant: "secondary" },
+  emitido: { label: "Emitido", dot: "bg-success", variant: "default" },
+  anulado: { label: "Anulado", dot: "bg-destructive", variant: "destructive" },
+  devuelto: { label: "Devuelto", dot: "bg-amber-500", variant: "outline" },
 };
 
-const TYPE_MAP: Record<string, { label: string; icon: React.ReactNode }> = {
-  venta: { label: "Venta", icon: <ShoppingCart className="h-3 w-3" /> },
-  servicio: { label: "Servicio", icon: <Wrench className="h-3 w-3" /> },
-  mixto: { label: "Mixto", icon: <List className="h-3 w-3" /> },
+const TYPE_MAP: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  venta: { label: "Venta", icon: <ShoppingCart className="h-4 w-4" />, color: "text-emerald-500" },
+  servicio: { label: "Servicio", icon: <Wrench className="h-4 w-4" />, color: "text-blue-500" },
+  mixto: { label: "Mixto", icon: <List className="h-4 w-4" />, color: "text-violet-500" },
 };
 
 // ─── Component ──────────────────────────────────────────────────
