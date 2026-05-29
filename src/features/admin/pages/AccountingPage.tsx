@@ -961,6 +961,34 @@ const AccountingPage = () => {
                   <Settings2 className="h-3.5 w-3.5" /> Tipos de Servicio
                 </Button>
               )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" title="Color de resaltado para Por Cobrar">
+                    <Palette className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Resaltado</span>
+                    <span
+                      className="inline-block h-3.5 w-3.5 rounded-full border-2"
+                      style={{ background: highlight.bg, borderColor: highlight.border }}
+                    />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-3" align="start">
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground">Color para "Por Cobrar"</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {HIGHLIGHT_PRESETS.map(h => (
+                      <button
+                        key={h.key}
+                        type="button"
+                        onClick={() => setHighlightKey(h.key)}
+                        title={h.label}
+                        className={`h-9 w-full rounded-md border-2 transition ${highlightKey === h.key ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-105" : "hover:scale-105"}`}
+                        style={{ background: h.bg, borderColor: h.border }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2">Se guarda automáticamente en este navegador.</p>
+                </PopoverContent>
+              </Popover>
             </div>
             <DataImportExport
               columns={IMPORT_COLUMNS}
