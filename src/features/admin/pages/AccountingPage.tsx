@@ -882,36 +882,49 @@ const AccountingPage = () => {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="border-success/20">
           <CardContent className="p-4 text-center">
             <ShoppingCart className="h-5 w-5 mx-auto mb-1 text-success" />
-            <p className="text-2xl font-bold text-success">S/. {totalProductos.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">Ventas del Mes</p>
+            <p className="text-xl sm:text-2xl font-bold text-success">S/. {totalProductos.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Ventas Cobradas</p>
           </CardContent>
         </Card>
         <Card className="border-info/20">
           <CardContent className="p-4 text-center">
             <Wrench className="h-5 w-5 mx-auto mb-1 text-info" />
-            <p className="text-2xl font-bold text-info">S/. {totalServicios.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">Servicios del Mes</p>
+            <p className="text-xl sm:text-2xl font-bold text-info">S/. {totalServicios.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Servicios Cobrados</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20">
           <CardContent className="p-4 text-center">
             <TrendingUp className="h-5 w-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-primary">S/. {totalGeneral.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">Total del Mes</p>
+            <p className="text-xl sm:text-2xl font-bold text-primary">S/. {totalGeneral.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Total Cobrado</p>
+          </CardContent>
+        </Card>
+        <Card
+          className={`border-amber-500/40 cursor-pointer transition hover:bg-amber-500/5 ${activeTab === "por_cobrar" ? "ring-2 ring-amber-500/50" : ""}`}
+          onClick={() => setActiveTab("por_cobrar")}
+        >
+          <CardContent className="p-4 text-center">
+            <Clock className="h-5 w-5 mx-auto mb-1 text-amber-500" />
+            <p className="text-xl sm:text-2xl font-bold text-amber-500">S/. {totalPorCobrar.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Pendiente por Cobrar ({porCobrar.length})</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "todos" | "ventas" | "servicios")}> 
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="todos" className="gap-1"><List className="h-4 w-4" /> Todos ({transactions.length})</TabsTrigger>
-          <TabsTrigger value="ventas" className="gap-1"><ShoppingCart className="h-4 w-4" /> Ventas</TabsTrigger>
-          <TabsTrigger value="servicios" className="gap-1"><Wrench className="h-4 w-4" /> Servicios</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="todos" className="gap-1 text-xs sm:text-sm"><List className="h-4 w-4" /> Todos ({transactions.length})</TabsTrigger>
+          <TabsTrigger value="ventas" className="gap-1 text-xs sm:text-sm"><ShoppingCart className="h-4 w-4" /> Ventas</TabsTrigger>
+          <TabsTrigger value="servicios" className="gap-1 text-xs sm:text-sm"><Wrench className="h-4 w-4" /> Servicios</TabsTrigger>
+          <TabsTrigger value="por_cobrar" className="gap-1 text-xs sm:text-sm data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-700 dark:data-[state=active]:text-amber-300">
+            <Clock className="h-4 w-4" /> Por Cobrar ({porCobrar.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* Shared content for all tabs */}
@@ -963,14 +976,16 @@ const AccountingPage = () => {
           </div>
 
           {/* Transactions table */}
+          <TooltipProvider delayDuration={150}>
           <div className="border border-border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
+                  <TableHead className="whitespace-nowrap">Fecha</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead className="w-12 text-center px-2">Tipo</TableHead>
+                  <TableHead className="w-12 text-center px-2">Estado</TableHead>
                   <TableHead className="text-right">Productos</TableHead>
                   <TableHead className="text-right">Servicios</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -980,7 +995,7 @@ const AccountingPage = () => {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       {isLoading ? "Cargando..." : "No hay transacciones este mes"}
                     </TableCell>
                   </TableRow>
@@ -988,39 +1003,73 @@ const AccountingPage = () => {
                   const st = STATUS_MAP[tx.estado];
                   const tp = TYPE_MAP[tx.tipo_general];
                   const displayedAmounts = getDisplayedAmounts(tx);
+                  const summary = (itemsSummary as any)[tx.id];
+                  const descPreview = summary
+                    ? `${summary.descripcion}${summary.total > 1 ? ` +${summary.total - 1} más` : ""}`
+                    : "—";
+                  const isPorCobrar = tx.por_cobrar && !tx.cobrado_en && tx.estado === "emitido";
+                  const rowClass = [
+                    tx.estado === "anulado" || tx.estado === "devuelto" ? "opacity-60" : "",
+                    isPorCobrar ? "bg-amber-500/10 hover:bg-amber-500/15 border-l-4 border-l-amber-500" : "",
+                  ].join(" ");
 
                   return (
-                    <TableRow key={tx.id} className={tx.estado === "anulado" || tx.estado === "devuelto" ? "opacity-60" : ""}>
-                      <TableCell className="whitespace-nowrap">
+                    <TableRow key={tx.id} className={rowClass}>
+                      <TableCell className="whitespace-nowrap text-xs">
                         {new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE")}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="gap-1 text-xs">
-                          {tp?.icon} {tp?.label}
-                        </Badge>
+                      <TableCell className="max-w-[160px]">
+                        <div className="flex items-center gap-1">
+                          <span className="truncate text-sm">{tx.cliente_nombre || "—"}</span>
+                          {isPorCobrar && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge className="text-[9px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 px-1.5 py-0 h-4 shrink-0">
+                                  POR COBRAR
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>Pendiente de cobro {tx.tipo_cliente ? `· ${tx.tipo_cliente}` : ""}</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="max-w-[150px] truncate">{tx.cliente_nombre || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant={st?.variant}>{st?.label}</Badge>
+                      <TableCell className="max-w-[220px]">
+                        <span className="text-xs text-muted-foreground truncate block" title={descPreview}>{descPreview}</span>
                       </TableCell>
-                      <TableCell className="text-right">S/. {displayedAmounts.productos.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">S/. {displayedAmounts.servicios.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-bold">S/. {displayedAmounts.total.toFixed(2)}</TableCell>
+                      <TableCell className="text-center px-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`inline-flex items-center justify-center ${tp?.color || ""}`}>{tp?.icon}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>{tp?.label}</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell className="text-center px-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`inline-block h-2.5 w-2.5 rounded-full ${st?.dot} ring-2 ring-background shadow`} />
+                          </TooltipTrigger>
+                          <TooltipContent>{st?.label}{isPorCobrar ? " · Por Cobrar" : ""}</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell className="text-right text-sm">S/. {displayedAmounts.productos.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-sm">S/. {displayedAmounts.servicios.toFixed(2)}</TableCell>
+                      <TableCell className={`text-right font-bold ${isPorCobrar ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                        S/. {displayedAmounts.total.toFixed(2)}
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)} title="Ver detalle">
                             <Eye className="h-3 w-3" />
                           </Button>
-                          {/* Borradores y emitidos pueden editarse */}
                           {(tx.estado === "borrador" || tx.estado === "emitido") && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)} title="Editar">
                               <Pencil className="h-3 w-3" />
                             </Button>
                           )}
-                          {/* Borrador → Emitir or Delete */}
                           {tx.estado === "borrador" && (
                             <>
-                              <Button variant="ghost" size="sm" className="h-7 px-4 text-success font-semibold col-span-2" onClick={() => emitirMutation.mutate(tx.id)} title="Emitir">
+                              <Button variant="ghost" size="sm" className="h-7 px-3 text-success font-semibold" onClick={() => emitirMutation.mutate(tx.id)} title="Emitir">
                                 <FileText className="h-3 w-3 mr-1" /> Emitir
                               </Button>
                               {isAdmin && (
@@ -1030,9 +1079,17 @@ const AccountingPage = () => {
                               )}
                             </>
                           )}
-                          {/* Emitido → Anular or Devolver */}
                           {tx.estado === "emitido" && (
                             <>
+                              {isPorCobrar ? (
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-amber-600 font-semibold" onClick={() => marcarCobradoMutation.mutate(tx.id)} title="Marcar como cobrado">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Cobrado
+                                </Button>
+                              ) : (
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" onClick={() => togglePorCobrarMutation.mutate({ id: tx.id, por_cobrar: true })} title="Marcar como pendiente por cobrar">
+                                  <Clock className="h-3 w-3" />
+                                </Button>
+                              )}
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setViewingTx(tx); setAnularOpen(true); }} title="Anular">
                                 <Ban className="h-3 w-3" />
                               </Button>
@@ -1049,6 +1106,7 @@ const AccountingPage = () => {
               </TableBody>
             </Table>
           </div>
+          </TooltipProvider>
         </div>
       </Tabs>
 
