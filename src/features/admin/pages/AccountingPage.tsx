@@ -104,7 +104,7 @@ const AccountingPage = () => {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
-  const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios">("todos");
+  const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios" | "por_cobrar">("todos");
   const [searchClient, setSearchClient] = useState("");
 
   // Dialog states
@@ -127,6 +127,8 @@ const AccountingPage = () => {
     cliente_telefono: "",
     notas: "",
     emitido_por: "Personal de Infocom",
+    por_cobrar: false,
+    tipo_cliente: "publico" as "publico" | "privado" | "corporativo",
   });
   const [items, setItems] = useState<TransactionItem[]>([]);
 
