@@ -12,10 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
-  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw, Gift
+  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw, Gift,
+  Clock, CheckCircle2, FileBadge, FileCheck2
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
