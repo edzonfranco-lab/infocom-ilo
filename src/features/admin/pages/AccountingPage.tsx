@@ -33,6 +33,18 @@ const HIGHLIGHT_PRESETS = [
   { key: "lime",    label: "Lima",      bg: "rgba(132, 204, 22, 0.30)",  border: "#84cc16" },
 ] as const;
 const HIGHLIGHT_LS_KEY = "infocom_por_cobrar_highlight";
+const HIGHLIGHT_CUSTOM_LS_KEY = "infocom_por_cobrar_highlight_custom";
+const HIGHLIGHT_OPACITY_LS_KEY = "infocom_por_cobrar_highlight_opacity";
+
+// Convert #RRGGBB to rgba with given alpha (0-1)
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "").trim();
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return `rgba(240,186,0,${alpha})`;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
 import PrintReceipt from "@/features/admin/components/PrintReceipt";
@@ -123,8 +135,31 @@ const AccountingPage = () => {
     if (typeof window === "undefined") return "amber";
     return localStorage.getItem(HIGHLIGHT_LS_KEY) || "amber";
   });
-  const highlight = HIGHLIGHT_PRESETS.find(h => h.key === highlightKey) || HIGHLIGHT_PRESETS[0];
+  const [customHex, setCustomHex] = useState<string>(() => {
+    if (typeof window === "undefined") return "#F0BA00";
+    return localStorage.getItem(HIGHLIGHT_CUSTOM_LS_KEY) || "#F0BA00";
+  });
+  const [highlightOpacity, setHighlightOpacity] = useState<number>(() => {
+    if (typeof window === "undefined") return 0.45;
+    const v = parseFloat(localStorage.getItem(HIGHLIGHT_OPACITY_LS_KEY) || "0.45");
+    return isNaN(v) ? 0.45 : v;
+  });
+  const highlight = highlightKey === "custom"
+    ? { key: "custom", label: `Custom ${customHex}`, bg: hexToRgba(customHex, highlightOpacity), border: customHex }
+    : (() => {
+        const preset = HIGHLIGHT_PRESETS.find(h => h.key === highlightKey) || HIGHLIGHT_PRESETS[0];
+        // Re-apply opacity for preset borders that are hex
+        if (preset.border.startsWith("#")) {
+          return { ...preset, bg: hexToRgba(preset.border, highlightOpacity) };
+        }
+        // For HSL borders (amber/yellow preset)
+        const hslMatch = preset.border.match(/hsl\(([^)]+)\)/);
+        if (hslMatch) return { ...preset, bg: `hsl(${hslMatch[1]} / ${highlightOpacity})` };
+        return preset;
+      })();
   useEffect(() => { try { localStorage.setItem(HIGHLIGHT_LS_KEY, highlightKey); } catch {} }, [highlightKey]);
+  useEffect(() => { try { localStorage.setItem(HIGHLIGHT_CUSTOM_LS_KEY, customHex); } catch {} }, [customHex]);
+  useEffect(() => { try { localStorage.setItem(HIGHLIGHT_OPACITY_LS_KEY, String(highlightOpacity)); } catch {} }, [highlightOpacity]);
 
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
@@ -972,7 +1007,7 @@ const AccountingPage = () => {
                     />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-56 p-3" align="start">
+                <PopoverContent className="w-72 p-3" align="start">
                   <p className="text-xs font-semibold mb-2 text-muted-foreground">Color para "Por Cobrar"</p>
                   <div className="grid grid-cols-4 gap-2">
                     {HIGHLIGHT_PRESETS.map(h => (
@@ -986,6 +1021,58 @@ const AccountingPage = () => {
                       />
                     ))}
                   </div>
+
+                  <div className="mt-3 pt-3 border-t space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground">Color personalizado</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={customHex}
+                        onChange={(e) => { setCustomHex(e.target.value.toUpperCase()); setHighlightKey("custom"); }}
+                        className="h-9 w-12 rounded-md border cursor-pointer bg-transparent"
+                        title="Selector visual"
+                      />
+                      <div className="flex-1 flex items-center gap-1 border rounded-md px-2 h-9 bg-background">
+                        <span className="text-xs text-muted-foreground">#</span>
+                        <input
+                          type="text"
+                          value={customHex.replace("#", "")}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/[^0-9a-fA-F]/g, "").slice(0, 6).toUpperCase();
+                            const hex = "#" + v;
+                            setCustomHex(hex);
+                            if (v.length === 6) setHighlightKey("custom");
+                          }}
+                          placeholder="F0BA00"
+                          maxLength={6}
+                          className="flex-1 bg-transparent text-xs font-mono uppercase outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setHighlightKey("custom")}
+                          className={`h-6 w-6 rounded border-2 ${highlightKey === "custom" ? "ring-2 ring-primary" : ""}`}
+                          style={{ background: hexToRgba(customHex, highlightOpacity), borderColor: customHex }}
+                          title="Usar este color"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[10px] text-muted-foreground">Intensidad</label>
+                        <span className="text-[10px] font-mono text-muted-foreground">{Math.round(highlightOpacity * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={10}
+                        max={90}
+                        step={5}
+                        value={Math.round(highlightOpacity * 100)}
+                        onChange={(e) => setHighlightOpacity(parseInt(e.target.value, 10) / 100)}
+                        className="w-full accent-primary"
+                      />
+                    </div>
+                  </div>
+
                   <p className="text-[10px] text-muted-foreground mt-2">Se guarda automáticamente en este navegador.</p>
                 </PopoverContent>
               </Popover>
