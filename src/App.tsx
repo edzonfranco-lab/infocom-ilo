@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider, useTheme } from "@/features/theme/ThemeProvider";
+import { FloatingThemeToggle } from "@/features/theme/FloatingThemeToggle";
 import SeasonalParticles from "@/features/theme/SeasonalParticles";
 import ProtectedRoute from "@/features/auth/components/ProtectedRoute";
 import { AuthProvider } from "@/features/auth/hooks/useAuth";
@@ -89,6 +90,7 @@ const App = () => (
           <Sonner />
           <SeasonalWrapper>
             <BrowserRouter>
+              <FloatingThemeToggle />
               <Routes>
                 {/* Shop */}
                 <Route path="/" element={<HomePage />} />
