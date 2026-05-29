@@ -119,6 +119,12 @@ const AccountingPage = () => {
   const [year, setYear] = useState(now.getFullYear());
   const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios" | "por_cobrar">("todos");
   const [searchClient, setSearchClient] = useState("");
+  const [highlightKey, setHighlightKey] = useState<string>(() => {
+    if (typeof window === "undefined") return "amber";
+    return localStorage.getItem(HIGHLIGHT_LS_KEY) || "amber";
+  });
+  const highlight = HIGHLIGHT_PRESETS.find(h => h.key === highlightKey) || HIGHLIGHT_PRESETS[0];
+  useEffect(() => { try { localStorage.setItem(HIGHLIGHT_LS_KEY, highlightKey); } catch {} }, [highlightKey]);
 
   // Dialog states
   const [formOpen, setFormOpen] = useState(false);
