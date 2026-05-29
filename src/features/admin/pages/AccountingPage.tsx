@@ -18,8 +18,21 @@ import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
   Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw, Gift,
-  Clock, CheckCircle2, FileBadge, FileCheck2
+  Clock, CheckCircle2, FileBadge, FileCheck2, Palette
 } from "lucide-react";
+
+// ─── Highlight color presets for "Por Cobrar" rows ──────────────
+const HIGHLIGHT_PRESETS = [
+  { key: "amber",   label: "Ámbar",     bg: "rgba(245, 158, 11, 0.28)",  border: "#f59e0b" },
+  { key: "rose",    label: "Rosa",      bg: "rgba(244, 63, 94, 0.28)",   border: "#f43f5e" },
+  { key: "orange",  label: "Naranja",   bg: "rgba(249, 115, 22, 0.30)",  border: "#f97316" },
+  { key: "yellow",  label: "Amarillo",  bg: "rgba(234, 179, 8, 0.32)",   border: "#eab308" },
+  { key: "red",     label: "Rojo",      bg: "rgba(239, 68, 68, 0.25)",   border: "#ef4444" },
+  { key: "fuchsia", label: "Fucsia",    bg: "rgba(217, 70, 239, 0.25)",  border: "#d946ef" },
+  { key: "sky",     label: "Celeste",   bg: "rgba(14, 165, 233, 0.25)",  border: "#0ea5e9" },
+  { key: "lime",    label: "Lima",      bg: "rgba(132, 204, 22, 0.30)",  border: "#84cc16" },
+] as const;
+const HIGHLIGHT_LS_KEY = "infocom_por_cobrar_highlight";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
 import PrintReceipt from "@/features/admin/components/PrintReceipt";
