@@ -347,8 +347,10 @@ const AccountingPage = () => {
           cliente_telefono: form.cliente_telefono || null,
           notas: form.notas || null,
           emitido_por: form.emitido_por || null,
+          por_cobrar: form.por_cobrar,
+          tipo_cliente: form.tipo_cliente,
           created_by: user?.id || null,
-        }).select("id").single();
+        } as any).select("id").single();
         if (error) throw error;
 
         // Headers + standalones first
