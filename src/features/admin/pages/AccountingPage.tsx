@@ -552,6 +552,30 @@ const AccountingPage = () => {
     },
   });
 
+  const togglePorCobrarMutation = useMutation({
+    mutationFn: async ({ id, por_cobrar }: { id: string; por_cobrar: boolean }) => {
+      const { error } = await supabase.from("transactions").update({ por_cobrar, cobrado_en: por_cobrar ? null : undefined } as any).eq("id", id);
+      if (error) throw error;
+      await supabase.from("transaction_history").insert({ transaction_id: id, accion: por_cobrar ? "marcado_por_cobrar" : "desmarcado_por_cobrar", usuario_id: user?.id || null });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions", month, year] });
+      toast.success("Estado de cobro actualizado");
+    },
+  });
+
+  const marcarCobradoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("transactions").update({ cobrado_en: new Date().toISOString() } as any).eq("id", id);
+      if (error) throw error;
+      await supabase.from("transaction_history").insert({ transaction_id: id, accion: "cobrado", usuario_id: user?.id || null });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions", month, year] });
+      toast.success("Marcado como COBRADO ✓");
+    },
+  });
+
   // ─── Helpers ──────────────────────────────────────────────────
   const closeForm = () => {
     setFormOpen(false);
