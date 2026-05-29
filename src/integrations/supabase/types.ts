@@ -1531,6 +1531,7 @@ export type Database = {
           anulado_por: string | null
           cliente_nombre: string | null
           cliente_telefono: string | null
+          cobrado_en: string | null
           created_at: string
           created_by: string | null
           devuelto_en: string | null
@@ -1544,9 +1545,11 @@ export type Database = {
           motivo_anulacion: string | null
           motivo_devolucion: string | null
           notas: string | null
+          por_cobrar: boolean
           subtotal_productos: number
           subtotal_servicios: number
           ticket_number: string | null
+          tipo_cliente: string | null
           tipo_general: Database["public"]["Enums"]["transaction_type"]
           total: number
           updated_at: string
@@ -1556,6 +1559,7 @@ export type Database = {
           anulado_por?: string | null
           cliente_nombre?: string | null
           cliente_telefono?: string | null
+          cobrado_en?: string | null
           created_at?: string
           created_by?: string | null
           devuelto_en?: string | null
@@ -1569,9 +1573,11 @@ export type Database = {
           motivo_anulacion?: string | null
           motivo_devolucion?: string | null
           notas?: string | null
+          por_cobrar?: boolean
           subtotal_productos?: number
           subtotal_servicios?: number
           ticket_number?: string | null
+          tipo_cliente?: string | null
           tipo_general?: Database["public"]["Enums"]["transaction_type"]
           total?: number
           updated_at?: string
@@ -1581,6 +1587,7 @@ export type Database = {
           anulado_por?: string | null
           cliente_nombre?: string | null
           cliente_telefono?: string | null
+          cobrado_en?: string | null
           created_at?: string
           created_by?: string | null
           devuelto_en?: string | null
@@ -1594,9 +1601,11 @@ export type Database = {
           motivo_anulacion?: string | null
           motivo_devolucion?: string | null
           notas?: string | null
+          por_cobrar?: boolean
           subtotal_productos?: number
           subtotal_servicios?: number
           ticket_number?: string | null
+          tipo_cliente?: string | null
           tipo_general?: Database["public"]["Enums"]["transaction_type"]
           total?: number
           updated_at?: string

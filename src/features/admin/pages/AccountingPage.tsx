@@ -12,10 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Receipt, Plus, ShoppingCart, Wrench, TrendingUp, ChevronLeft, ChevronRight,
-  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw, Gift
+  Trash2, Pencil, Printer, FileText, Ban, Eye, Package, Settings2, List, Search, ChevronsUpDown, Check, RotateCcw, Gift,
+  Clock, CheckCircle2, FileBadge, FileCheck2
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import DataImportExport from "@/features/admin/components/DataImportExport";
@@ -65,6 +68,9 @@ interface Transaction {
   devuelto_en: string | null;
   devuelto_por: string | null;
   motivo_devolucion: string | null;
+  por_cobrar?: boolean;
+  cobrado_en?: string | null;
+  tipo_cliente?: string | null;
   created_at: string;
   items?: TransactionItem[];
 }
@@ -77,17 +83,18 @@ const IMPORT_COLUMNS = [
   { key: "precio_unitario", label: "Precio Unitario" },
 ];
 
-const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  borrador: { label: "📝 Borrador", variant: "secondary" },
-  emitido: { label: "🟢 Emitido", variant: "default" },
-  anulado: { label: "🔴 Anulado", variant: "destructive" },
-  devuelto: { label: "🟡 Devuelto", variant: "outline" },
+// Colored-dot status (compact). label used in tooltip.
+const STATUS_MAP: Record<string, { label: string; dot: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  borrador: { label: "Borrador", dot: "bg-muted-foreground", variant: "secondary" },
+  emitido: { label: "Emitido", dot: "bg-success", variant: "default" },
+  anulado: { label: "Anulado", dot: "bg-destructive", variant: "destructive" },
+  devuelto: { label: "Devuelto", dot: "bg-amber-500", variant: "outline" },
 };
 
-const TYPE_MAP: Record<string, { label: string; icon: React.ReactNode }> = {
-  venta: { label: "Venta", icon: <ShoppingCart className="h-3 w-3" /> },
-  servicio: { label: "Servicio", icon: <Wrench className="h-3 w-3" /> },
-  mixto: { label: "Mixto", icon: <List className="h-3 w-3" /> },
+const TYPE_MAP: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  venta: { label: "Venta", icon: <ShoppingCart className="h-4 w-4" />, color: "text-emerald-500" },
+  servicio: { label: "Servicio", icon: <Wrench className="h-4 w-4" />, color: "text-blue-500" },
+  mixto: { label: "Mixto", icon: <List className="h-4 w-4" />, color: "text-violet-500" },
 };
 
 // ─── Component ──────────────────────────────────────────────────
@@ -97,7 +104,7 @@ const AccountingPage = () => {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
-  const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios">("todos");
+  const [activeTab, setActiveTab] = useState<"todos" | "ventas" | "servicios" | "por_cobrar">("todos");
   const [searchClient, setSearchClient] = useState("");
 
   // Dialog states
@@ -120,6 +127,8 @@ const AccountingPage = () => {
     cliente_telefono: "",
     notas: "",
     emitido_por: "Personal de Infocom",
+    por_cobrar: false,
+    tipo_cliente: "publico" as "publico" | "privado" | "corporativo",
   });
   const [items, setItems] = useState<TransactionItem[]>([]);
 
@@ -217,11 +226,33 @@ const AccountingPage = () => {
     },
   });
 
+  // ─── Items summary (descripción breve por transacción) ───────
+  const txIds = transactions.map(t => t.id);
+  const { data: itemsSummary = {} } = useQuery({
+    queryKey: ["tx_items_summary", txIds.join(",")],
+    enabled: txIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transaction_items")
+        .select("transaction_id, descripcion, item_type, cantidad")
+        .in("transaction_id", txIds)
+        .is("combo_parent_item_id", null);
+      if (error) throw error;
+      const map: Record<string, { descripcion: string; count: number; total: number }> = {};
+      (data || []).forEach((it: any) => {
+        if (!map[it.transaction_id]) map[it.transaction_id] = { descripcion: it.descripcion, count: 1, total: 1 };
+        else { map[it.transaction_id].count += 1; map[it.transaction_id].total += 1; }
+      });
+      return map;
+    },
+  });
+
   // ─── Filtered views ───────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = transactions;
     if (activeTab === "ventas") list = list.filter(t => Number(t.subtotal_productos || 0) > 0);
     if (activeTab === "servicios") list = list.filter(t => Number(t.subtotal_servicios || 0) > 0);
+    if (activeTab === "por_cobrar") list = list.filter(t => t.por_cobrar && !t.cobrado_en && t.estado === "emitido");
     if (searchClient.trim()) {
       const q = searchClient.toLowerCase();
       list = list.filter(t => t.cliente_nombre?.toLowerCase().includes(q));
@@ -229,11 +260,14 @@ const AccountingPage = () => {
     return list;
   }, [transactions, activeTab, searchClient]);
 
-  // ─── Metrics (only emitido) ───────────────────────────────────
+  // ─── Metrics ───────────────────────────────────────────────────
   const emitidos = transactions.filter(t => t.estado === "emitido");
-  const totalProductos = emitidos.reduce((a, t) => a + Number(t.subtotal_productos || 0), 0);
-  const totalServicios = emitidos.reduce((a, t) => a + Number(t.subtotal_servicios || 0), 0);
-  const totalGeneral = emitidos.reduce((a, t) => a + Number(t.total || 0), 0);
+  const cobrados = emitidos.filter(t => !t.por_cobrar || t.cobrado_en);
+  const porCobrar = emitidos.filter(t => t.por_cobrar && !t.cobrado_en);
+  const totalProductos = cobrados.reduce((a, t) => a + Number(t.subtotal_productos || 0), 0);
+  const totalServicios = cobrados.reduce((a, t) => a + Number(t.subtotal_servicios || 0), 0);
+  const totalGeneral = cobrados.reduce((a, t) => a + Number(t.total || 0), 0);
+  const totalPorCobrar = porCobrar.reduce((a, t) => a + Number(t.total || 0), 0);
 
   // ─── Mutations ────────────────────────────────────────────────
   const saveMutation = useMutation({
@@ -248,7 +282,9 @@ const AccountingPage = () => {
           cliente_telefono: form.cliente_telefono || null,
           notas: form.notas || null,
           emitido_por: form.emitido_por || null,
-        }).eq("id", editingId);
+          por_cobrar: form.por_cobrar,
+          tipo_cliente: form.tipo_cliente,
+        } as any).eq("id", editingId);
         if (error) throw error;
 
         // Delete old items, insert new — header first, then children with parent FK
@@ -311,8 +347,10 @@ const AccountingPage = () => {
           cliente_telefono: form.cliente_telefono || null,
           notas: form.notas || null,
           emitido_por: form.emitido_por || null,
+          por_cobrar: form.por_cobrar,
+          tipo_cliente: form.tipo_cliente,
           created_by: user?.id || null,
-        }).select("id").single();
+        } as any).select("id").single();
         if (error) throw error;
 
         // Headers + standalones first
@@ -514,11 +552,35 @@ const AccountingPage = () => {
     },
   });
 
+  const togglePorCobrarMutation = useMutation({
+    mutationFn: async ({ id, por_cobrar }: { id: string; por_cobrar: boolean }) => {
+      const { error } = await supabase.from("transactions").update({ por_cobrar, cobrado_en: por_cobrar ? null : undefined } as any).eq("id", id);
+      if (error) throw error;
+      await supabase.from("transaction_history").insert({ transaction_id: id, accion: por_cobrar ? "marcado_por_cobrar" : "desmarcado_por_cobrar", usuario_id: user?.id || null });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions", month, year] });
+      toast.success("Estado de cobro actualizado");
+    },
+  });
+
+  const marcarCobradoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("transactions").update({ cobrado_en: new Date().toISOString() } as any).eq("id", id);
+      if (error) throw error;
+      await supabase.from("transaction_history").insert({ transaction_id: id, accion: "cobrado", usuario_id: user?.id || null });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["transactions", month, year] });
+      toast.success("Marcado como COBRADO ✓");
+    },
+  });
+
   // ─── Helpers ──────────────────────────────────────────────────
   const closeForm = () => {
     setFormOpen(false);
     setEditingId(null);
-    setForm({ fecha: new Date().toISOString().split("T")[0], cliente_nombre: "", cliente_telefono: "", notas: "", emitido_por: "Personal de Infocom" });
+    setForm({ fecha: new Date().toISOString().split("T")[0], cliente_nombre: "", cliente_telefono: "", notas: "", emitido_por: "Personal de Infocom", por_cobrar: false, tipo_cliente: "publico" });
     setItems([]);
   };
 
@@ -529,6 +591,8 @@ const AccountingPage = () => {
       cliente_telefono: tx.cliente_telefono || "",
       notas: tx.notas || "",
       emitido_por: tx.emitido_por || "",
+      por_cobrar: !!tx.por_cobrar,
+      tipo_cliente: (tx.tipo_cliente as any) || "publico",
     });
     setEditingId(tx.id);
     // Load items
@@ -818,36 +882,49 @@ const AccountingPage = () => {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card className="border-success/20">
           <CardContent className="p-4 text-center">
             <ShoppingCart className="h-5 w-5 mx-auto mb-1 text-success" />
-            <p className="text-2xl font-bold text-success">S/. {totalProductos.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">Ventas del Mes</p>
+            <p className="text-xl sm:text-2xl font-bold text-success">S/. {totalProductos.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Ventas Cobradas</p>
           </CardContent>
         </Card>
         <Card className="border-info/20">
           <CardContent className="p-4 text-center">
             <Wrench className="h-5 w-5 mx-auto mb-1 text-info" />
-            <p className="text-2xl font-bold text-info">S/. {totalServicios.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">Servicios del Mes</p>
+            <p className="text-xl sm:text-2xl font-bold text-info">S/. {totalServicios.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Servicios Cobrados</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20">
           <CardContent className="p-4 text-center">
             <TrendingUp className="h-5 w-5 mx-auto mb-1 text-primary" />
-            <p className="text-2xl font-bold text-primary">S/. {totalGeneral.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">Total del Mes</p>
+            <p className="text-xl sm:text-2xl font-bold text-primary">S/. {totalGeneral.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Total Cobrado</p>
+          </CardContent>
+        </Card>
+        <Card
+          className={`border-amber-500/40 cursor-pointer transition hover:bg-amber-500/5 ${activeTab === "por_cobrar" ? "ring-2 ring-amber-500/50" : ""}`}
+          onClick={() => setActiveTab("por_cobrar")}
+        >
+          <CardContent className="p-4 text-center">
+            <Clock className="h-5 w-5 mx-auto mb-1 text-amber-500" />
+            <p className="text-xl sm:text-2xl font-bold text-amber-500">S/. {totalPorCobrar.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">Pendiente por Cobrar ({porCobrar.length})</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "todos" | "ventas" | "servicios")}> 
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="todos" className="gap-1"><List className="h-4 w-4" /> Todos ({transactions.length})</TabsTrigger>
-          <TabsTrigger value="ventas" className="gap-1"><ShoppingCart className="h-4 w-4" /> Ventas</TabsTrigger>
-          <TabsTrigger value="servicios" className="gap-1"><Wrench className="h-4 w-4" /> Servicios</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="todos" className="gap-1 text-xs sm:text-sm"><List className="h-4 w-4" /> Todos ({transactions.length})</TabsTrigger>
+          <TabsTrigger value="ventas" className="gap-1 text-xs sm:text-sm"><ShoppingCart className="h-4 w-4" /> Ventas</TabsTrigger>
+          <TabsTrigger value="servicios" className="gap-1 text-xs sm:text-sm"><Wrench className="h-4 w-4" /> Servicios</TabsTrigger>
+          <TabsTrigger value="por_cobrar" className="gap-1 text-xs sm:text-sm data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-700 dark:data-[state=active]:text-amber-300">
+            <Clock className="h-4 w-4" /> Por Cobrar ({porCobrar.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* Shared content for all tabs */}
@@ -899,14 +976,16 @@ const AccountingPage = () => {
           </div>
 
           {/* Transactions table */}
+          <TooltipProvider delayDuration={150}>
           <div className="border border-border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo</TableHead>
+                  <TableHead className="whitespace-nowrap">Fecha</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead className="w-12 text-center px-2">Tipo</TableHead>
+                  <TableHead className="w-12 text-center px-2">Estado</TableHead>
                   <TableHead className="text-right">Productos</TableHead>
                   <TableHead className="text-right">Servicios</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -916,7 +995,7 @@ const AccountingPage = () => {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       {isLoading ? "Cargando..." : "No hay transacciones este mes"}
                     </TableCell>
                   </TableRow>
@@ -924,39 +1003,73 @@ const AccountingPage = () => {
                   const st = STATUS_MAP[tx.estado];
                   const tp = TYPE_MAP[tx.tipo_general];
                   const displayedAmounts = getDisplayedAmounts(tx);
+                  const summary = (itemsSummary as any)[tx.id];
+                  const descPreview = summary
+                    ? `${summary.descripcion}${summary.total > 1 ? ` +${summary.total - 1} más` : ""}`
+                    : "—";
+                  const isPorCobrar = tx.por_cobrar && !tx.cobrado_en && tx.estado === "emitido";
+                  const rowClass = [
+                    tx.estado === "anulado" || tx.estado === "devuelto" ? "opacity-60" : "",
+                    isPorCobrar ? "bg-amber-500/10 hover:bg-amber-500/15 border-l-4 border-l-amber-500" : "",
+                  ].join(" ");
 
                   return (
-                    <TableRow key={tx.id} className={tx.estado === "anulado" || tx.estado === "devuelto" ? "opacity-60" : ""}>
-                      <TableCell className="whitespace-nowrap">
+                    <TableRow key={tx.id} className={rowClass}>
+                      <TableCell className="whitespace-nowrap text-xs">
                         {new Date(tx.fecha + "T12:00:00").toLocaleDateString("es-PE")}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="gap-1 text-xs">
-                          {tp?.icon} {tp?.label}
-                        </Badge>
+                      <TableCell className="max-w-[160px]">
+                        <div className="flex items-center gap-1">
+                          <span className="truncate text-sm">{tx.cliente_nombre || "—"}</span>
+                          {isPorCobrar && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge className="text-[9px] bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30 px-1.5 py-0 h-4 shrink-0">
+                                  POR COBRAR
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>Pendiente de cobro {tx.tipo_cliente ? `· ${tx.tipo_cliente}` : ""}</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="max-w-[150px] truncate">{tx.cliente_nombre || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant={st?.variant}>{st?.label}</Badge>
+                      <TableCell className="max-w-[220px]">
+                        <span className="text-xs text-muted-foreground truncate block" title={descPreview}>{descPreview}</span>
                       </TableCell>
-                      <TableCell className="text-right">S/. {displayedAmounts.productos.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">S/. {displayedAmounts.servicios.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-bold">S/. {displayedAmounts.total.toFixed(2)}</TableCell>
+                      <TableCell className="text-center px-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`inline-flex items-center justify-center ${tp?.color || ""}`}>{tp?.icon}</span>
+                          </TooltipTrigger>
+                          <TooltipContent>{tp?.label}</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell className="text-center px-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className={`inline-block h-2.5 w-2.5 rounded-full ${st?.dot} ring-2 ring-background shadow`} />
+                          </TooltipTrigger>
+                          <TooltipContent>{st?.label}{isPorCobrar ? " · Por Cobrar" : ""}</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell className="text-right text-sm">S/. {displayedAmounts.productos.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-sm">S/. {displayedAmounts.servicios.toFixed(2)}</TableCell>
+                      <TableCell className={`text-right font-bold ${isPorCobrar ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                        S/. {displayedAmounts.total.toFixed(2)}
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDetail(tx)} title="Ver detalle">
                             <Eye className="h-3 w-3" />
                           </Button>
-                          {/* Borradores y emitidos pueden editarse */}
                           {(tx.estado === "borrador" || tx.estado === "emitido") && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tx)} title="Editar">
                               <Pencil className="h-3 w-3" />
                             </Button>
                           )}
-                          {/* Borrador → Emitir or Delete */}
                           {tx.estado === "borrador" && (
                             <>
-                              <Button variant="ghost" size="sm" className="h-7 px-4 text-success font-semibold col-span-2" onClick={() => emitirMutation.mutate(tx.id)} title="Emitir">
+                              <Button variant="ghost" size="sm" className="h-7 px-3 text-success font-semibold" onClick={() => emitirMutation.mutate(tx.id)} title="Emitir">
                                 <FileText className="h-3 w-3 mr-1" /> Emitir
                               </Button>
                               {isAdmin && (
@@ -966,9 +1079,17 @@ const AccountingPage = () => {
                               )}
                             </>
                           )}
-                          {/* Emitido → Anular or Devolver */}
                           {tx.estado === "emitido" && (
                             <>
+                              {isPorCobrar ? (
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-amber-600 font-semibold" onClick={() => marcarCobradoMutation.mutate(tx.id)} title="Marcar como cobrado">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" /> Cobrado
+                                </Button>
+                              ) : (
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600" onClick={() => togglePorCobrarMutation.mutate({ id: tx.id, por_cobrar: true })} title="Marcar como pendiente por cobrar">
+                                  <Clock className="h-3 w-3" />
+                                </Button>
+                              )}
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { setViewingTx(tx); setAnularOpen(true); }} title="Anular">
                                 <Ban className="h-3 w-3" />
                               </Button>
@@ -985,6 +1106,7 @@ const AccountingPage = () => {
               </TableBody>
             </Table>
           </div>
+          </TooltipProvider>
         </div>
       </Tabs>
 
@@ -1305,15 +1427,44 @@ const AccountingPage = () => {
 
             <div><Label>Notas</Label><Input value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} /></div>
 
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1" disabled={saveMutation.isPending || items.length === 0}>
+            {/* Pendiente por cobrar (crédito a entidades) */}
+            <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="por_cobrar"
+                  checked={form.por_cobrar}
+                  onCheckedChange={(v) => setForm({ ...form, por_cobrar: !!v })}
+                />
+                <Label htmlFor="por_cobrar" className="flex items-center gap-1 cursor-pointer font-semibold text-amber-700 dark:text-amber-300">
+                  <Clock className="h-4 w-4" /> Marcar como PENDIENTE POR COBRAR
+                </Label>
+              </div>
+              <p className="text-[11px] text-muted-foreground pl-6">
+                Use esta opción solo para entidades privadas o públicas a crédito. No aplica al público en general.
+              </p>
+              {form.por_cobrar && (
+                <div className="pl-6">
+                  <Label className="text-xs">Tipo de cliente</Label>
+                  <Select value={form.tipo_cliente} onValueChange={(v: any) => setForm({ ...form, tipo_cliente: v })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="publico">Entidad Pública</SelectItem>
+                      <SelectItem value="privado">Entidad Privada</SelectItem>
+                      <SelectItem value="corporativo">Corporativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 flex-wrap">
+              <Button type="submit" className="flex-1 min-w-[140px]" disabled={saveMutation.isPending || items.length === 0}>
                 {editingId ? "Guardar Cambios" : "Guardar como Borrador"}
               </Button>
               {!editingId && (
-                <Button type="button" variant="secondary" className="flex-1 gap-1" disabled={saveMutation.isPending || items.length === 0}
+                <Button type="button" variant="secondary" className="flex-1 min-w-[140px] gap-1" disabled={saveMutation.isPending || items.length === 0}
                   onClick={async () => {
                     if (items.length === 0) return;
-                    // Save then emit
                     try {
                       const { data: tx, error } = await supabase.from("transactions").insert({
                         fecha: form.fecha,
@@ -1323,8 +1474,10 @@ const AccountingPage = () => {
                         emitido_por: form.emitido_por || user?.email || "Admin",
                         estado: "emitido" as any,
                         emitido_en: new Date().toISOString(),
+                        por_cobrar: form.por_cobrar,
+                        tipo_cliente: form.tipo_cliente,
                         created_by: user?.id || null,
-                      }).select("id").single();
+                      } as any).select("id").single();
                       if (error) throw error;
                       const payload = items.map(it => ({
                         transaction_id: tx.id,
@@ -1339,20 +1492,15 @@ const AccountingPage = () => {
                         diagnostico: it.diagnostico || null,
                       }));
                       await supabase.from("transaction_items").insert(payload);
-
-                      // Reduce stock for product items
                       await reduceStockForTransaction(tx.id);
-
-                      // Sync customer to customers table
                       if (form.cliente_nombre) {
                         await syncCustomer(form.cliente_nombre, form.cliente_telefono || null, itemTotals.total);
                       }
-
                       await supabase.from("transaction_history").insert({
                         transaction_id: tx.id, accion: "creado_y_emitido", usuario_id: user?.id || null,
                       });
                       qc.invalidateQueries({ queryKey: ["transactions", month, year] });
-                      toast.success("Transaccion emitida — Stock actualizado");
+                      toast.success(form.por_cobrar ? "Transacción emitida como PENDIENTE POR COBRAR" : "Transaccion emitida — Stock actualizado");
                       closeForm();
                     } catch (err: any) {
                       toast.error(err.message || "Error");
@@ -1362,6 +1510,15 @@ const AccountingPage = () => {
                   <FileText className="h-4 w-4" /> Emitir Comprobante
                 </Button>
               )}
+              {/* SUNAT — En implementación */}
+              <Button type="button" variant="outline" className="gap-1 border-blue-500/40 text-blue-600 hover:bg-blue-500/10"
+                onClick={() => toast.info("📄 Emisión de BOLETA electrónica en implementación con SUNAT", { description: "Próximamente podrás emitir boletas electrónicas oficiales." })}>
+                <FileCheck2 className="h-4 w-4" /> Emitir Boleta
+              </Button>
+              <Button type="button" variant="outline" className="gap-1 border-violet-500/40 text-violet-600 hover:bg-violet-500/10"
+                onClick={() => toast.info("📄 Emisión de FACTURA electrónica en implementación con SUNAT", { description: "Próximamente podrás emitir facturas electrónicas oficiales." })}>
+                <FileBadge className="h-4 w-4" /> Emitir Factura
+              </Button>
             </div>
           </form>
         </DialogContent>
