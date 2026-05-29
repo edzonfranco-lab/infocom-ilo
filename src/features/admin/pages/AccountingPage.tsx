@@ -282,7 +282,9 @@ const AccountingPage = () => {
           cliente_telefono: form.cliente_telefono || null,
           notas: form.notas || null,
           emitido_por: form.emitido_por || null,
-        }).eq("id", editingId);
+          por_cobrar: form.por_cobrar,
+          tipo_cliente: form.tipo_cliente,
+        } as any).eq("id", editingId);
         if (error) throw error;
 
         // Delete old items, insert new — header first, then children with parent FK
